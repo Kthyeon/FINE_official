@@ -13,7 +13,7 @@
     "data_loader": {
         "type": "CIFAR10DataLoader",
         "args":{
-            "data_dir": "/dir_to_data",
+            "data_dir": "data/",
             "batch_size": 128,
             "shuffle": true,
             "num_batches": 0,

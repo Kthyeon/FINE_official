@@ -13,7 +13,7 @@ import os
 
 def get_cifar10(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
-                download=False, noise_file = ''):
+                download=True, noise_file = ''):
     base_dataset = torchvision.datasets.CIFAR10(root, train=train, download=download)
     if train:
         train_idxs, val_idxs = train_val_split(base_dataset.targets)

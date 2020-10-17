@@ -76,13 +76,10 @@ class Trainer(BaseTrainer):
                 
                 output = self.model(data)
 
-                loss = self.train_criterion(indexs.cpu().detach().numpy().tolist(), output, label)
+                loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
                 self.optimizer.zero_grad()
                 loss.backward()
 
-
-
-                
                 self.optimizer.step()
 
                 self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)

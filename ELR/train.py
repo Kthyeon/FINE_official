@@ -7,7 +7,7 @@ import torch
 import mlflow
 import mlflow.pytorch
 import data_loader.data_loaders as module_data
-import model.loss as module_loss
+import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
@@ -69,9 +69,19 @@ def main(config: ConfigParser):
         num_examp = data_loader.dataset.num_raw_example
     else:
         num_examp = len(data_loader.dataset)
-
-    train_loss = getattr(module_loss, config['train_loss']['type'])(num_examp=num_examp, num_classes=config['num_classes'],
-                                                            beta=config['train_loss']['args']['beta'])
+    
+    if config['train_loss']['type'] == 'ELRLoss':
+        train_loss = getattr(module_loss, 'ELRLoss')(num_examp=num_examp, 
+                                                     num_classes=config['num_classes'],
+                                                     beta=config['train_loss']['args']['beta'])
+    elif config['train_loss']['type'] == 'SCELoss':
+        train_loss = getattr(module_loss, 'SCELoss')(alpha=config['train_loss']['args']['alpha'],
+                                                     beta=config['train_loss']['args']['beta'],
+                                                     num_classes=config['num_classes'])
+    elif config['train_loss']['type'] == 'TruncatedLoss':
+        train_loss = getattr(module_loss, 'TruncatedLoss')(q=config['train_loss']['args']['q'],
+                                                           k=config['train_loss']['args']['k'],
+                                                           trainset_size=num_examp)
 
     val_loss = getattr(module_loss, config['val_loss'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
@@ -104,22 +114,36 @@ if __name__ == '__main__':
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
-
+    
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
     options = [
         CustomArgs(['--lr', '--learning_rate'], type=float, target=('optimizer', 'args', 'lr')),
         CustomArgs(['--bs', '--batch_size'], type=int, target=('data_loader', 'args', 'batch_size')),
-        CustomArgs(['--lamb', '--lamb'], type=float, target=('train_loss', 'args', 'lambda')),
-        CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')),
         CustomArgs(['--percent', '--percent'], type=float, target=('trainer', 'percent')),
         CustomArgs(['--asym', '--asym'], type=bool, target=('trainer', 'asym')),
         CustomArgs(['--name', '--exp_name'], type=str, target=('name',)),
         CustomArgs(['--seed', '--seed'], type=int, target=('seed',))
     ]
+    
+    config = ConfigParser.get_instance(args, options)
+    if config['train_loss']['type'] == 'ELRLoss':
+        options.append(CustomArgs(['--lamb', '--lamb'], type=float, target=('train_loss', 'args', 'lambda')))
+        options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
+    elif config['train_loss']['type'] == 'SCELoss':
+        options.append(CustomArgs(['--alpha', '--alpha'], type=float, target=('train_loss', 'args', 'alpha')))
+        options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
+    elif config['train_loss']['type'] == 'TruncatedLoss':
+        options.append(CustomArgs(['--q', '--q'], type=float, target=('train_loss', 'args', 'q')))
+        options.append(CustomArgs(['--k', '--k'], type=float, target=('train_loss', 'args', 'k')))
+#     elif config['train_loss']['type'] == ...:
+#         options.append(somethings...)
+
     config = ConfigParser.get_instance(args, options)
 
     random.seed(config['seed'])
     torch.manual_seed(config['seed'])
     torch.cuda.manual_seed_all(config['seed'])
+    
+    ### TRAINING ###
     main(config)

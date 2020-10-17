@@ -19,7 +19,6 @@ class TruncatedLoss(nn.Module):
 
         loss = ((1-(Yg**self.q))/self.q)*self.weight[indexes] - ((1-(self.k**self.q))/self.q)*self.weight[indexes]
         loss = torch.mean(loss)
-
         return loss
 
     def update_weight(self, logits, targets, indexes):

@@ -11,7 +11,7 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import Trainer
+from trainer import DefaultTrainer, TruncatedTrainer
 from collections import OrderedDict
 import random
 
@@ -78,10 +78,11 @@ def main(config: ConfigParser):
         train_loss = getattr(module_loss, 'SCELoss')(alpha=config['train_loss']['args']['alpha'],
                                                      beta=config['train_loss']['args']['beta'],
                                                      num_classes=config['num_classes'])
-    elif config['train_loss']['type'] == 'TruncatedLoss':
-        train_loss = getattr(module_loss, 'TruncatedLoss')(q=config['train_loss']['args']['q'],
-                                                           k=config['train_loss']['args']['k'],
-                                                           trainset_size=num_examp)
+    elif config['train_loss']['type'] == 'GCELoss':
+        train_loss = getattr(module_loss, 'GCELoss')(q=config['train_loss']['args']['q'],
+                                                     k=config['train_loss']['args']['k'],
+                                                     trainset_size=num_examp,
+                                                     truncated=config['train_loss']['args']['truncated'])
 
     val_loss = getattr(module_loss, config['val_loss'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
@@ -93,13 +94,39 @@ def main(config: ConfigParser):
 
     lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
-    trainer = Trainer(model, train_loss, metrics, optimizer,
-                      config=config,
-                      data_loader=data_loader,
-                      valid_data_loader=valid_data_loader,
-                      test_data_loader=test_data_loader,
-                      lr_scheduler=lr_scheduler,
-                      val_criterion=val_loss)
+    if config['train_loss']['type'] == 'ELRLoss':
+        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss)
+    elif config['train_loss']['type'] == 'SCELoss':
+        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss)
+    elif config['train_loss']['type'] == 'GCELoss':
+        if config['train_loss']['args']['truncated'] == False:
+            trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss)
+        elif config['train_loss']['args']['truncated'] == True:
+            trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
+                                      config=config,
+                                      data_loader=data_loader,
+                                      valid_data_loader=valid_data_loader,
+                                      test_data_loader=test_data_loader,
+                                      lr_scheduler=lr_scheduler,
+                                      val_criterion=val_loss)
 
     trainer.train()
     logger = config.get_logger('trainer', config['trainer']['verbosity'])
@@ -133,9 +160,10 @@ if __name__ == '__main__':
     elif config['train_loss']['type'] == 'SCELoss':
         options.append(CustomArgs(['--alpha', '--alpha'], type=float, target=('train_loss', 'args', 'alpha')))
         options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
-    elif config['train_loss']['type'] == 'TruncatedLoss':
+    elif config['train_loss']['type'] == 'GCELoss':
         options.append(CustomArgs(['--q', '--q'], type=float, target=('train_loss', 'args', 'q')))
         options.append(CustomArgs(['--k', '--k'], type=float, target=('train_loss', 'args', 'k')))
+        options.append(CustomArgs(['--truncated', '--truncated'], type=bool, target=('train_loss', 'args', 'truncated')))
 #     elif config['train_loss']['type'] == ...:
 #         options.append(somethings...)
 

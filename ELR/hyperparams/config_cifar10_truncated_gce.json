@@ -38,7 +38,8 @@
         "args":{
             "q": 0.7,
             "k": 0.5,
-            "truncated": false
+            "truncated": true,
+            "prune": 40
         }
     },
 

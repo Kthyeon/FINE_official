@@ -12,6 +12,8 @@ class SCELoss(torch.nn.Module):
         self.cross_entropy = torch.nn.CrossEntropyLoss()
 
     def forward(self, pred, labels, index=None):
+        # index is redundant input for SCELoss
+        
         # CCE
         ce = self.cross_entropy(pred, labels)
 

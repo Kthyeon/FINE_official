@@ -14,6 +14,7 @@ from parse_config import ConfigParser
 from trainer import DefaultTrainer, TruncatedTrainer
 from collections import OrderedDict
 import random
+import numpy as np
 
 
 

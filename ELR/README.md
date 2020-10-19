@@ -6,13 +6,14 @@ This is an official PyTorch implementation of ELR method proposed in [Early-Lear
 Train the network on the Symmmetric Noise CIFAR-10 dataset (noise rate = 0.8):
 
 ```
-python train.py -c config_cifar10.json --percent 0.8
+python train.py -c ./hyperparams/cosine/config_cifar10_elr.json --percent 0.8
+python train.py -c ./hyperparams/multistep/confic_cifar10_elr.json --percent 0.8
 ```
 
 Train the network on the Asymmmetric Noise CIFAR-100 dataset (noise rate = 0.4):
 
 ```
-python train.py -c config_cifar100.json --percent 0.4 --asym 1
+python train.py -c ./hyperparams/cosine/config_cifar100.json --percent 0.4 --asym 1
 ```
 
 The config files can be modified to adjust hyperparameters and optimization settings. 

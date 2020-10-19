@@ -176,6 +176,10 @@ if __name__ == '__main__':
     random.seed(config['seed'])
     torch.manual_seed(config['seed'])
     torch.cuda.manual_seed_all(config['seed'])
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(config['seed'])
+
+
     
     ### TRAINING ###
     main(config)

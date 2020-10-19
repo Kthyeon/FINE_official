@@ -178,8 +178,12 @@ if __name__ == '__main__':
     torch.cuda.manual_seed_all(config['seed'])
     torch.backends.cudnn.deterministic = True
     np.random.seed(config['seed'])
+<<<<<<< HEAD
 
 
+=======
+                
+>>>>>>> 7c58b88c33e56eb369ac2ae805782a64efd8eee6
     
     ### TRAINING ###
     main(config)

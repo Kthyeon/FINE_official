@@ -31,7 +31,11 @@ def log_params(conf: OrderedDict, parent_key: str = None):
 
 
 def main(config: ConfigParser):
-
+    
+    # By default, pytorch utilizes multi-threaded cpu
+    # Set to handle whole procedures on a single core
+    torch.set_num_threads(1)
+    
     logger = config.get_logger('train')
 
     data_loader = getattr(module_data, config['data_loader']['type'])(

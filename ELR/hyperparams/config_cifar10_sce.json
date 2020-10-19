@@ -36,7 +36,7 @@
     "train_loss": {
         "type": "SCELoss",
         "args":{
-            "alpha": 1.0,
+            "alpha": 0.1,
             "beta": 1.0
         }
     },

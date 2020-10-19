@@ -1,5 +1,6 @@
 # ELR
-This is an official PyTorch implementation of ELR method proposed in [Early-Learning Regularization Prevents Memorization of Noisy Labels](). 
+This is an non-official PyTorch implementation of ELR method proposed in [Early-Learning Regularization Prevents Memorization of Noisy Labels]().
+This also include PyTorch implementation of SCE and GCE method.
 
 
 ## Usage
@@ -7,7 +8,7 @@ Train the network on the Symmmetric Noise CIFAR-10 dataset (noise rate = 0.8):
 
 ```
 python train.py -c ./hyperparams/cosine/config_cifar10_elr.json --percent 0.8
-python train.py -c ./hyperparams/multistep/confic_cifar10_elr.json --percent 0.8
+python train.py -c ./hyperparams/multistep/config_cifar10_elr.json --percent 0.8
 ```
 
 Train the network on the Asymmmetric Noise CIFAR-100 dataset (noise rate = 0.4):

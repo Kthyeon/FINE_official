@@ -49,7 +49,6 @@ class DefaultTrainer(BaseTrainer):
 
     def _train_epoch(self, epoch):
         """
-        Training logic for an epoch
 
         :param epoch: Current training epoch.
         :return: A log that contains all information you want to save.

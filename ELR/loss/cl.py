@@ -3,32 +3,41 @@ import torch
 from parse_config import ConfigParser
 import torch.nn as nn
 
-def CrossEntropyLoss(output, target):
-    return F.cross_entropy(output, target)
-
-
-class ELRLoss(nn.Module):
-    def __init__(self, num_examp, num_classes=10, beta=0.3):
-        super().__init__()
-        self.num_classes = num_classes
-        self.config = ConfigParser.get_instance()
-        self.USE_CUDA = torch.cuda.is_available()
-        self.target = torch.zeros(num_examp, self.num_classes).cuda() if self.USE_CUDA else torch.zeros(num_examp, self.num_classes)
-        self.beta = beta
-        
-    def forward(self, output, label, index):
-        y_pred = F.softmax(output,dim=1)
-        y_pred = torch.clamp(y_pred, 1e-4, 1.0-1e-4)
-        y_pred_ = y_pred.data.detach()
-        self.target[index] = self.beta * self.target[index] + (1-self.beta) * ((y_pred_)/(y_pred_).sum(dim=1,keepdim=True))
-        ce_loss = F.cross_entropy(output, label)
-        elr_reg = ((1-(self.target[index] * y_pred).sum(dim=1)).log()).mean()
-        final_loss = ce_loss +  self.config['train_loss']['args']['lambda']*elr_reg
-        return  final_loss
-    
 class NPCLoss(nn.Module):
+    def __init__(self, epsilon):
+        super().__init__()
+        self.epsilon = epsilon
     
+    def forward(self, output, target, epoch):
+        # set base loss function
+        base_loss = SoftHingeLoss()
 
+        # margin for each data point = t_y - max(i!=y)t_i , y is target class num, shape (Batch_size,)
+        tmp_output = output.clone()
+        target = target.long()
+        tmp_output[range(len(output)), target] = float("-inf")
+        margin = output[range(len(output)), target] - torch.max(tmp_output, dim=1).values
+        
+        # calculate threshold
+        batch_size = output.shape[0]
+        threshold = ((1 - self.epsilon) ** 2) * batch_size + (1 - self.epsilon) * torch.sum(torch.ones(batch_size)[margin < 0])
+        threshold = int(threshold)
+        
+        # parameters required to calculate NPCL
+        v = partial_opt(margin, threshold, base_loss)
+        l = base_loss(margin)
+        
+        # calculate NPCL
+        npcl_1 = torch.dot(v, l)
+        npcl_2 = threshold - torch.sum(v)
+        
+        if npcl_1 < npcl_2:
+            npcl = npcl_2
+        else:
+            npcl = npcl_1
+        
+        return npcl
+        
 class CLoss(nn.Module):
     def __init__(self):
         super().__init__()

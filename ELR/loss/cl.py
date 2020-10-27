@@ -78,13 +78,8 @@ class CLoss(nn.Module):
             curriculum_loss = curriculum_loss_1
         
         return curriculum_loss
-        
-class SoftHingeLoss(nn.Module):
-    def __init__(self):
-        super(SoftHingeLoss, self).__init__()
-
-    def forward(self, margin):
-        # soft hinge loss described in the paper elr, appendix H
+    
+def SoftHingeLoss(margin): #margin.shape = [batch_size]
         if margin >= 0:
             soft_hinge_loss = 1 - margin
         else:
@@ -93,14 +88,35 @@ class SoftHingeLoss(nn.Module):
         soft_hinge_loss[soft_hinge_loss < 0] = 0
         
         return soft_hinge_loss
-    
-class HardHingeLoss(nn.Module):
-    def __init__(self):
-        super(HardHingeLoss, self).__init__()
 
-    def forward(self, margin):
-        # hard hinge loss described in the paper elr, appendix H
-        hard_hinge_loss = 1 - margin
-        hard_hinge_loss[soft_hinge_loss < 0] = 0
+def HardHingeLoss(margin):
+    hard_hinge_loss = 1 - margin
+    hard_hinge_loss[soft_hinge_loss < 0] = 0
+
+    return hard_hinge_loss
+
+# class SoftHingeLoss(nn.Module):
+#     def __init__(self):
+#         super(SoftHingeLoss, self).__init__()
+
+#     def forward(self, margin):
+#         # soft hinge loss described in the paper elr, appendix H
+#         if margin >= 0:
+#             soft_hinge_loss = 1 - margin
+#         else:
+#             soft_hinge_loss = 1 - output[range(len(output)), target] + torch.logsumexp(output, dim=1)
         
-        return hard_hinge_loss
+#         soft_hinge_loss[soft_hinge_loss < 0] = 0
+        
+#         return soft_hinge_loss
+    
+# class HardHingeLoss(nn.Module):
+#     def __init__(self):
+#         super(HardHingeLoss, self).__init__()
+
+#     def forward(self, margin):
+#         # hard hinge loss described in the paper elr, appendix H
+#         hard_hinge_loss = 1 - margin
+#         hard_hinge_loss[soft_hinge_loss < 0] = 0
+        
+#         return hard_hinge_loss

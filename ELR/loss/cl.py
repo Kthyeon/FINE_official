@@ -27,7 +27,9 @@ class ELRLoss(nn.Module):
         return  final_loss
     
 class NPCLoss(nn.Module):
-
+    
+    
+    
 class SoftHingeLoss(nn.Module):
     def __init__(self):
         super(SoftHingeLoss, self).__init__()
@@ -50,3 +52,21 @@ class SoftHingeLoss(nn.Module):
         
         return soft_hinge_loss
     
+class HardHingeLoss(nn.Module):
+    def __init__(self):
+        super(HardHingeLoss, self).__init__()
+
+    def forward(self, output, target):
+        tmp_output = output.clone()
+        target = target.long()
+        tmp_output[range(len(output)), target] = float("-inf")
+        
+        # margin for each data point = t_y - max(i!=y)t_i , y is target class num
+        margin = output[range(len(output)), target] - torch.max(tmp_output, dim=1).values
+        
+        # soft hinge loss described in the paper elr, appendix H
+        
+        hard_hinge_loss = 1 - margin
+        hard_hinge_loss[soft_hinge_loss < 0] = 0
+        
+        return hard_hinge_loss

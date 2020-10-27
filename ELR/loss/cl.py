@@ -28,7 +28,28 @@ class ELRLoss(nn.Module):
     
 class NPCLoss(nn.Module):
     
+
+class CLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
     
+    def forward(self, output, target, epoch):
+        if epoch < 10:
+            base_loss = HardHingeLoss()
+        else:
+            base_loss = SoftHingeLoss()
+            
+        tmp_output = output.clone()
+        target = target.long()
+        tmp_output[range(len(output)), target] = float("-inf")
+        
+        # margin for each data point = t_y - max(i!=y)t_i , y is target class num, shape (Batch_size,)
+        margin = output[range(len(output)), target] - torch.max(tmp_output, dim=1).values
+        
+        v = self.algorithm1(margin, threshold)
+        
+        
+        
     
 class SoftHingeLoss(nn.Module):
     def __init__(self):
@@ -64,7 +85,7 @@ class HardHingeLoss(nn.Module):
         # margin for each data point = t_y - max(i!=y)t_i , y is target class num
         margin = output[range(len(output)), target] - torch.max(tmp_output, dim=1).values
         
-        # soft hinge loss described in the paper elr, appendix H
+        # hard hinge loss described in the paper elr, appendix H
         
         hard_hinge_loss = 1 - margin
         hard_hinge_loss[soft_hinge_loss < 0] = 0

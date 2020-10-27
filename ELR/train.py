@@ -88,7 +88,12 @@ def main(config: ConfigParser):
                                                      k=config['train_loss']['args']['k'],
                                                      trainset_size=num_examp,
                                                      truncated=config['train_loss']['args']['truncated'])
-
+    elif config['train_loss']['type'] == 'CLoss' or config['train_loss']['type'] == 'NPCLoss':
+        train_loss = getattr(module_loss, config['train_loss']['type'])(q=config['train_loss']['args']['q'],
+                                                     k=config['train_loss']['args']['k'],
+                                                     trainset_size=num_examp,
+                                                     truncated=config['train_loss']['args']['truncated'])
+        
     val_loss = getattr(module_loss, config['val_loss'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
 

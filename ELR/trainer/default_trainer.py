@@ -74,8 +74,10 @@ class DefaultTrainer(BaseTrainer):
                 data, label = data.to(self.device), label.long().to(self.device)
                 
                 output = self.model(data)
-
-                loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
+                if self.config['train_loss']['type'] == 'CLoss' or self.config['train_loss']['type'] == 'NPCLoss':
+                    loss = self.train_criterion(output, label, epoch, indexs.cpu().detach().numpy().tolist())
+                else:
+                    loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
                 self.optimizer.zero_grad()
                 loss.backward()
 

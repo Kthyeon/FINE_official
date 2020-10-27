@@ -6,9 +6,10 @@ import torch.nn as nn
 def CrossEntropyLoss(output, target):
     return F.cross_entropy(output, target)
 
-def partial_opt(margin, threshold, base_loss):
+#일단 softhinge만 사용하는 거로
+def partial_opt(margin, threshold):
     L = 0
-    loss_value = base_loss(margin) #calculate soft hing loss value
+    loss_value = SoftHingeLoss(margin, output, target) #calculate soft hing loss value
     batch_size = len(margin)
     v_set = torch.empty(batch_size)
     sorted_margin, index = torch.sort(margin) #Sort in non-dereasing order
@@ -24,38 +25,47 @@ def partial_opt(margin, threshold, base_loss):
     
     return v_set
 
-class ELRLoss(nn.Module):
-    def __init__(self, num_examp, num_classes=10, beta=0.3):
-        super().__init__()
-        self.num_classes = num_classes
-        self.config = ConfigParser.get_instance()
-        self.USE_CUDA = torch.cuda.is_available()
-        self.target = torch.zeros(num_examp, self.num_classes).cuda() if self.USE_CUDA else torch.zeros(num_examp, self.num_classes)
-        self.beta = beta
+class NPCLoss(nn.Module):	
+    def __init__(self, epsilon):	   
+        super().__init__()	
+        self.epsilon = epsilon	
+
+    def forward(self, output, target, epoch):	
+        # set base loss function	
+#         base_loss = SoftHingeLoss()
         
-    def forward(self, output, label, index):
-        y_pred = F.softmax(output,dim=1)
-        y_pred = torch.clamp(y_pred, 1e-4, 1.0-1e-4)
-        y_pred_ = y_pred.data.detach()
-        self.target[index] = self.beta * self.target[index] + (1-self.beta) * ((y_pred_)/(y_pred_).sum(dim=1,keepdim=True))
-        ce_loss = F.cross_entropy(output, label)
-        elr_reg = ((1-(self.target[index] * y_pred).sum(dim=1)).log()).mean()
-        final_loss = ce_loss +  self.config['train_loss']['args']['lambda']*elr_reg
-        return  final_loss
-    
-class NPCLoss(nn.Module):
-    
+        # margin for each data point = t_y - max(i!=y)t_i , y is target class num, shape (Batch_size,)
+        tmp_output = output.clone()
+        target = target.long()
+        tmp_output[range(len(output)), target] = torch.max(tmp_output, dim=1).values
+        
+        #calculate threshold
+        batch_size = output.shape[0]
+        threshold = ((1 - self.epsilon) ** 2) * batch_size + (1 - self.epsilon) * torch.sum(torch.ones(batch_size)[margin < 0])
+        
+        threshold = int(threshold) #threshold 왜 int???
+
+        # parameters required to calculate NPCL
+        v = partial_opt(margin, threshold)
+        l = SoftHingeLoss(margin)
+
+        # calculate NPCL
+        npcl_1 = torch.dot(v, l)
+        npcl_2 = threshold - torch.sum(v)
+
+        return npcl_1 if npcl_1 < npcl_2 else npcl_2
 
 class CLoss(nn.Module):
     def __init__(self):
         super().__init__()
     
     def forward(self, output, target, epoch):
+        ''' Check
         if epoch < 10:
             base_loss = HardHingeLoss()
         else:
             base_loss = SoftHingeLoss()
-            
+        '''
         tmp_output = output.clone()
         target = target.long()
         tmp_output[range(len(output)), target] = float("-inf")
@@ -64,59 +74,26 @@ class CLoss(nn.Module):
         margin = output[range(len(output)), target] - torch.max(tmp_output, dim=1).values
         
         # parameters required to calculate curriculum loss
-        v = partial_opt(margin, threshold, base_loss)
-        l = base_loss(margin)
+        v = partial_opt(margin, threshold) # shape = [batch] / 0 or 1
+        l = SoftHingeLoss(margin) # shape = [batch]
         batch_size = output.shape[0]
         
         # curriculum loss is maximum value between loss 1 and 2
         curriculum_loss_1 = torch.dot(v, l)
         curriculum_loss_2 = batch_size - torch.sum(v) + torch.sum(torch.ones(batch_size)[margin < 0])
         
-        if curriculum_loss_1 < curriculum_loss_2:
-            curriculum_loss = curriculum_loss_2
-        else:
-            curriculum_loss = curriculum_loss_1
-        
-        return curriculum_loss
+        return curriculm_loss_1 if curriculm_loss_1 < curriculum_loss_2 else curriculm_loss_2
     
-def SoftHingeLoss(margin): #margin.shape = [batch_size]
-        if margin >= 0:
-            soft_hinge_loss = 1 - margin
-        else:
-            soft_hinge_loss = 1 - output[range(len(output)), target] + torch.logsumexp(output, dim=1)
-        
-        soft_hinge_loss[soft_hinge_loss < 0] = 0
-        
-        return soft_hinge_loss
+def SoftHingeLoss(margin, output, target): #margin.shape = [batch_size]
+    
+    soft_hinge_loss = torch.where(margin > 0, 1 - margin, 1 - output[range(len(output)), target] + torch.logsumexp(output, dim=1))
+    soft_hinge_loss[soft_hinge_loss < 0] = 0 #soft_hinge_loss.shape = [batch_size]
 
-def HardHingeLoss(margin):
+    return soft_hinge_loss
+
+def HardHingeLoss(margin): # margin.shape = [batch_size]
+    
     hard_hinge_loss = 1 - margin
-    hard_hinge_loss[soft_hinge_loss < 0] = 0
+    hard_hinge_loss[hard_hinge_loss < 0] = 0
 
     return hard_hinge_loss
-
-# class SoftHingeLoss(nn.Module):
-#     def __init__(self):
-#         super(SoftHingeLoss, self).__init__()
-
-#     def forward(self, margin):
-#         # soft hinge loss described in the paper elr, appendix H
-#         if margin >= 0:
-#             soft_hinge_loss = 1 - margin
-#         else:
-#             soft_hinge_loss = 1 - output[range(len(output)), target] + torch.logsumexp(output, dim=1)
-        
-#         soft_hinge_loss[soft_hinge_loss < 0] = 0
-        
-#         return soft_hinge_loss
-    
-# class HardHingeLoss(nn.Module):
-#     def __init__(self):
-#         super(HardHingeLoss, self).__init__()
-
-#     def forward(self, margin):
-#         # hard hinge loss described in the paper elr, appendix H
-#         hard_hinge_loss = 1 - margin
-#         hard_hinge_loss[soft_hinge_loss < 0] = 0
-        
-#         return hard_hinge_loss

@@ -8,7 +8,7 @@ from utils import inf_loop
 import sys
 from sklearn.mixture import GaussianMixture
 
-class DefaultTrainer(BaseTrainer):
+class NPCLTrainer(BaseTrainer):
     """
     DefaultTrainer class
 
@@ -74,10 +74,7 @@ class DefaultTrainer(BaseTrainer):
                 data, label = data.to(self.device), label.long().to(self.device)
                 
                 output = self.model(data)
-                if self.config['train_loss']['type'] == 'CLoss' or self.config['train_loss']['type'] == 'NPCLoss':
-                    loss = self.train_criterion(output, label, epoch, indexs.cpu().detach().numpy().tolist())
-                else:
-                    loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
+                loss = self.train_criterion(output, label)
                 self.optimizer.zero_grad()
                 loss.backward()
 

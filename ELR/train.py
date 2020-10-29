@@ -11,7 +11,7 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer
+from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer
 from collections import OrderedDict
 import random
 import numpy as np
@@ -135,7 +135,7 @@ def main(config: ConfigParser):
                                       lr_scheduler=lr_scheduler,
                                       val_criterion=val_loss)
     elif config['train_loss']['type'] == 'NPCLoss':
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+        trainer = NPCLTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      valid_data_loader=valid_data_loader,

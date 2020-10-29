@@ -57,7 +57,7 @@ class NPCLoss(nn.Module):
         threshold = int(threshold) #threshold 왜 int???
 
         # parameters required to calculate NPCL
-        l = softHingeLoss(margin).to('cuda')
+        l = softHingeLoss(margin, output, target).to('cuda')
         v = partial_opt(l, threshold).to('cuda')
 
         # calculate NPCL

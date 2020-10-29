@@ -7,6 +7,7 @@ from base import BaseTrainer
 from utils import inf_loop
 import sys
 from sklearn.mixture import GaussianMixture
+import pdb
 
 class DefaultTrainer(BaseTrainer):
     """
@@ -78,6 +79,7 @@ class DefaultTrainer(BaseTrainer):
                     loss = self.train_criterion(output, label, epoch, indexs.cpu().detach().numpy().tolist())
                 else:
                     loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
+#                 pdb.set_trace()
                 self.optimizer.zero_grad()
                 loss.backward()
 

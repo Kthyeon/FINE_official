@@ -8,16 +8,15 @@ import pdb
 def partial_opt(loss_value, threshold):
     L = 0
     batch_size = len(loss_value)
-#     v_set = torch.nn.Parameter(data=torch.ones(batch_size), requires_grad=False)
-    v_set = torch.ones(batch_size)
+    v_set = torch.empty(batch_size)
     sorted_loss, index = torch.sort(loss_value) #Sort losses in non-dereasing order
                         
     for i in range(batch_size):
         L += sorted_loss[i]
         if L <= (threshold + 1 - i):
-            v_set[index[i]] = 1
+            v_set[index[i]] == 1
         else:
-            v_set[index[i]] = 0
+            v_set[index[i]] == 0
             
     v_set = v_set.float()
     
@@ -65,13 +64,8 @@ class NPCLoss(nn.Module):
         # calculate NPCL
         npcl_1 = torch.dot(v, loss_val).to('cuda')
         npcl_2 = threshold - torch.sum(v).to('cuda')
-        npcl_2.requires_grad=True
-        
-        loss_final = npcl_2 if npcl_1 < npcl_2 else npcl_1
 #         pdb.set_trace()
-#         loss_val.requires_grad = True
-        
-        return loss_final
+        return npcl_2 if npcl_1 < npcl_2 else npcl_1
     
 class CLoss(nn.Module):
     def __init__(self):

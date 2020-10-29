@@ -7,6 +7,7 @@ from base import BaseTrainer
 from utils import inf_loop
 import sys
 from sklearn.mixture import GaussianMixture
+import pdb
 
 class NPCLTrainer(BaseTrainer):
     """
@@ -75,6 +76,8 @@ class NPCLTrainer(BaseTrainer):
                 
                 output = self.model(data)
                 loss = self.train_criterion(output, label)
+#                 loss.requires_grad=True
+#                 pdb.set_trace()
                 self.optimizer.zero_grad()
                 loss.backward()
 

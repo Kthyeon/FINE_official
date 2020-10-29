@@ -17,7 +17,7 @@ def partial_opt(loss_value, threshold):
         else:
             v_set[index[i]] == 0
             
-    v_set = v_set.long()
+    v_set = v_set.float()
     
     return v_set
 
@@ -57,8 +57,8 @@ class NPCLoss(nn.Module):
         threshold = int(threshold) #threshold 왜 int???
 
         # parameters required to calculate NPCL
-        l = softHingeLoss(margin)
-        v = partial_opt(l, threshold)
+        l = softHingeLoss(margin).to('cuda')
+        v = partial_opt(l, threshold).to('cuda')
 
         # calculate NPCL
         npcl_1 = torch.dot(v, l)
@@ -79,9 +79,9 @@ class CLoss(nn.Module):
         
         # parameters required to calculate curriculum loss
         batch_size = output.shape[0]
-        l = softHingeLoss(margin, output, target) # shape = [batch]
+        l = softHingeLoss(margin, output, target).to('cuda') # shape = [batch]
         threshold = batch_size # temporarily set to n; it should be 0 <= C <= 2n
-        v = partial_opt(l, threshold) # shape = [batch] / 0 or 1
+        v = partial_opt(l, threshold).to('cuda') # shape = [batch] / 0 or 1
         
         
         # curriculum loss is maximum value between loss 1 and 2

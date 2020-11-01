@@ -21,8 +21,10 @@ def partial_opt(loss_value, threshold):
 
 def softHingeLoss(margin, output, target): #margin.shape = [batch_size]
     
-    soft_hinge_loss = torch.where(margin >= 0, 1 - margin, 1 - output[range(len(output)), target] + torch.logsumexp(output, dim=1))
-    soft_hinge_loss[soft_hinge_loss < 0] = 0 #soft_hinge_loss.shape = [batch_size]
+    fst_term = F.relu(1 - margin)
+    snd_term = F.relu(1 - output[range(len(output)), target] + torch.logsumexp(output, dim=1))
+    soft_hinge_loss = torch.where(margin >= 0, fst_term, snd_term)
+
 
     return soft_hinge_loss
 
@@ -53,11 +55,12 @@ class NPCLoss(nn.Module):
 #         base_loss = SoftHingeLoss()
         
         # margin for each data point = t_y - max(i!=y)t_i ; y is target class num, shape (Batch_size,)
-        tmp_output = output.clone()
         target = target.long()
-        tmp_output[range(len(output)), target] = float("-inf")
-        margin = output[range(len(output)), target] - torch.max(tmp_output, dim=1).values
-        
+        # output = F.softmax(output, dim=1)
+        values, indices = torch.topk(output, k=2, dim=1)
+        margin1 = output[range(len(output)), target] - values[:, 0]
+        margin2 = output[range(len(output)), target] - values[:, 1]
+        margin = torch.where(margin1 != 0, margin1, margin2)
         
         #calculate threshold
         batch_size = output.shape[0]
@@ -74,9 +77,9 @@ class NPCLoss(nn.Module):
         npcl_2 = threshold - torch.sum(bi(loss_val[v_index])).to('cuda')
         npcl_2.requires_grad=True
         
-        loss_final = npcl_2 if npcl_1 < npcl_2 else npcl_1
+        loss_final = torch.max(npcl_1, npcl_2)# npcl_2 if npcl_1 < npcl_2 else npcl_1
         
-        return loss_final / len(v_index)
+        return loss_final /  len(v_index)
     
 class CLoss(nn.Module):
     def __init__(self):

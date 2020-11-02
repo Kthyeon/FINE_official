@@ -91,8 +91,7 @@ class Binary(nn.Module):
 
     def forward(self, x):
         
-        return torch.ones_like(x)
-    
+        return (x+1e-10) / x
 
 
 class NPCLoss(nn.Module):	
@@ -114,20 +113,19 @@ class NPCLoss(nn.Module):
         # print(torch.sum(margin < 0.))
         
         #calculate threshold
-        bi1 = Binary()
-        bi2 = Binary()
-        threshold = ((1 - self.epsilon) ** 2) * torch.sum(bi1(margin)) + (1 - self.epsilon) * torch.sum(margin < 0.)
+        bi = Binary()
+        threshold = ((1 - self.epsilon) ** 2) * output.shape[0] + (1 - self.epsilon) * torch.sum(margin < 0.)
          #threshold 왜 int???
         
         # parameters required to calculate NPCL
-        loss_val1 = softHingeLoss(margin, output, target).to('cuda')
-        loss_val2 = hardHingeLoss(margin).to('cuda')
-        loss_val = 1.0 * loss_val1 + 0.0 * loss_val2
+        loss_val = softHingeLoss(margin, output, target).to('cuda')
+#        loss_val2 = hardHingeLoss(margin).to('cuda')
+#        loss_val = 1.0 * loss_val1 + 0.0 * loss_val2
         v_index = partial_opt(loss_val, threshold) #.to('cuda')
 
         # calculate NPCL
         npcl_1 = torch.sum(loss_val[v_index]).to('cuda')
-        npcl_2 = threshold - torch.sum(bi2(loss_val[v_index])).to('cuda')
+        npcl_2 = threshold - torch.sum(bi(loss_val[v_index])).to('cuda')
 #        npcl_2.requires_grad=True
         
         loss_final = torch.max(npcl_1, npcl_2) # npcl_2 if npcl_1 < npcl_2 else npcl_1

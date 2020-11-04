@@ -7,6 +7,9 @@ from base import BaseTrainer
 from utils import inf_loop
 import sys
 from sklearn.mixture import GaussianMixture
+from loss.mixup import mixup
+import torch.nn.functional as F
+
 
 class DefaultTrainer(BaseTrainer):
     """
@@ -15,11 +18,12 @@ class DefaultTrainer(BaseTrainer):
     Note:
         Inherited from BaseTrainer.
     """
-    def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
-                 valid_data_loader=None, test_data_loader=None, lr_scheduler=None, len_epoch=None, val_criterion=None):
+    def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,mixup = False, teacher = None, valid_data_loader=None, test_data_loader=None, lr_scheduler=None, len_epoch=None, val_criterion=None):
         super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion)
         self.config = config
         self.data_loader = data_loader
+        self.teacher = teacher.to(self.device)
+        self.mixup = mixup
         if len_epoch is None:
             # epoch-based training
             self.len_epoch = len(self.data_loader)
@@ -73,10 +77,24 @@ class DefaultTrainer(BaseTrainer):
                 progress.set_description_str(f'Train epoch {epoch}')
                 
                 data, label = data.to(self.device), label.long().to(self.device)
+                if self.teacher:
+                    _, tea_pred = torch.max(self.teacher(data), dim=1)
+                    tea_pred = tea_pred.long().to(self.device)
+                if self.mixup:
+                    if self.teacher:
+                        lam, data, labels1, labels2 = mixup(data, label, self.device, tea_pred)
+                    else:
+                        lam, data, labels1, labels2 = mixup(data, label, self.device)
                 
                 output = self.model(data)
-
-                loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
+                
+                if self.mixup:
+                    loss = lam * self.train_criterion(output, labels1, indexs.cpu().detach().numpy().tolist())
+                    loss += (1-lam) * self.train_criterion(output, labels2, indexs.cpu().detach().numpy().tolist())
+                elif self.teacher:
+                    loss = self.train_criterion(output, tea_pred, indexs.cpu().detach().numpy().tolist())
+                else:
+                    loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
                 self.optimizer.zero_grad()
                 loss.backward()
 

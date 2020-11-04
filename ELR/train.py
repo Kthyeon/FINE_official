@@ -14,6 +14,7 @@ from parse_config import ConfigParser
 from trainer import DefaultTrainer, TruncatedTrainer
 from collections import OrderedDict
 import random
+import numpy as np
 
 
 
@@ -30,7 +31,7 @@ def log_params(conf: OrderedDict, parent_key: str = None):
             log_params(value, combined_key)
 
 
-def main(config: ConfigParser):
+def main(parse, config: ConfigParser):
     
     # By default, pytorch utilizes multi-threaded cpu
     # Set to handle whole procedures on a single core
@@ -66,6 +67,14 @@ def main(config: ConfigParser):
 
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch)
+    if parse.distillation:
+        teacher = config.initialize('arch', module_arch)
+        teacher.load_state_dict(torch.load('./asym_40_gce.pth', map_location = 'cpu')['state_dict'])
+        for params in teacher.parameters():
+            params.requires_grad = False
+    else:
+        teacher = None
+    
 
     # get function handles of loss and metrics
     logger.info(config.config)
@@ -73,6 +82,7 @@ def main(config: ConfigParser):
         num_examp = data_loader.dataset.num_raw_example
     else:
         num_examp = len(data_loader.dataset)
+    
     
     if config['train_loss']['type'] == 'ELRLoss':
         train_loss = getattr(module_loss, 'ELRLoss')(num_examp=num_examp, 
@@ -101,6 +111,8 @@ def main(config: ConfigParser):
     if config['train_loss']['type'] == 'ELRLoss':
         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
+                                     mixup=parse.mixup,
+                                     teacher=teacher,
                                      data_loader=data_loader,
                                      valid_data_loader=valid_data_loader,
                                      test_data_loader=test_data_loader,
@@ -109,6 +121,8 @@ def main(config: ConfigParser):
     elif config['train_loss']['type'] == 'SCELoss':
         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
+                                     mixup=parse.mixup,
+                                     teacher=teacher,
                                      data_loader=data_loader,
                                      valid_data_loader=valid_data_loader,
                                      test_data_loader=test_data_loader,
@@ -118,7 +132,9 @@ def main(config: ConfigParser):
         if config['train_loss']['args']['truncated'] == False:
             trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
+                                     mixup=parse.mixup,
                                      data_loader=data_loader,
+                                     teacher=teacher,
                                      valid_data_loader=valid_data_loader,
                                      test_data_loader=test_data_loader,
                                      lr_scheduler=lr_scheduler,
@@ -145,6 +161,9 @@ if __name__ == '__main__':
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
+    args.add_argument('--mixup', help='whether to use mixup', action='store_true')
+    args.add_argument('--distillation', help='whether to distill knowledge', action='store_true')
+
     
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
@@ -170,7 +189,7 @@ if __name__ == '__main__':
         options.append(CustomArgs(['--truncated', '--truncated'], type=bool, target=('train_loss', 'args', 'truncated')))
 #     elif config['train_loss']['type'] == ...:
 #         options.append(somethings...)
-
+    parse = args.parse_args()
     config = ConfigParser.get_instance(args, options)
 
     random.seed(config['seed'])
@@ -180,4 +199,4 @@ if __name__ == '__main__':
     np.random.seed(config['seed'])
     
     ### TRAINING ###
-    main(config)
+    main(parse, config)

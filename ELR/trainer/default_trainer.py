@@ -22,7 +22,10 @@ class DefaultTrainer(BaseTrainer):
         super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion)
         self.config = config
         self.data_loader = data_loader
-        self.teacher = teacher.to(self.device)
+        if teacher !=None:
+            self.teacher = teacher.to(self.device)
+        else:
+            self.teacher = teacher
         self.mixup = mixup
         if len_epoch is None:
             # epoch-based training
@@ -78,21 +81,26 @@ class DefaultTrainer(BaseTrainer):
                 
                 data, label = data.to(self.device), label.long().to(self.device)
                 if self.teacher:
-                    _, tea_pred = torch.max(self.teacher(data), dim=1)
-                    tea_pred = tea_pred.long().to(self.device)
+                    tea_logit = self.teacher(data).to(self.device)
+                    _, tea_pred = torch.max(tea_logit, dim=1)
+                    tea_pred = tea_pred.long()
                 if self.mixup:
                     if self.teacher:
                         lam, data, labels1, labels2 = mixup(data, label, self.device, tea_pred)
                     else:
                         lam, data, labels1, labels2 = mixup(data, label, self.device)
+                        tea_logit = self.teacher(data).to(self.device)
                 
                 output = self.model(data)
                 
                 if self.mixup:
-                    loss = lam * self.train_criterion(output, labels1, indexs.cpu().detach().numpy().tolist())
-                    loss += (1-lam) * self.train_criterion(output, labels2, indexs.cpu().detach().numpy().tolist())
+                    if self.teacher:
+                        loss = self.train_criterion(output, tea_logit, indexs.cpu().detach().numpy().tolist(), kd =True)
+                    else:
+                        loss = lam * self.train_criterion(output, labels1, indexs.cpu().detach().numpy().tolist())
+                        loss += (1-lam) * self.train_criterion(output, labels2, indexs.cpu().detach().numpy().tolist())
                 elif self.teacher:
-                    loss = self.train_criterion(output, tea_pred, indexs.cpu().detach().numpy().tolist())
+                    loss = self.train_criterion(output, tea_logit, indexs.cpu().detach().numpy().tolist(), kd =True)
                 else:
                     loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
                 self.optimizer.zero_grad()

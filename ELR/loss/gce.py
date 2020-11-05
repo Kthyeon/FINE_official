@@ -14,16 +14,20 @@ class GCELoss(nn.Module):
         self.truncated = truncated
         self.weight = torch.nn.Parameter(data=torch.ones(trainset_size, 1), requires_grad=False)
              
-    def forward(self, logits, targets, indexes):
-        p = F.softmax(logits, dim=1)
-        Yg = torch.gather(p, 1, torch.unsqueeze(targets, 1))
-        
-        if self.truncated == True:
-            loss = ((1-(Yg**self.q))/self.q)*self.weight[indexes] - ((1-(self.k**self.q))/self.q)*self.weight[indexes]
-            loss = torch.mean(loss)
+    def forward(self, logits, targets, indexes, epsilon = 0.0, kd = False):
+        if kd:
+            criterion = nn.MSELoss()
+            loss = criterion(logits, targets)
         else:
-            loss = (1-(Yg**self.q))/self.q
-            loss = torch.mean(loss)
+            p = F.softmax(logits, dim=1)
+            Yg = torch.gather(p, 1, torch.unsqueeze(targets, 1))
+
+            if self.truncated == True:
+                loss = ((1-(Yg**self.q))/self.q)*self.weight[indexes] - ((1-(self.k**self.q))/self.q)*self.weight[indexes]
+                loss = torch.mean(loss)
+            else:
+                loss = (1-(Yg**self.q))/self.q
+                loss = torch.mean(loss)
 
         return loss
 

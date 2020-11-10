@@ -11,7 +11,7 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer
+from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer
 from collections import OrderedDict
 import random
 import numpy as np
@@ -88,7 +88,9 @@ def main(config: ConfigParser):
                                                      k=config['train_loss']['args']['k'],
                                                      trainset_size=num_examp,
                                                      truncated=config['train_loss']['args']['truncated'])
-
+    elif config['train_loss']['type'] == 'NPCLoss':
+        train_loss = getattr(module_loss, config['train_loss']['type'])(epsilon=config['train_loss']['args']['epsilon'])
+        
     val_loss = getattr(module_loss, config['val_loss'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
 
@@ -132,6 +134,14 @@ def main(config: ConfigParser):
                                       test_data_loader=test_data_loader,
                                       lr_scheduler=lr_scheduler,
                                       val_criterion=val_loss)
+    elif config['train_loss']['type'] == 'NPCLoss':
+        trainer = NPCLTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss)
 
     trainer.train()
     logger = config.get_logger('trainer', config['trainer']['verbosity'])

@@ -43,16 +43,19 @@ def main(config: ConfigParser):
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],
         shuffle=config['data_loader']['args']['shuffle'],
-        validation_split=config['data_loader']['args']['validation_split'],
+#         validation_split=config['data_loader']['args']['validation_split'],
+        validation_split=0.0,
         num_batches=config['data_loader']['args']['num_batches'],
         training=True,
         num_workers=config['data_loader']['args']['num_workers'],
         pin_memory=config['data_loader']['args']['pin_memory'] 
     )
 
+    
+    # valid_data_loader = data_loader.split_validation()
 
-    valid_data_loader = data_loader.split_validation()
-
+    valid_data_loader = None
+    
     # test_data_loader = None
 
     test_data_loader = getattr(module_data, config['data_loader']['type'])(

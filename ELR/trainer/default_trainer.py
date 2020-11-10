@@ -67,12 +67,14 @@ class DefaultTrainer(BaseTrainer):
 
         total_loss = 0
         total_metrics = np.zeros(len(self.metrics))
+        total_metrics_gt = np.zeros(len(self.metrics))
 
         with tqdm(self.data_loader) as progress:
-            for batch_idx, (data, label, indexs, _) in enumerate(progress):
+            for batch_idx, (data, label, indexs, gt) in enumerate(progress):
                 progress.set_description_str(f'Train epoch {epoch}')
                 
                 data, label = data.to(self.device), label.long().to(self.device)
+                gt = gt.long().to(self.device)
                 
                 output = self.model(data)
                 if self.config['train_loss']['type'] == 'CLoss' or self.config['train_loss']['type'] == 'NPCLoss':
@@ -90,7 +92,7 @@ class DefaultTrainer(BaseTrainer):
                 self.train_loss_list.append(loss.item())
                 total_loss += loss.item()
                 total_metrics += self._eval_metrics(output, label)
-
+                total_metrics_gt += self._eval_metrics(output, gt)
 
                 if batch_idx % self.log_step == 0:
                     progress.set_postfix_str(' {} Loss: {:.6f}'.format(
@@ -106,6 +108,7 @@ class DefaultTrainer(BaseTrainer):
         log = {
             'loss': total_loss / self.len_epoch,
             'metrics': (total_metrics / self.len_epoch).tolist(),
+            'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
             'learning rate': self.lr_scheduler.get_lr()
         }
 

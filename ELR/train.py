@@ -38,7 +38,14 @@ def main(config: ConfigParser):
     torch.set_num_threads(1)
     
     logger = config.get_logger('train')
-
+    
+    # Set seed for reproducibility
+    random.seed(config['seed'])
+    torch.manual_seed(config['seed'])
+    torch.cuda.manual_seed_all(config['seed'])
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(config['seed'])
+    
     data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],
@@ -187,11 +194,11 @@ if __name__ == '__main__':
 
     config = ConfigParser.get_instance(args, options)
 
-    random.seed(config['seed'])
-    torch.manual_seed(config['seed'])
-    torch.cuda.manual_seed_all(config['seed'])
-    torch.backends.cudnn.deterministic = True
-    np.random.seed(config['seed'])
+#     random.seed(config['seed'])
+#     torch.manual_seed(config['seed'])
+#     torch.cuda.manual_seed_all(config['seed'])
+#     torch.backends.cudnn.deterministic = True
+#     np.random.seed(config['seed'])
     
     ### TRAINING ###
     main(config)

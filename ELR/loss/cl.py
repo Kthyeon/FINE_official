@@ -130,7 +130,7 @@ class NPCLoss(nn.Module):
         
         loss_final = torch.max(npcl_1, npcl_2) # npcl_2 if npcl_1 < npcl_2 else npcl_1
         
-        return loss_final / output.shape[0] 
+        return loss_final / output.shape[0] * 0.1
     
 class CLoss(nn.Module):
     def __init__(self):

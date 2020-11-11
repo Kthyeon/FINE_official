@@ -9,8 +9,9 @@ from PIL import Image
 
 
 class CIFAR10DataLoader(BaseDataLoader):
-    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True):
-        config = ConfigParser.get_instance()
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True, config=None):
+        if config == None:
+            config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
         
         transform_train = transforms.Compose([

@@ -24,7 +24,12 @@ class GCELoss(nn.Module):
         else:
             loss = (1-(Yg**self.q))/self.q
             loss = torch.mean(loss)
+            
+#         entropy = - p * torch.log(p)
+        
+#         print (entropy.mean())
 
+#         return loss + 0.05 * entropy.mean()
         return loss
 
     def update_weight(self, logits, targets, indexes):

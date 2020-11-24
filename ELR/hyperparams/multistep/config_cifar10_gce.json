@@ -56,7 +56,7 @@
     },
 
     "trainer": {
-        "epochs": 120,
+        "epochs": 10,
         "warmup": 0,
         "save_dir": "saved/",
         "save_period": 1,
@@ -67,10 +67,10 @@
         "tensorboard": false,
         "mlflow": true,
         "_percent": "Percentage of noise",
-        "percent": 0.8,
+        "percent": 0.4,
         "_begin": "When to begin updating labels",
         "begin": 0,
         "_asym": "symmetric noise if false",
-        "asym": false
+        "asym": true
     }
 }

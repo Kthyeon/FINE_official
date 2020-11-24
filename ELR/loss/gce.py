@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import math
 import numpy as np
 
+
 class GCELoss(nn.Module):
 
     def __init__(self, q=0.7, k=0.5, trainset_size=50000, truncated=False):

@@ -103,7 +103,7 @@ class JongwooTrainer(DefaultTrainer):
                         data, label = data.to(self.device), label.long().to(self.device)
                         
                         # instance와 거리 비교
-                        output = self.model(data)
+                        output = self.model(data).detach()
                         output_prob = torch.softmax(output, dim=-1).detach()
                         
                         # TODO: noise label과 pseudo label 비교. confidence도 비교.
@@ -128,9 +128,10 @@ class JongwooTrainer(DefaultTrainer):
         # TODO: DATA LOADER 인덱스 별로 쪼개서 나눠서 학습하게 하는 거 만들것.
         # TODO: 이 씨발련들 왜 학습이 안돼.....
         # TODO: 아무것도 안건드렸다고...
-        
-                print (clean_idxs)
-                print (noise_idxs)
+                
+            self.clean_dataset = torch.utils.data.Subset(self.data_loader.dataset, clean_idxs)
+            self.noise_dataset = torch.utils.data.Subset(self.data_loader.dataset, noise_idxs)
+            self.dataset = torch.utils.data.Subset(self.data_loader.dataset, neither_idxs)
                                 
         return super()._train_epoch(epoch)
     

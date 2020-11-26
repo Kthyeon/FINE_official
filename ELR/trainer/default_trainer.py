@@ -17,7 +17,7 @@ class DefaultTrainer(BaseTrainer):
         Inherited from BaseTrainer.
     """
     def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
-                 valid_data_loader=None, test_data_loader=None, lr_scheduler=None, len_epoch=None, val_criterion=None):
+                 valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None):
         super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion)
         self.config = config
         self.data_loader = data_loader
@@ -29,6 +29,11 @@ class DefaultTrainer(BaseTrainer):
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
         self.valid_data_loader = valid_data_loader
+        
+        if teacher != None:
+            self.teacher = teacher.to(self.device)
+        else:
+            self.teacher = teacher
 
         self.test_data_loader = test_data_loader
         self.do_validation = self.valid_data_loader is not None
@@ -74,13 +79,20 @@ class DefaultTrainer(BaseTrainer):
                 progress.set_description_str(f'Train epoch {epoch}')
                 
                 data, label = data.to(self.device), label.long().to(self.device)
+                if self.teacher:
+                    tea_logit = self.teacher(data).to(self.device)
+                    
+                
                 gt = gt.long().to(self.device)
                 
                 output = self.model(data)
                 if self.config['train_loss']['type'] == 'CLoss' or self.config['train_loss']['type'] == 'NPCLoss':
                     loss = self.train_criterion(output, label, epoch, indexs.cpu().detach().numpy().tolist())
                 else:
-                    loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
+                    if self.teacher:
+                        loss = self.train_criterion(output, tea_logit, indexs.cpu().detach().numpy().tolist(), kd =True)
+                    else:
+                        loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
 #                 pdb.set_trace()
                 self.optimizer.zero_grad()
                 loss.backward()

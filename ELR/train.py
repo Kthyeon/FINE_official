@@ -31,7 +31,7 @@ def log_params(conf: OrderedDict, parent_key: str = None):
             log_params(value, combined_key)
 
 
-def main(config: ConfigParser):
+def main(parse, config: ConfigParser):
     
     # By default, pytorch utilizes multi-threaded cpu
     # Set to handle whole procedures on a single core
@@ -77,6 +77,13 @@ def main(config: ConfigParser):
 
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch)
+    if parse.distillation:
+        teacher = config.initialize('arch', module_arch)
+        teacher.load_state_dict(torch.load('./asym_40_gce.pth', map_location = 'cpu')['state_dict'])
+        for params in teacher.parameters():
+            params.requires_grad = False
+    else:
+        teacher = None
 
     # get function handles of loss and metrics
     logger.info(config.config)
@@ -115,6 +122,7 @@ def main(config: ConfigParser):
         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
+                                     teacher=teacher,
                                      valid_data_loader=valid_data_loader,
                                      test_data_loader=test_data_loader,
                                      lr_scheduler=lr_scheduler,
@@ -123,6 +131,7 @@ def main(config: ConfigParser):
         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
+                                     teacher=teacher,
                                      valid_data_loader=valid_data_loader,
                                      test_data_loader=test_data_loader,
                                      lr_scheduler=lr_scheduler,
@@ -132,6 +141,7 @@ def main(config: ConfigParser):
             trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
+                                     teacher=teacher,
                                      valid_data_loader=valid_data_loader,
                                      test_data_loader=test_data_loader,
                                      lr_scheduler=lr_scheduler,
@@ -140,6 +150,7 @@ def main(config: ConfigParser):
             trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
                                       config=config,
                                       data_loader=data_loader,
+                                     teacher=teacher,
                                       valid_data_loader=valid_data_loader,
                                       test_data_loader=test_data_loader,
                                       lr_scheduler=lr_scheduler,
@@ -148,6 +159,7 @@ def main(config: ConfigParser):
         trainer = NPCLTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
+                                     teacher=teacher,
                                      valid_data_loader=valid_data_loader,
                                      test_data_loader=test_data_loader,
                                      lr_scheduler=lr_scheduler,
@@ -166,6 +178,8 @@ if __name__ == '__main__':
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
+    args.add_argument('--distillation', help='whether to distill knowledge', action='store_true')
+
     
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
@@ -191,14 +205,10 @@ if __name__ == '__main__':
         options.append(CustomArgs(['--truncated', '--truncated'], type=bool, target=('train_loss', 'args', 'truncated')))
 #     elif config['train_loss']['type'] == ...:
 #         options.append(somethings...)
-
+    parse = args.parse_args()
     config = ConfigParser.get_instance(args, options)
 
-#     random.seed(config['seed'])
-#     torch.manual_seed(config['seed'])
-#     torch.cuda.manual_seed_all(config['seed'])
-#     torch.backends.cudnn.deterministic = True
-#     np.random.seed(config['seed'])
+
     
     ### TRAINING ###
-    main(config)
+    main(parse, config)

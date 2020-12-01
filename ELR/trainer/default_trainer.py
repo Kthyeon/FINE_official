@@ -8,6 +8,43 @@ from utils import inf_loop
 import sys
 from sklearn.mixture import GaussianMixture
 import pdb
+import numpy as np
+
+
+
+    
+def get_out_list(model, device, data_loader):
+
+    label_list = np.empty((0,))
+
+    model.eval()
+    model.to(device)
+    with tqdm(data_loader) as progress:
+        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
+            data = data.to(device)
+            label, label_gt = label.long().to(device), label_gt.long().to(device)
+            output, _ = model(data)
+
+            label_list = np.concatenate((label_list, label.cpu()))
+            if batch_idx == 0:
+                out_list = output.detach().cpu()
+            else:
+                out_list = np.concatenate((out_list, output.detach().cpu()), axis=0)
+    
+    return label_list, out_list
+
+
+def get_singular_value_vector(label_list, out_list):
+    
+    singular_dict = {}
+    v_ortho_dict = {}
+    
+    for index in np.unique(label_list):
+        u, s, v = np.linalg.svd(out_list[label_list==index])
+        singular_dict[index] = s[0] / s[1]
+        v_ortho_dict[index] = torch.from_numpy(v[:2])
+
+    return singular_dict, v_ortho_dict
 
 class DefaultTrainer(BaseTrainer):
     """
@@ -17,10 +54,11 @@ class DefaultTrainer(BaseTrainer):
         Inherited from BaseTrainer.
     """
     def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
-                 valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None):
+                 valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None, mode='ce'):
         super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion)
         self.config = config
         self.data_loader = data_loader
+        self.mode = mode
         if len_epoch is None:
             # epoch-based training
             self.len_epoch = len(self.data_loader)
@@ -32,6 +70,10 @@ class DefaultTrainer(BaseTrainer):
         
         if teacher != None:
             self.teacher = teacher.to(self.device)
+            label_list, out_list = get_out_list(self.teacher, self.device, self.data_loader)
+            self.singular_dict, self.v_ortho_dict = get_singular_value_vector(label_list, out_list)
+            for key in self.v_ortho_dict.keys():
+                self.v_ortho_dict[key] = self.v_ortho_dict[key].to(self.device)
         else:
             self.teacher = teacher
 
@@ -80,17 +122,19 @@ class DefaultTrainer(BaseTrainer):
                 
                 data, label = data.to(self.device), label.long().to(self.device)
                 if self.teacher:
-                    tea_logit = self.teacher(data).to(self.device)
+                    tea_represent, tea_logit = self.teacher(data)
+                    tea_represent, tea_logit = tea_represent.to(self.device), tea_logit.to(self.device)
+#                     represent_out = self.represent(data).to(self.device)
                     
                 
                 gt = gt.long().to(self.device)
                 
-                output = self.model(data)
+                model_represent, output = self.model(data)
                 if self.config['train_loss']['type'] == 'CLoss' or self.config['train_loss']['type'] == 'NPCLoss':
                     loss = self.train_criterion(output, label, epoch, indexs.cpu().detach().numpy().tolist())
                 else:
                     if self.teacher:
-                        loss = self.train_criterion(output, tea_logit, indexs.cpu().detach().numpy().tolist(), kd =True)
+                        loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist(), tea_logits = tea_logit, model_represents = model_represent, tea_represents = tea_represent, singular_dict=self.singular_dict, v_ortho_dict=self.v_ortho_dict, kd =True, mode=self.mode)
                     else:
                         loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
 #                 pdb.set_trace()
@@ -159,7 +203,7 @@ class DefaultTrainer(BaseTrainer):
                 for batch_idx, (data, label, _, _) in enumerate(progress):
                     progress.set_description_str(f'Valid epoch {epoch}')
                     data, label = data.to(self.device), label.to(self.device)
-                    output = self.model(data)
+                    _, output = self.model(data)
                     loss = self.val_criterion(output, label)
 
                     self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
@@ -197,7 +241,7 @@ class DefaultTrainer(BaseTrainer):
                 for batch_idx, (data, label,indexs,_) in enumerate(progress):
                     progress.set_description_str(f'Test epoch {epoch}')
                     data, label = data.to(self.device), label.to(self.device)
-                    output = self.model(data)
+                    _, output = self.model(data)
                     
                     loss = self.val_criterion(output, label)
 
@@ -236,7 +280,7 @@ class DefaultTrainer(BaseTrainer):
                 data, label = data.to(self.device), label.long().to(self.device)
 
                 self.optimizer.zero_grad()
-                output = self.model(data)
+                _, output = self.model(data)
                 out_prob = torch.nn.functional.softmax(output).data.detach()
 
                 self.train_criterion.update_hist(indexs.cpu().detach().numpy().tolist(), out_prob)

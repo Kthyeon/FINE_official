@@ -103,7 +103,7 @@ class ResNet(nn.Module):
         out = self.linear(y)
         if out.requires_grad:
             out.register_hook(self.activations_hook)
-        return out
+        return y, out
 
     def get_activations_gradient(self):
         return self.gradients

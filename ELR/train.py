@@ -145,7 +145,8 @@ def main(parse, config: ConfigParser):
                                      valid_data_loader=valid_data_loader,
                                      test_data_loader=test_data_loader,
                                      lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss)
+                                     val_criterion=val_loss,
+                                     mode = parse.mode)
         elif config['train_loss']['args']['truncated'] == True:
             trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
                                       config=config,
@@ -179,6 +180,8 @@ if __name__ == '__main__':
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
     args.add_argument('--distillation', help='whether to distill knowledge', action='store_true')
+    args.add_argument('--mode', type=str, default='ce', choices=['ce', 'kd', 'same'], help = 'distill_type')
+
 
     
     # custom cli options to modify configuration from default values given in json file.

@@ -14,7 +14,7 @@ class BaseDataLoader(DataLoader):
     sampler: Optional[SubsetRandomSampler]
 
     def __init__(self, train_dataset, batch_size, shuffle, validation_split: float, num_workers, pin_memory,
-                 collate_fn=default_collate, val_dataset=None):
+                 collate_fn=default_collate, sampler=None, val_dataset=None):
         self.collate_fn = collate_fn
         self.validation_split = validation_split
         self.shuffle = shuffle
@@ -30,11 +30,12 @@ class BaseDataLoader(DataLoader):
             'num_workers': num_workers,
             'pin_memory': pin_memory
         }
-        if val_dataset is None:
+        self.sampler = sampler
+        if val_dataset is None and self.validation_split != 0.0:
             self.sampler, self.valid_sampler = self._split_sampler(self.validation_split)
             super().__init__(sampler=self.sampler, **self.init_kwargs)
         else:
-            super().__init__(**self.init_kwargs)
+            super().__init__(sampler=self.sampler, **self.init_kwargs)
 
     def _split_sampler(self, split) -> Union[Tuple[None, None], Tuple[SubsetRandomSampler, SubsetRandomSampler]]:
         if split == 0.0:

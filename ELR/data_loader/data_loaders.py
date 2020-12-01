@@ -9,7 +9,7 @@ from PIL import Image
 
 
 class CIFAR10DataLoader(BaseDataLoader):
-    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True, config=None):
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True, sampler=None, config=None):
         if config == None:
             config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
@@ -31,10 +31,10 @@ class CIFAR10DataLoader(BaseDataLoader):
         self.train_dataset, self.val_dataset = get_cifar10(config['data_loader']['args']['data_dir'], cfg_trainer, train=training,
                                                            transform_train=transform_train, transform_val=transform_val, noise_file = noise_file)
 
-        super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
+        super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory, sampler=sampler,
                          val_dataset = self.val_dataset)
     def run_loader(self, batch_size, shuffle, validation_split, num_workers, pin_memory):
-        super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
+        super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory, sampler=sampler,
                          val_dataset = self.val_dataset)
 
 

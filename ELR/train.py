@@ -13,9 +13,10 @@ import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer
 from collections import OrderedDict
+
 import random
 import numpy as np
-
+import copy
 
 
 def log_params(conf: OrderedDict, parent_key: str = None):
@@ -77,13 +78,7 @@ def main(parse, config: ConfigParser):
 
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch)
-    if parse.distillation:
-        teacher = config.initialize('arch', module_arch)
-        teacher.load_state_dict(torch.load('./asym_40_gce.pth', map_location = 'cpu')['state_dict'])
-        for params in teacher.parameters():
-            params.requires_grad = False
-    else:
-        teacher = None
+    teacher = None
 
     # get function handles of loss and metrics
     logger.info(config.config)
@@ -105,8 +100,7 @@ def main(parse, config: ConfigParser):
                                                      k=config['train_loss']['args']['k'],
                                                      trainset_size=num_examp,
                                                      truncated=config['train_loss']['args']['truncated'])
-    elif config['train_loss']['type'] == 'NPCLoss':
-        train_loss = getattr(module_loss, config['train_loss']['type'])(epsilon=config['train_loss']['args']['epsilon'])
+
         
     val_loss = getattr(module_loss, config['val_loss'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
@@ -151,22 +145,100 @@ def main(parse, config: ConfigParser):
             trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
                                       config=config,
                                       data_loader=data_loader,
-                                     teacher=teacher,
+                                      teacher=teacher,
                                       valid_data_loader=valid_data_loader,
                                       test_data_loader=test_data_loader,
                                       lr_scheduler=lr_scheduler,
                                       val_criterion=val_loss)
-    elif config['train_loss']['type'] == 'NPCLoss':
-        trainer = NPCLTrainer(model, train_loss, metrics, optimizer,
-                                     config=config,
-                                     data_loader=data_loader,
-                                     teacher=teacher,
-                                     valid_data_loader=valid_data_loader,
-                                     test_data_loader=test_data_loader,
-                                     lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss)
 
     trainer.train()
+    
+        
+    if parse.distillation:
+        teacher = copy.deepcopy(model)
+        for params in teacher.parameters():
+            params.requires_grad = False
+        
+        model = config.initialize('arch', module_arch)
+        
+        
+        # loss definition
+        if config['train_loss']['type'] == 'ELRLoss':
+            train_loss = getattr(module_loss, 'ELRLoss')(num_examp=num_examp, 
+                                                         num_classes=config['num_classes'],
+                                                         beta=config['train_loss']['args']['beta'])
+        elif config['train_loss']['type'] == 'SCELoss':
+            train_loss = getattr(module_loss, 'SCELoss')(alpha=config['train_loss']['args']['alpha'],
+                                                         beta=config['train_loss']['args']['beta'],
+                                                         num_classes=config['num_classes'])
+        elif config['train_loss']['type'] == 'GCELoss':
+            train_loss = getattr(module_loss, 'GCELoss')(q=config['train_loss']['args']['q'],
+                                                         k=config['train_loss']['args']['k'],
+                                                         trainset_size=num_examp,
+                                                         truncated=config['train_loss']['args']['truncated'])
+            
+        val_loss = getattr(module_loss, config['val_loss'])
+        metrics = [getattr(module_metric, met) for met in config['metrics']]
+
+        # build optimizer, learning rate scheduler. delete every lines containing lr_scheduler for disabling scheduler
+        trainable_params = filter(lambda p: p.requires_grad, model.parameters())
+
+        optimizer = config.initialize('optimizer', torch.optim, [{'params': trainable_params}])
+
+        lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)    
+            
+            
+        if config['train_loss']['type'] == 'ELRLoss':
+            trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                         config=config,
+                                         data_loader=data_loader,
+                                         teacher=teacher,
+                                         valid_data_loader=valid_data_loader,
+                                         test_data_loader=test_data_loader,
+                                         lr_scheduler=lr_scheduler,
+                                         val_criterion=val_loss,
+                                         mode = parse.mode,
+                                         entropy = parse.entropy,
+                                         threshold = parse.threshold
+                                    )
+        elif config['train_loss']['type'] == 'SCELoss':
+            trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                         config=config,
+                                         data_loader=data_loader,
+                                         teacher=teacher,
+                                         valid_data_loader=valid_data_loader,
+                                         test_data_loader=test_data_loader,
+                                         lr_scheduler=lr_scheduler,
+                                         val_criterion=val_loss,
+                                         mode = parse.mode,
+                                         entropy = parse.entropy,
+                                         threshold = parse.threshold                                    
+                                    )
+        elif config['train_loss']['type'] == 'GCELoss':
+            if config['train_loss']['args']['truncated'] == False:
+                trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                         config=config,
+                                         data_loader=data_loader,
+                                         teacher=teacher,
+                                         valid_data_loader=valid_data_loader,
+                                         test_data_loader=test_data_loader,
+                                         lr_scheduler=lr_scheduler,
+                                         val_criterion=val_loss,
+                                         mode = parse.mode,
+                                         entropy = parse.entropy,
+                                         threshold = parse.threshold)
+            elif config['train_loss']['args']['truncated'] == True:
+                trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
+                                          config=config,
+                                          data_loader=data_loader,
+                                         teacher=teacher,
+                                          valid_data_loader=valid_data_loader,
+                                          test_data_loader=test_data_loader,
+                                          lr_scheduler=lr_scheduler,
+                                          val_criterion=val_loss)
+                
+        trainer.train()
+    
     logger = config.get_logger('trainer', config['trainer']['verbosity'])
     cfg_trainer = config['trainer']
 
@@ -181,6 +253,8 @@ if __name__ == '__main__':
                       help='indices of GPUs to enable (default: all)')
     args.add_argument('--distillation', help='whether to distill knowledge', action='store_true')
     args.add_argument('--mode', type=str, default='ce', choices=['ce', 'kd', 'same'], help = 'distill_type')
+    args.add_argument('--entropy', help='whether to use entropy loss', action='store_true')
+    args.add_argument('--threshold', type=float, default=0.1, help='threshold for the use of entropy loss.')
 
 
     

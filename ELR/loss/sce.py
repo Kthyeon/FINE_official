@@ -13,7 +13,7 @@ class SCELoss(torch.nn.Module):
         self.cross_entropy = torch.nn.CrossEntropyLoss()
         self.A = math.exp(-4)
         
-    def forward(self, pred, labels, index=None):
+    def forward(self, pred, labels, index=None, mode = None):
         # index is redundant input for SCELoss
         
         # CCE
@@ -27,5 +27,8 @@ class SCELoss(torch.nn.Module):
         rce = (-1*torch.sum(pred * torch.log(label_one_hot), dim=1))
 
         # Loss
-        loss = self.alpha * ce + self.beta * rce.mean()
+        if mode = 'ce':
+            loss = ce
+        else:
+            loss = self.alpha * ce + self.beta * rce.mean()
         return loss

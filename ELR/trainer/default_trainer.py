@@ -10,7 +10,16 @@ from sklearn.mixture import GaussianMixture
 import pdb
 import numpy as np
 
-
+def singular_label(v_ortho_dict, model_represents, label):
+    
+    
+    sing_lbl = torch.zeros(model_represents.shape[0]) == 0.
+    
+    for i, data in enumerate(model_represents):
+        if torch.dot(v_ortho_dict[label[i].item()][0], data).abs() < torch.dot(v_ortho_dict[label[i].item()][1], data).abs():
+            sing_lbl[i] = False
+        
+    return sing_lbl
 
     
 def get_out_list(model, device, data_loader):
@@ -54,7 +63,7 @@ class DefaultTrainer(BaseTrainer):
         Inherited from BaseTrainer.
     """
     def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
-                 valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None, mode='ce'):
+                 valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None, mode=None, entropy=False, threshold = 0.1):
         super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion)
         self.config = config
         self.data_loader = data_loader
@@ -86,6 +95,10 @@ class DefaultTrainer(BaseTrainer):
         self.val_loss_list: List[float] = []
         self.test_loss_list: List[float] = []
         #Visdom visualization
+        
+        self.entropy = entropy
+        if self.entropy:
+            self.entro_loss = Entropy(threshold)
         
 
     def _eval_metrics(self, output, label):
@@ -134,11 +147,15 @@ class DefaultTrainer(BaseTrainer):
                     loss = self.train_criterion(output, label, epoch, indexs.cpu().detach().numpy().tolist())
                 else:
                     if self.teacher:
-                        loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist(), tea_logits = tea_logit, model_represents = model_represent, tea_represents = tea_represent, singular_dict=self.singular_dict, v_ortho_dict=self.v_ortho_dict, kd =True, mode=self.mode)
+                        sing_lbl = singular_label(self.v_ortho_dict, tea_represent, label)
+                        loss = self.train_criterion(output[sing_lbl], label[sing_lbl], indexes, mode=self.mode)
                     else:
+                        sing_lbl = None
                         loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
 #                 pdb.set_trace()
                 self.optimizer.zero_grad()
+                if self.entropy:
+                    loss -= self.entro_loss(output, label, sing_lbl)
                 loss.backward()
 
                 self.optimizer.step()

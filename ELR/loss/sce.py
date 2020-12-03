@@ -2,6 +2,7 @@
 import torch
 import torch.nn.functional as F
 import math
+import torch.nn as nn
 
 class SCELoss(torch.nn.Module):
     def __init__(self, alpha, beta, num_classes=10):
@@ -27,7 +28,7 @@ class SCELoss(torch.nn.Module):
         rce = (-1*torch.sum(pred * torch.log(label_one_hot), dim=1))
 
         # Loss
-        if mode = 'ce':
+        if mode == 'ce':
             loss = ce
         else:
             loss = self.alpha * ce + self.beta * rce.mean()

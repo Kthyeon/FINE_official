@@ -33,6 +33,7 @@ class CIFAR10DataLoader(BaseDataLoader):
 
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
                          val_dataset = self.val_dataset)
+        
     def run_loader(self, batch_size, shuffle, validation_split, num_workers, pin_memory):
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
                          val_dataset = self.val_dataset)

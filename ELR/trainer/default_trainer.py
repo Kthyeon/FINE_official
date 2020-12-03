@@ -148,7 +148,7 @@ class DefaultTrainer(BaseTrainer):
                 else:
                     if self.teacher:
                         sing_lbl = singular_label(self.v_ortho_dict, tea_represent, label)
-                        loss = self.train_criterion(output[sing_lbl], label[sing_lbl], indexes, mode=self.mode)
+                        loss = self.train_criterion(output[sing_lbl], label[sing_lbl], indexs[sing_lbl], mode=self.mode)
                     else:
                         sing_lbl = None
                         loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())

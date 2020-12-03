@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 
 class Entropy(nn.Module):
     def __init__(self, threshold = 0.1):

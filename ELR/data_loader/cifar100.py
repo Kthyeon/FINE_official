@@ -16,7 +16,7 @@ from numpy.testing import assert_array_almost_equal
 
 def get_cifar100(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
-                download=False, noise_file = '', teacher_idx = None):
+                download=True, noise_file = '', teacher_idx = None):
     base_dataset = torchvision.datasets.CIFAR100(root, train=train, download=download)
     if train:
         train_idxs, val_idxs = train_val_split(base_dataset.targets)

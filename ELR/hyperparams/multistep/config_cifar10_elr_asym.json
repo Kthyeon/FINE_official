@@ -34,11 +34,10 @@
     },
     
     "train_loss": {
-        "type": "GCELoss",
+        "type": "ELRLoss",
         "args":{
-            "q": 0.7,
-            "k": 0.5,
-            "truncated": false
+            "beta": 0.9,
+            "lambda": 1
         }
     },
 
@@ -67,7 +66,7 @@
         "tensorboard": false,
         "mlflow": true,
         "_percent": "Percentage of noise",
-        "percent": 0.4,
+        "percent": 0.8,
         "_begin": "When to begin updating labels",
         "begin": 0,
         "_asym": "symmetric noise if false",

@@ -216,7 +216,7 @@ if __name__ == '__main__':
         config_path = './hyperparams/cosine/config_cifar10_elr.json'
     )
     
-    wandb.init(config=hyperparameter_defaults, project='noisylabel')
+    wandb.init(config=hyperparameter_defaults, project='noisy_label', entity='goguryeo')
         
     args = argparse.ArgumentParser(description='PyTorch Template')
     args.add_argument('-c', '--config', default=wandb.config['config_path'], type=str,

@@ -34,14 +34,14 @@
     },
     
     "train_loss": {
-        "type": "TruncatedLoss",
+        "type": "GCELoss",
         "args":{
             "q": 0.7,
             "k": 0.5
         }
     },
 
-    "val_loss": "CrossEntropyLOss",
+    "val_loss": "CrossEntropyLoss",
     "metrics": [
         "my_metric", "my_metric2"
     ],

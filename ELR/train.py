@@ -19,6 +19,7 @@ import random
 import numpy as np
 import copy
 
+import wandb
 
 def log_params(conf: OrderedDict, parent_key: str = None):
     for key, value in conf.items():
@@ -80,6 +81,9 @@ def main(parse, config: ConfigParser):
 
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch)
+    
+    wandb.watch(model)
+    
     if parse.distillation:
         teacher = config.initialize('arch', module_arch)
         teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name + '.pth')['state_dict'])
@@ -208,8 +212,14 @@ def main(parse, config: ConfigParser):
 
 
 if __name__ == '__main__':
+    hyperparameter_defaults = dict(
+        config_path = './hyperparams/cosine/config_cifar10_elr.json'
+    )
+    
+    wandb.init(config=hyperparameter_defaults, project='noisylabel')
+        
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default=None, type=str,
+    args.add_argument('-c', '--config', default=wandb.config['config_path'], type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')

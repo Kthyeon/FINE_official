@@ -150,7 +150,7 @@ class DefaultTrainer(BaseTrainer):
 
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
-
+            
         return log
 
 

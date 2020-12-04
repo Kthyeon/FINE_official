@@ -6,6 +6,8 @@ from numpy import inf
 from logger import TensorboardWriter
 import numpy as np
 
+import wandb
+
 class BaseTrainer:
     """
     Base class for all trainers
@@ -69,14 +71,13 @@ class BaseTrainer:
         Full training logic
         """
         not_improved_count = 0
+        
 
         for epoch in tqdm(range(self.start_epoch, self.epochs + 1), desc='Total progress: '):
             if epoch <= self.config['trainer']['warmup']:
                 result = self._warmup_epoch(epoch)
             else:
                 result= self._train_epoch(epoch)
-
-            
 
             # save logged informations into log dict
             log = {'epoch': epoch}
@@ -91,6 +92,8 @@ class BaseTrainer:
                     log.update({'test_' + mtr.__name__: value[i] for i, mtr in enumerate(self.metrics)})
                 else:
                     log[key] = value
+            
+            wandb.log(log)
 
             # print logged informations to the screen
             for key, value in log.items():
@@ -123,6 +126,7 @@ class BaseTrainer:
 
             if epoch % self.save_period == 0:
                 self._save_checkpoint(epoch, save_best=best)
+        
     
     def _prepare_device(self, n_gpu_use):
         """

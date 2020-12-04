@@ -214,25 +214,28 @@ def main(parse, config: ConfigParser):
 
 if __name__ == '__main__':
     hyperparameter_defaults = dict(
-        config_path = './hyperparams/cosine/config_cifar10_gce.json',
+        lr_scheduler='cosine',
+        dataset='cifar10',
+        loss = 'gce',
         percent = 0.8,
         asym = True
     )
     
     wandb_name = ''
     if hyperparameter_defaults['asym'] == True:
-        wandb_name = 'asym_'
+        wandb_name = '_asym_' + str(hyperparameter_defaults['percent'])
     else:
-        wandb_name = 'sym_'
-        
-    if 'gce' in hyperparameter_defaults['config_path']:
-        wandb_name = 'gce_' + wandb_name + str(hyperparameter_defaults['percent'])
+        wandb_name = '_sym_' + str(hyperparameter_defaults['percent'])
     
+    wandb_name = '_baseline_' + hyperparameter_defaults['loss'] + wandb_name
+    wandb_name = hyperparameter_defaults['dataset'] + wandb_name
+    
+    config_path = './hyperparams/' + hyperparameter_defaults['lr_scheduler'] + '/config_' + hyperparameter_defaults['dataset'] + '_' + hyperparameter_defaults['loss'] + '.json'
     
     wandb.init(config=hyperparameter_defaults, project='noisylabel', entity='goguryeo', name=wandb_name)
         
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default=wandb.config['config_path'], type=str,
+    args.add_argument('-c', '--config', default=config_path, type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')

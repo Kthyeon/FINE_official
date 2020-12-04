@@ -51,12 +51,12 @@
         "type": "MultiStepLR",
         "args": {
             "milestones": [40, 80],
-            "gamma": 0.01
+            "gamma": 0.1
         }
     },
 
     "trainer": {
-        "epochs": 10,
+        "epochs": 120,
         "warmup": 0,
         "save_dir": "saved/",
         "save_period": 1,
@@ -71,6 +71,6 @@
         "_begin": "When to begin updating labels",
         "begin": 0,
         "_asym": "symmetric noise if false",
-        "asym": true
+        "asym": false
     }
 }

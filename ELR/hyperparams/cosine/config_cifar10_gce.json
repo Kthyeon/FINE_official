@@ -29,7 +29,7 @@
         "args":{
             "lr": 0.02,
             "momentum": 0.9,
-            "weight_decay": 1e-3
+            "weight_decay": 1e-5
         }
     },
     

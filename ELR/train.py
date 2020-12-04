@@ -41,6 +41,7 @@ def main(parse, config: ConfigParser):
     torch.set_num_threads(1)
     
     logger = config.get_logger('train')
+    wandb.init(config=config, project=parse.project)
     
     # Set seed for reproducibility
     random.seed(config['seed'])
@@ -212,14 +213,10 @@ def main(parse, config: ConfigParser):
 
 
 if __name__ == '__main__':
-    hyperparameter_defaults = dict(
-        config_path = './hyperparams/cosine/config_cifar10_elr.json'
-    )
-    
-    wandb.init(config=hyperparameter_defaults, project='noisy_label', entity='goguryeo')
+
         
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default=wandb.config['config_path'], type=str,
+    args.add_argument('-c', '--config', default=None, type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')
@@ -232,7 +229,7 @@ if __name__ == '__main__':
     args.add_argument('--wd', type=float, default=5e-4, help = 'weight_decay')
     args.add_argument('--load_name', type=str, default=None, help = 'teacher checkpoint for distillation')
     args.add_argument('--reinit', help='whether to use teacher checkpoint', action='store_true')
-
+    args.add_argument('--project', type=str, default='noisylabel', help='WandB project name')
     
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')

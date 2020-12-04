@@ -41,7 +41,7 @@ def main(parse, config: ConfigParser):
     torch.set_num_threads(1)
     
     logger = config.get_logger('train')
-    wandb.init(config=config, project=parse.project, name=parse.name)
+    wandb.init(config=config, project=parse.project, name=parse.run_name)
     
     # Set seed for reproducibility
     random.seed(config['seed'])
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     args.add_argument('--load_name', type=str, default=None, help = 'teacher checkpoint for distillation')
     args.add_argument('--reinit', help='whether to use teacher checkpoint', action='store_true')
     args.add_argument('--project', type=str, default='noisylabel', help='WandB project name')
-    args.add_argument('--name', type=str, default=None, help='WandB name')
+    args.add_argument('--run_name', type=str, default=None, help='WandB name')
     
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')

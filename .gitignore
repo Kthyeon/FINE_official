@@ -1,5 +1,6 @@
 # not upload data
 ELR/dir_to_data/
+ELR/wandb
 .gitignore
 
 # Byte-compiled / optimized / DLL files

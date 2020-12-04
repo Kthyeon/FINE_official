@@ -20,28 +20,30 @@ class ConfigParser:
         return super().__new__(cls)
 
     @classmethod
-    def get_instance(cls, args=None, options='', timestamp=True):
+    def get_instance(cls, args=None, options='', timestamp=True, cfg_name=None):
         if not cls.__instance:
             if args is None:
                 NotImplementedError('Cannot initialize without args')
             cls.__instance = cls.__internal_new__()
-            cls.__instance.__init__(args, options)
+            cls.__instance.__init__(args, options, cfg_fname=cfg_name)
 
         return cls.__instance
 
-    def __init__(self, args, options='', timestamp=True):
+    def __init__(self, args, options='', timestamp=True, cfg_fname=None):
         # parse default and custom cli options
         for opt in options:
             args.add_argument(*opt.flags, default=None, type=opt.type)
         args = args.parse_args()
         self.args = args
-
         if args.device:
             os.environ["CUDA_VISIBLE_DEVICES"] = args.device
         if args.resume is None:
             msg_no_cfg = "Configuration file need to be specified. Add '-c config.json', for example."
-            assert args.config is not None, msg_no_cfg
-            self.cfg_fname = Path(args.config)
+            if cfg_fname is not None:
+                self.cfg_fname = Path(cfg_fname)
+            else:
+                assert args.config is not None, msg_no_cfg
+                self.cfg_fname = Path(args.config)
             config = read_json(self.cfg_fname)
             self.resume = None
         else:

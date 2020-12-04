@@ -64,12 +64,12 @@ class GCELoss(nn.Module):
         self.weight = torch.nn.Parameter(data=torch.ones(trainset_size, 1), requires_grad=False)
              
     def forward(self, logits, targets, indexes, mode=None):
-        ce = nn.CrossEntropyLoss(reduction='none')
         p = F.softmax(logits, dim=1)
         Yg = torch.gather(p, 1, torch.unsqueeze(targets, 1))
         
         if self.truncated == True:
             if mode == 'ce':
+                ce = nn.CrossEntropyLoss(reduction='none')
                 loss = ce(logits, targets)
                 loss = torch.mean(loss)
             else:
@@ -77,6 +77,7 @@ class GCELoss(nn.Module):
                 loss = torch.mean(loss)
         else:
             if mode == 'ce':
+                ce = nn.CrossEntropyLoss(reduction='none')
                 loss = ce(logits, targets)
                 loss = torch.mean(loss)
             else:

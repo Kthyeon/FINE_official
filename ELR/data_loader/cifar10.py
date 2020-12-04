@@ -13,10 +13,12 @@ import os
 
 def get_cifar10(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
-                download=True, noise_file = ''):
+                download=True, noise_file = '', teacher_idx=None):
     base_dataset = torchvision.datasets.CIFAR10(root, train=train, download=download)
     if train:
         train_idxs, val_idxs = train_val_split(base_dataset.targets)
+        if teacher_idx != None:
+            train_idxs = teacher_idx
         train_dataset = CIFAR10_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR10_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
         if cfg_trainer['asym']:

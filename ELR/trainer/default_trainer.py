@@ -10,50 +10,7 @@ from sklearn.mixture import GaussianMixture
 import pdb
 import numpy as np
 
-def singular_label(v_ortho_dict, model_represents, label):
-    
-    
-    sing_lbl = torch.zeros(model_represents.shape[0]) == 0.
-    
-    for i, data in enumerate(model_represents):
-        if torch.dot(v_ortho_dict[label[i].item()][0], data).abs() < torch.dot(v_ortho_dict[label[i].item()][1], data).abs():
-            sing_lbl[i] = False
-        
-    return sing_lbl
 
-    
-def get_out_list(model, device, data_loader):
-
-    label_list = np.empty((0,))
-
-    model.eval()
-    model.to(device)
-    with tqdm(data_loader) as progress:
-        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
-            data = data.to(device)
-            label, label_gt = label.long().to(device), label_gt.long().to(device)
-            output, _ = model(data)
-
-            label_list = np.concatenate((label_list, label.cpu()))
-            if batch_idx == 0:
-                out_list = output.detach().cpu()
-            else:
-                out_list = np.concatenate((out_list, output.detach().cpu()), axis=0)
-    
-    return label_list, out_list
-
-
-def get_singular_value_vector(label_list, out_list):
-    
-    singular_dict = {}
-    v_ortho_dict = {}
-    
-    for index in np.unique(label_list):
-        u, s, v = np.linalg.svd(out_list[label_list==index])
-        singular_dict[index] = s[0] / s[1]
-        v_ortho_dict[index] = torch.from_numpy(v[:2])
-
-    return singular_dict, v_ortho_dict
 
 class DefaultTrainer(BaseTrainer):
     """
@@ -79,10 +36,6 @@ class DefaultTrainer(BaseTrainer):
         
         if teacher != None:
             self.teacher = teacher.to(self.device)
-            label_list, out_list = get_out_list(self.teacher, self.device, self.data_loader)
-            self.singular_dict, self.v_ortho_dict = get_singular_value_vector(label_list, out_list)
-            for key in self.v_ortho_dict.keys():
-                self.v_ortho_dict[key] = self.v_ortho_dict[key].to(self.device)
         else:
             self.teacher = teacher
 
@@ -147,8 +100,7 @@ class DefaultTrainer(BaseTrainer):
                     loss = self.train_criterion(output, label, epoch, indexs.cpu().detach().numpy().tolist())
                 else:
                     if self.teacher:
-                        sing_lbl = singular_label(self.v_ortho_dict, tea_represent, label)
-                        loss = self.train_criterion(output[sing_lbl], label[sing_lbl], indexs[sing_lbl], mode=self.mode)
+                        loss = self.train_criterion(output, label, indexs, mode=self.mode)
                     else:
                         sing_lbl = None
                         loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())

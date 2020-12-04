@@ -13,6 +13,7 @@ import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer
 from collections import OrderedDict
+from trainer.svd_classifier import singular_label, get_out_list, get_singular_value_vector
 
 import random
 import numpy as np
@@ -47,16 +48,17 @@ def main(parse, config: ConfigParser):
     torch.backends.cudnn.deterministic = True
     np.random.seed(config['seed'])
     
+    
     data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],
-        shuffle=config['data_loader']['args']['shuffle'],
+        shuffle=False if parse.distillation else config['data_loader']['args']['shuffle'] ,
 #         validation_split=config['data_loader']['args']['validation_split'],
         validation_split=0.0,
         num_batches=config['data_loader']['args']['num_batches'],
         training=True,
         num_workers=config['data_loader']['args']['num_workers'],
-        pin_memory=config['data_loader']['args']['pin_memory'] 
+        pin_memory=config['data_loader']['args']['pin_memory']
     )
 
     
@@ -83,8 +85,34 @@ def main(parse, config: ConfigParser):
         teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name + '.pth')['state_dict'])
         for params in teacher.parameters():
             params.requires_grad = False
+                    
+        tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+        singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
+
+        for key in v_ortho_dict.keys():
+            v_ortho_dict[key] = v_ortho_dict[key].cuda()
+
+        teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+        
+            
+            
+        data_loader = getattr(module_data, config['data_loader']['type'])(
+        config['data_loader']['args']['data_dir'],
+        batch_size= config['data_loader']['args']['batch_size'],
+        shuffle=config['data_loader']['args']['shuffle'],
+#         validation_split=config['data_loader']['args']['validation_split'],
+        validation_split=0.0,
+        num_batches=config['data_loader']['args']['num_batches'],
+        training=True,
+        num_workers=config['data_loader']['args']['num_workers'],
+        pin_memory=config['data_loader']['args']['pin_memory'],
+        teacher_idx = teacher_idx)
     else:
         teacher = None
+        
+    
+    
+    
 
     # get function handles of loss and metrics
     logger.info(config.config)
@@ -114,7 +142,7 @@ def main(parse, config: ConfigParser):
     # build optimizer, learning rate scheduler. delete every lines containing lr_scheduler for disabling scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
 
-    optimizer = config.initialize('optimizer', torch.optim, [{'params': trainable_params, 'weight_decay': parse.wd}])
+    optimizer = config.initialize('optimizer', torch.optim, [{'params': trainable_params}])
 
     lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 

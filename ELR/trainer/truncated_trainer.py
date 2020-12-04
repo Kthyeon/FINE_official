@@ -1,14 +1,13 @@
 import numpy as np
 import torch
 from tqdm import tqdm
-from .default_trainer import DefaultTrainer, singular_label
+from .default_trainer import DefaultTrainer
 
 
 
 class TruncatedTrainer(DefaultTrainer):
     def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
-                 valid_data_loader=None, test_data_loader=None, lr_scheduler=None, len_epoch=None, val_criterion=None, teacher = None,
-                         mode = None,entropy = False,threshold = 0.1):
+                 valid_data_loader=None, test_data_loader=None, lr_scheduler=None, len_epoch=None, val_criterion=None, teacher = None, mode = None,entropy = False,threshold = 0.1):
         super().__init__(model, train_criterion, metrics, optimizer, config, data_loader,
                          valid_data_loader=valid_data_loader,
                          test_data_loader=test_data_loader,

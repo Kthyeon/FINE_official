@@ -41,7 +41,7 @@ def main(parse, config: ConfigParser):
     torch.set_num_threads(1)
     
     logger = config.get_logger('train')
-    wandb.init(config=config, project=parse.project)
+    
     
     # Set seed for reproducibility
     random.seed(config['seed'])
@@ -213,10 +213,26 @@ def main(parse, config: ConfigParser):
 
 
 if __name__ == '__main__':
-
+    hyperparameter_defaults = dict(
+        config_path = './hyperparams/cosine/config_cifar10_gce.json',
+        percent = 0.8,
+        asym = True
+    )
+    
+    wandb_name = ''
+    if hyperparameter_defaults['asym'] == True:
+        wandb_name = 'asym_'
+    else:
+        wandb_name = 'sym_'
+        
+    if 'gce' in hyperparameter_defaults['config_path']:
+        wandb_name = 'gce_' + wandb_name + str(hyperparameter_defaults['percent'])
+    
+    
+    wandb.init(config=hyperparameter_defaults, project='noisylabel', entity='goguryeo', name=wandb_name)
         
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default=None, type=str,
+    args.add_argument('-c', '--config', default=wandb.config['config_path'], type=str,
                       help='config file path (default: None)')
     args.add_argument('-r', '--resume', default=None, type=str,
                       help='path to latest checkpoint (default: None)')
@@ -258,7 +274,8 @@ if __name__ == '__main__':
     parse = args.parse_args()
     config = ConfigParser.get_instance(args, options)
 
-
+    config['trainer']['asym'] = wandb.config['asym']
+    config['trainer']['percent'] = wandb.config['percent']
     
     ### TRAINING ###
     main(parse, config)

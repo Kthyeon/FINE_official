@@ -26,10 +26,12 @@ def get_cifar100(root, cfg_trainer, train=True,
         val_dataset = CIFAR100_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
         if cfg_trainer['asym']:
             train_dataset.asymmetric_noise()
-            val_dataset.asymmetric_noise()
+            if len(val_dataset) > 0:
+                val_dataset.asymmetric_noise()
         else:
             train_dataset.symmetric_noise()
-            val_dataset.symmetric_noise()
+            if len(val_dataset) > 0:
+                val_dataset.symmetric_noise()
         
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
     else:
@@ -37,16 +39,18 @@ def get_cifar100(root, cfg_trainer, train=True,
         val_dataset = CIFAR100_val(root, cfg_trainer, None, train=train, transform=transform_val)
         print(f"Test: {len(val_dataset)}")
 
-    
-    
-    
-    return train_dataset, val_dataset
+    if len(val_dataset) == 0:
+        return train_dataset, None
+    else:
+        return train_dataset, val_dataset
+
+#     return train_dataset, val_dataset
 
 
 def train_val_split(base_dataset: torchvision.datasets.CIFAR100):
     num_classes = 100
     base_dataset = np.array(base_dataset)
-    train_n = int(len(base_dataset) * 0.9 / num_classes)
+    train_n = int(len(base_dataset) * 1.0 / num_classes)
     train_idxs = []
     val_idxs = []
 
@@ -220,7 +224,10 @@ class CIFAR100_val(torchvision.datasets.CIFAR100):
         """ Flip classes according to transition probability matrix T.
         It expects a number between 0 and the number of classes - 1.
         """
-
+        
+        print (P.shape[0] == P.shape[1])
+        print (max(y) < P.shape[0])
+        
         assert P.shape[0] == P.shape[1]
         assert np.max(y) < P.shape[0]
 
@@ -261,7 +268,7 @@ class CIFAR100_val(torchvision.datasets.CIFAR100):
         n = self.cfg_trainer['percent']
         nb_superclasses = 20
         nb_subclasses = 5
-
+        
         if n > 0.0:
             for i in np.arange(nb_superclasses):
                 init, end = i * nb_subclasses, (i+1) * nb_subclasses

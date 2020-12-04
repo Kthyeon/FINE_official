@@ -83,6 +83,9 @@ def main(parse, config: ConfigParser):
     if parse.distillation:
         teacher = config.initialize('arch', module_arch)
         teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name + '.pth')['state_dict'])
+        if not parse.reinit:
+            model.load_state_dict(torch.load('./checkpoint/' + parse.load_name + '.pth')['state_dict'])
+        
         for params in teacher.parameters():
             params.requires_grad = False
                     
@@ -218,7 +221,7 @@ if __name__ == '__main__':
     args.add_argument('--threshold', type=float, default=0.1, help='threshold for the use of entropy loss.')
     args.add_argument('--wd', type=float, default=5e-4, help = 'weight_decay')
     args.add_argument('--load_name', type=str, default=None, help = 'teacher checkpoint for distillation')
-
+    args.add_argument('--reinit', help='whether to use teacher checkpoint', action='store_true')
 
     
     # custom cli options to modify configuration from default values given in json file.

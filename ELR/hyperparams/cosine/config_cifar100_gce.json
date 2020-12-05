@@ -34,10 +34,11 @@
     },
     
     "train_loss": {
-        "type": "TruncatedLoss",
+        "type": "GCELoss",
         "args":{
             "q": 0.7,
-            "k": 0.5
+            "k": 0.5,
+            "truncated": false
         }
     },
 
@@ -61,7 +62,7 @@
         "save_period": 1,
         "verbosity": 2,
         "label_dir": "saved/",       
-        "monitor": "max val_my_metric",
+        "monitor": "max test_my_metric",
         "early_stop": 2000,
         "tensorboard": false,
         "mlflow": true,

@@ -47,10 +47,10 @@
     ],
 
     "lr_scheduler": {
-        "type": "MultiStepLR",
+        "type": "CosineAnnealingWarmRestarts",
         "args": {
-            "milestones": [80,120],
-            "gamma": 0.01
+            "T_0": 10,
+            "eta_min": 0.001
         }
     },
 

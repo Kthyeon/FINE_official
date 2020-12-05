@@ -41,7 +41,8 @@ def main(parse, config: ConfigParser):
     torch.set_num_threads(1)
     
     logger = config.get_logger('train')
-    wandb.init(config=config, project=parse.project, name=parse.run_name)
+    wandb.init(config=config, project=parse.project, name=parse.run_name, entity='goguryeo')
+#     wandb.init(config=config, project=parse.project, name=parse.run_name)
     
     # Set seed for reproducibility
     random.seed(config['seed'])

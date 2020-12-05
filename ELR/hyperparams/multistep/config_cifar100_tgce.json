@@ -43,7 +43,7 @@
         }
     },
 
-    "val_loss": "CrossEntropyLOss",
+    "val_loss": "CrossEntropyLoss",
     "metrics": [
         "my_metric", "my_metric2"
     ],

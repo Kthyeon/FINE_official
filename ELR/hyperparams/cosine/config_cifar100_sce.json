@@ -27,30 +27,30 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.02,
+            "lr": 0.1,
             "momentum": 0.9,
-            "weight_decay": 1e-3
+            "weight_decay": 5e-3
         }
     },
     
     "train_loss": {
         "type": "SCELoss",
         "args":{
-            "alpha": 1.0,
-            "beta": 1.0
+            "alpha": 6.0,
+            "beta": 0.1
         }
     },
 
-    "val_loss": "CrossEntropyLOss",
+    "val_loss": "CrossEntropyLoss",
     "metrics": [
         "my_metric", "my_metric2"
     ],
 
     "lr_scheduler": {
-        "type": "MultiStepLR",
+        "type": "CosineAnnealingWarmRestarts",
         "args": {
-            "milestones": [80,120],
-            "gamma": 0.01
+            "T_0": 10,
+            "eta_min": 0.001
         }
     },
 
@@ -61,7 +61,7 @@
         "save_period": 1,
         "verbosity": 2,
         "label_dir": "saved/",       
-        "monitor": "max val_my_metric",
+        "monitor": "max test_my_metric",
         "early_stop": 2000,
         "tensorboard": false,
         "mlflow": true,

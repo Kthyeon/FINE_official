@@ -27,9 +27,9 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.02,
+            "lr": 0.01,
             "momentum": 0.9,
-            "weight_decay": 1e-3
+            "weight_decay": 1e-4
         }
     },
     

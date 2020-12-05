@@ -27,9 +27,9 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.02,
+            "lr": 0.01,
             "momentum": 0.9,
-            "weight_decay": 1e-3
+            "weight_decay": 1e-4
         }
     },
     
@@ -38,11 +38,12 @@
         "args":{
             "q": 0.7,
             "k": 0.5,
-            "truncated": true
+            "truncated": true,
+            "prune": 80
         }
     },
 
-    "val_loss": "CrossEntropyLOss",
+    "val_loss": "CrossEntropyLoss",
     "metrics": [
         "my_metric", "my_metric2"
     ],

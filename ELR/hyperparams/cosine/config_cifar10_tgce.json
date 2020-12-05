@@ -27,9 +27,9 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.02,
+            "lr": 0.01,
             "momentum": 0.9,
-            "weight_decay": 1e-3
+            "weight_decay": 1e-4
         }
     },
     
@@ -63,7 +63,7 @@
         "save_period": 1,
         "verbosity": 2,
         "label_dir": "saved/",
-        "monitor": "max val_my_metric",
+        "monitor": "max test_my_metric",
         "early_stop": 2000,
         "tensorboard": false,
         "mlflow": true,

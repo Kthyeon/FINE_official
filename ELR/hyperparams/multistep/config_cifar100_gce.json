@@ -34,10 +34,11 @@
     },
     
     "train_loss": {
-        "type": "TruncatedLoss",
+        "type": "GCELoss",
         "args":{
             "q": 0.7,
-            "k": 0.5
+            "k": 0.5,
+            "truncateed": false
         }
     },
 

@@ -38,7 +38,7 @@
         "args":{
             "num_gradual" : 10.0,
             "exponent" : 1.0,
-            "tau" : 1.25
+            "tau" : 1.0
         }
     },
 

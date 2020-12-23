@@ -150,7 +150,8 @@ class CoteachingTrainer(BaseTrainer):
         #     self.data_loader.run()
 
         log = {
-            'loss': total_loss / self.len_epoch,
+            'loss_1': total_loss_1 / self.len_epoch,
+            'loss_2': total_loss_2 / self.len_epoch,
             'metrics_1': (total_metrics_1 / self.len_epoch).tolist(),
             'metrics_gt_1': (total_metrics_gt_1 / self.len_epoch).tolist(),
             'metrics_2': (total_metrics_2 / self.len_epoch).tolist(),

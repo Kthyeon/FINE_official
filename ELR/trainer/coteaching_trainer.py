@@ -197,11 +197,11 @@ class CoteachingTrainer(BaseTrainer):
                     progress.set_description_str(f'Valid epoch {epoch}')
                     data, label = data.to(self.device), label.to(self.device)
 #                     _, output = self.model(data)
-                    output_1 = self.model_1(data)
-                    output_2 = self.model_2(data)
+                    _, output_1 = self.model_1(data)
+                    _, output_2 = self.model_2(data)
                     
                     loss_1 = self.val_criterion(output_1, label)
-                    loss_2 = self.val_crtierion(output_2, label)
+                    loss_2 = self.val_criterion(output_2, label)
 
                     self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
                     self.writer.add_scalar('loss_1', loss.item())
@@ -247,10 +247,10 @@ class CoteachingTrainer(BaseTrainer):
                     data, label = data.to(self.device), label.to(self.device)
 #                     _, output = self.model(data)
                     
-                    output_1 = self.model_1(data)
-                    output_2 = self.model_2(data)
+                    _, output_1 = self.model_1(data)
+                    _, output_2 = self.model_2(data)
                     loss_1 = self.val_criterion(output_1, label)
-                    loss_2 = self.val_crtierion(output_2, label)    
+                    loss_2 = self.val_criterion(output_2, label)    
                     
                     self.writer.set_step((epoch - 1) * len(self.test_data_loader) + batch_idx, 'test')
 #                     self.writer.add_scalar('loss', loss.item())
@@ -263,7 +263,7 @@ class CoteachingTrainer(BaseTrainer):
                     total_test_metrics_2 += self._eval_metrics(output_2, label)
                     self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
-                    results[indexs.cpu().detach().numpy().tolist()] = output.cpu().detach().numpy().tolist()
+                    results[indexs.cpu().detach().numpy().tolist()] = output_1.cpu().detach().numpy().tolist()
                     tar_[indexs.cpu().detach().numpy().tolist()] = label.cpu().detach().numpy().tolist()
 
         # add histogram of model parameters to the tensorboard

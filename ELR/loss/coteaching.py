@@ -81,6 +81,7 @@ class CoteachingLoss(nn.Module):
         # TODO: UPDATE FORGET RATE FOR EVERY EPOCH
         # drop forget rate
         
-        factor = (epoch ** self.exponent) / self.num_gradual
-        self.forget_rate = self.tau * self.noise_rate * min(factor, 1)
+        if epoch > 30:
+            factor = (epoch ** self.exponent) / self.num_gradual
+            self.forget_rate = self.tau * self.noise_rate * min(factor, 1)
         

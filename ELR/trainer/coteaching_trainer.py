@@ -36,6 +36,8 @@ class CoteachingTrainer(BaseTrainer):
         
         # Specific attribute for coteaching
         self.model_1, self.model_2 = copy.deepcopy(model), copy.deepcopy(model)
+        self.optimizer_1 = torch.optim.Adam(self.model_1.parameters(), lr=1e-3)
+        self.optimizer_2 = torch.optim.Adam(self.model_2.parameters(), lr=1e-3)
         
         # TODO: 얘네는 train.py단에서 건드리는게 더 쉬울듯?
         # 아니면 train_epoch에서 건드려도 됨
@@ -92,8 +94,8 @@ class CoteachingTrainer(BaseTrainer):
         
         # 이러면 learning rate scheduler 한 번에 할 수 있어서
         # 따로 안 만들어줘도 됨.
-        self.optimizer_1 = copy.deepcopy(self.optimizer)
-        self.optimizer_2 = copy.deepcopy(self.optimizer)
+#         self.optimizer_1 = copy.deepcopy(self.optimizer)
+#         self.optimizer_2 = copy.deepcopy(self.optimizer)
 
         total_loss_1, total_loss_2 = 0, 0
         total_metrics_1, total_metrics_2 = np.zeros(len(self.metrics)), np.zeros(len(self.metrics))
@@ -172,8 +174,8 @@ class CoteachingTrainer(BaseTrainer):
         # TODO: UPDATE FORGET RATE FOR TRAIN LOSS
         self.train_criterion.update_forget_rate(epoch)
         
-        if self.lr_scheduler is not None:
-            self.lr_scheduler.step()
+#         if self.lr_scheduler is not None:
+#             self.lr_scheduler.step()
             
         return log
 
@@ -253,9 +255,6 @@ class CoteachingTrainer(BaseTrainer):
                     loss_2 = self.val_criterion(output_2, label)    
                     
                     self.writer.set_step((epoch - 1) * len(self.test_data_loader) + batch_idx, 'test')
-#                     self.writer.add_scalar('loss', loss.item())
-#                     self.test_loss_list.append(loss.item())
-
 
                     total_test_loss_1 += loss_1.item()
                     total_test_metrics_1 += self._eval_metrics(output_1, label)

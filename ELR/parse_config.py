@@ -20,21 +20,27 @@ class ConfigParser:
         return super().__new__(cls)
 
     @classmethod
-    def get_instance(cls, args=None, options='', timestamp=True, cfg_name=None):
+    def get_instance(cls, args=None, options='', timestamp=True):
         if not cls.__instance:
             if args is None:
                 NotImplementedError('Cannot initialize without args')
             cls.__instance = cls.__internal_new__()
-            cls.__instance.__init__(args, options, cfg_fname=cfg_name)
+            cls.__instance.__init__(args, options)
 
         return cls.__instance
 
-    def __init__(self, args, options='', timestamp=True, cfg_fname=None):
+    def __init__(self, args, options='', timestamp=True):
         # parse default and custom cli options
         for opt in options:
             args.add_argument(*opt.flags, default=None, type=opt.type)
         args = args.parse_args()
         self.args = args
+        
+        # set config file from arguments (dataset, lr scheduler, loss fn)
+        cfg_fname=None
+        if args.dataset and args.lr_scheduler and args.loss_fn:
+            cfg_fname = './hyperparams/' + args.lr_scheduler + '/config_' + args.dataset + '_' + args.loss_fn + '.json'
+        
         if args.device:
             os.environ["CUDA_VISIBLE_DEVICES"] = args.device
         if args.resume is None:
@@ -58,21 +64,20 @@ class ConfigParser:
 
         # set save_dir where trained model and log will be saved.
         save_dir = Path(self.config['trainer']['save_dir'])
-        timestamp = datetime.now().strftime(r'%m%d_%H%M%S') if timestamp else ''
-
 
         if self.config['trainer']['asym']:
             exper_name = self.config['name'] + '_asym_' + str(int(self.config['trainer']['percent']*100))
         else:
             exper_name = self.config['name'] + '_sym_' + str(int(self.config['trainer']['percent']*100))
-        self._save_dir = save_dir / 'models' / exper_name / timestamp
-        self._log_dir = save_dir / 'log' / exper_name / timestamp
+        self._save_dir = save_dir / 'models' / exper_name
+        self._log_dir = save_dir / 'log' / exper_name
 
         self.save_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         # save updated config file to the checkpoint dir
-        write_json(self.config, self.save_dir / 'config.json')
+        config_name = 'config_' + str(self.config['seed']) + '.json'
+        write_json(self.config, self.save_dir / config_name)
 
         # configure logging module
         setup_logging(self.log_dir)

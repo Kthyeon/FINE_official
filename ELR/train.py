@@ -21,6 +21,16 @@ import copy
 
 import wandb
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def log_params(conf: OrderedDict, parent_key: str = None):
     for key, value in conf.items():
         if parent_key is not None:
@@ -35,14 +45,25 @@ def log_params(conf: OrderedDict, parent_key: str = None):
 
 
 def main(parse, config: ConfigParser):
+    dataset_name = config['name'].split('_')[0]
+    lr_scheduler_name = config['lr_scheduler']['type']
+    loss_fn_name = config['train_loss']['type']
     
-
-    wandb_name = '_sym_' + str(config['trainer']['percent'])
-    wandb_name = '_baseline_' + parse.loss_fn + wandb_name
-    wandb_name = parse.dataset + '_' + parse.lr_scheduler + wandb_name
+    wandb_run_name_list = []
     
-    wandb.init(config=config, project='noisylabel', entity='goguryeo', name=wandb_name)
+    if parse.distillation:
+        wandb_run_name_list.append('distil')
+    else:
+        wandb_run_name_list.append('baseline')
+    wandb_run_name_list.append(dataset_name)
+    wandb_run_name_list.append(lr_scheduler_name)
+    wandb_run_name_list.append(loss_fn_name)
+    wandb_run_name_list.append(str(config['trainer']['asym']))
+    wandb_run_name_list.append(str(config['trainer']['percent']))
+    wandb_run_name = '_'.join(wandb_run_name_list)
     
+    if parse.no_wandb:
+        wandb.init(config=config, project='noisylabel', entity='goguryeo', name=wandb_run_name)
     
     # By default, pytorch utilizes multi-threaded cpu
     # Set to handle whole procedures on a single core
@@ -50,14 +71,12 @@ def main(parse, config: ConfigParser):
     
     logger = config.get_logger('train')
     
-    
     # Set seed for reproducibility
     random.seed(config['seed'])
     torch.manual_seed(config['seed'])
     torch.cuda.manual_seed_all(config['seed'])
     torch.backends.cudnn.deterministic = True
     np.random.seed(config['seed'])
-    
     
     data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
@@ -71,7 +90,6 @@ def main(parse, config: ConfigParser):
         pin_memory=config['data_loader']['args']['pin_memory']
     )
 
-    
     # valid_data_loader = data_loader.split_validation()
 
     valid_data_loader = None
@@ -91,7 +109,8 @@ def main(parse, config: ConfigParser):
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch)
     
-    wandb.watch(model)
+    if parse.no_wandb:
+        wandb.watch(model)
     
     if parse.distillation:
         teacher = config.initialize('arch', module_arch)
@@ -110,8 +129,6 @@ def main(parse, config: ConfigParser):
 
         teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
         
-            
-            
         data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],
@@ -125,10 +142,6 @@ def main(parse, config: ConfigParser):
         teacher_idx = teacher_idx)
     else:
         teacher = None
-        
-    
-    
-    
 
     # get function handles of loss and metrics
     logger.info(config.config)
@@ -228,53 +241,45 @@ if __name__ == '__main__':
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default='1', type=str,
                       help='indices of GPUs to enable (default: all)')
-    args.add_argument
     args.add_argument('--distillation', help='whether to distill knowledge', action='store_true')
     args.add_argument('--mode', type=str, default='ce', choices=['ce', 'same'], help = 'distill_type. same means the same loss of teacher recipe')
     args.add_argument('--entropy', help='whether to use entropy loss', action='store_true')
     args.add_argument('--threshold', type=float, default=0.1, help='threshold for the use of entropy loss.')
-    args.add_argument('--wd', type=float, default=5e-4, help = 'weight_decay')
+    args.add_argument('--wd', type=float, default=None, help = 'weight_decay')
     args.add_argument('--load_name', type=str, default=None, help = 'teacher checkpoint for distillation')
     args.add_argument('--reinit', help='whether to use teacher checkpoint', action='store_true')
-    args.add_argument('--project', type=str, default='noisylabel', help='WandB project name')
     
-    args.add_argument('--dataset', type=str, default=None, help='WandB dataset name')
-    args.add_argument('--lr_scheduler', type=str, default=None, help='WandB lr_scheduler name')
-    args.add_argument('--loss_fn', type=str, default=None, help='WandB loss_fn name')
-    args.add_argument('--percent', type=float, default=None, help='Wandb percent')
-    
-    parse = args.parse_args()
-    cfg_fname=None
-    if parse.dataset and parse.lr_scheduler and parse.loss_fn:
-        cfg_fname = './hyperparams/' + parse.lr_scheduler + '/config_' + parse.dataset + '_' + parse.loss_fn + '.json'
+    args.add_argument('--no_wandb', action='store_false', help='if false, not to use wandb')
+    # dataset, lr_scheduler, loss_fn are only used to decide config file; they have no effect when config file is given
+    args.add_argument('--dataset', type=str, default=None, help='dataset name') 
+    args.add_argument('--lr_scheduler', type=str, default=None, help='type of lr_scheduler name')
+    args.add_argument('--loss_fn', type=str, default=None, help='loss_fn type name')
+
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
     options = [
         CustomArgs(['--lr', '--learning_rate'], type=float, target=('optimizer', 'args', 'lr')),
         CustomArgs(['--bs', '--batch_size'], type=int, target=('data_loader', 'args', 'batch_size')),
         CustomArgs(['--name', '--exp_name'], type=str, target=('name',)),
-        CustomArgs(['--seed', '--seed'], type=int, target=('seed',))
+        CustomArgs(['--seed', '--seed'], type=int, target=('seed',)),
+        CustomArgs(['--percent', '--percent'], type=float, target=('trainer', 'percent')),
+        CustomArgs(['--asym', '--asym'], type=str2bool, target=('trainer', 'asym')),
     ]
+    config = ConfigParser.get_instance(args, options)
+    parse = args.parse_args()
     
-    config = ConfigParser.get_instance(args, options, cfg_name=cfg_fname)
-    if config['train_loss']['type'] == 'ELRLoss':
-        options.append(CustomArgs(['--lamb', '--lamb'], type=float, target=('train_loss', 'args', 'lambda')))
-        options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
-    elif config['train_loss']['type'] == 'SCELoss':
-        options.append(CustomArgs(['--alpha', '--alpha'], type=float, target=('train_loss', 'args', 'alpha')))
-        options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
-    elif config['train_loss']['type'] == 'GCELoss':
-        options.append(CustomArgs(['--q', '--q'], type=float, target=('train_loss', 'args', 'q')))
-        options.append(CustomArgs(['--k', '--k'], type=float, target=('train_loss', 'args', 'k')))
-        options.append(CustomArgs(['--truncated', '--truncated'], type=bool, target=('train_loss', 'args', 'truncated')))
+#     if config['train_loss']['type'] == 'ELRLoss':
+#         options.append(CustomArgs(['--lamb', '--lamb'], type=float, target=('train_loss', 'args', 'lambda')))
+#         options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
+#     elif config['train_loss']['type'] == 'SCELoss':
+#         options.append(CustomArgs(['--alpha', '--alpha'], type=float, target=('train_loss', 'args', 'alpha')))
+#         options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
+#     elif config['train_loss']['type'] == 'GCELoss':
+#         options.append(CustomArgs(['--q', '--q'], type=float, target=('train_loss', 'args', 'q')))
+#         options.append(CustomArgs(['--k', '--k'], type=float, target=('train_loss', 'args', 'k')))
+#         options.append(CustomArgs(['--truncated', '--truncated'], type=bool, target=('train_loss', 'args', 'truncated')))
 #     elif config['train_loss']['type'] == ...:
 #         options.append(somethings...)
-    parse = args.parse_args()
-    config = ConfigParser.get_instance(args, options, cfg_name=cfg_fname)
-    
-    if parse.percent is not None:
-        config['trainer']['percent'] = parse.percent
-    config['trainer']['asym'] = False
 
     ### TRAINING ###
     main(parse, config)

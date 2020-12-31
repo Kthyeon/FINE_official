@@ -114,9 +114,9 @@ def main(parse, config: ConfigParser):
     
     if parse.distillation:
         teacher = config.initialize('arch', module_arch)
-        teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name + '.pth')['state_dict'])
+        teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
         if not parse.reinit:
-            model.load_state_dict(torch.load('./checkpoint/' + parse.load_name + '.pth')['state_dict'])
+            model.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
         
         for params in teacher.parameters():
             params.requires_grad = False

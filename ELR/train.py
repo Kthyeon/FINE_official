@@ -151,7 +151,7 @@ def main(parse, config: ConfigParser):
         num_examp = len(data_loader.dataset)
     
     if config['train_loss']['type'] == 'ELRLoss':
-        train_loss = getattr(module_loss, 'ELRLoss')(num_examp=num_examp, 
+        train_loss = getattr(module_loss, 'ELRLoss')(num_examp=num_examp,
                                                      num_classes=config['num_classes'],
                                                      beta=config['train_loss']['args']['beta'])
     elif config['train_loss']['type'] == 'SCELoss':
@@ -199,7 +199,7 @@ def main(parse, config: ConfigParser):
                                      val_criterion=val_loss,
                                      mode = parse.mode,
                                      entropy = parse.entropy,
-                                     threshold = parse.threshold                                    
+                                     threshold = parse.threshold                                  
                                 )
     elif config['train_loss']['type'] == 'GCELoss':
         if config['train_loss']['args']['truncated'] == False:
@@ -213,7 +213,8 @@ def main(parse, config: ConfigParser):
                                      val_criterion=val_loss,
                                      mode = parse.mode,
                                      entropy = parse.entropy,
-                                     threshold = parse.threshold)
+                                     threshold = parse.threshold
+                                    )
         elif config['train_loss']['args']['truncated'] == True:
             trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
                                       config=config,
@@ -225,7 +226,8 @@ def main(parse, config: ConfigParser):
                                       val_criterion=val_loss,
                                       mode = parse.mode,
                                       entropy = parse.entropy,
-                                      threshold = parse.threshold)
+                                      threshold = parse.threshold
+                                     )
 
     trainer.train()
     
@@ -247,7 +249,7 @@ if __name__ == '__main__':
     args.add_argument('--threshold', type=float, default=0.1, help='threshold for the use of entropy loss.')
     args.add_argument('--wd', type=float, default=None, help = 'weight_decay')
     args.add_argument('--load_name', type=str, default=None, help = 'teacher checkpoint for distillation')
-    args.add_argument('--reinit', help='whether to use teacher checkpoint', action='store_true')
+    args.add_argument('--reinit', help='if false, reuse teacher checkpoint', action='store_true')
     
     args.add_argument('--no_wandb', action='store_false', help='if false, not to use wandb')
     # dataset, lr_scheduler, loss_fn are only used to decide config file; they have no effect when config file is given
@@ -268,18 +270,5 @@ if __name__ == '__main__':
     config = ConfigParser.get_instance(args, options)
     parse = args.parse_args()
     
-#     if config['train_loss']['type'] == 'ELRLoss':
-#         options.append(CustomArgs(['--lamb', '--lamb'], type=float, target=('train_loss', 'args', 'lambda')))
-#         options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
-#     elif config['train_loss']['type'] == 'SCELoss':
-#         options.append(CustomArgs(['--alpha', '--alpha'], type=float, target=('train_loss', 'args', 'alpha')))
-#         options.append(CustomArgs(['--beta', '--beta'], type=float, target=('train_loss', 'args', 'beta')))
-#     elif config['train_loss']['type'] == 'GCELoss':
-#         options.append(CustomArgs(['--q', '--q'], type=float, target=('train_loss', 'args', 'q')))
-#         options.append(CustomArgs(['--k', '--k'], type=float, target=('train_loss', 'args', 'k')))
-#         options.append(CustomArgs(['--truncated', '--truncated'], type=bool, target=('train_loss', 'args', 'truncated')))
-#     elif config['train_loss']['type'] == ...:
-#         options.append(somethings...)
-
     ### TRAINING ###
     main(parse, config)

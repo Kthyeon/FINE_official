@@ -93,8 +93,11 @@ class BaseTrainer:
                 else:
                     log[key] = value
             
-            wandb.log(log)
-
+            try:
+                wandb.log(log)
+            except:
+                print("wandb not initialized")
+            
             # print logged informations to the screen
             for key, value in log.items():
                 self.logger.info('    {:15s}: {}'.format(str(key), value))
@@ -166,9 +169,10 @@ class BaseTrainer:
         # torch.save(state, filename)
         # self.logger.info("Saving checkpoint: {} ...".format(filename))
         if save_best:
-            best_path = str(self.checkpoint_dir / 'model_best.pth')
+            model_name = 'model_best' + str(self.config['seed']) + '.pth'
+            best_path = str(self.checkpoint_dir / model_name)
             torch.save(state, best_path)
-            self.logger.info("Saving current best: model_best.pth at: {} ...".format(best_path))
+            self.logger.info("Saving current best: " + model_name + " at: {} ...".format(best_path))
 
 
     def _resume_checkpoint(self, resume_path):

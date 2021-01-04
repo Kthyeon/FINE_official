@@ -66,9 +66,9 @@ class ConfigParser:
         save_dir = Path(self.config['trainer']['save_dir'])
 
         if self.config['trainer']['asym']:
-            exper_name = self.config['name'] + '_asym_' + str(int(self.config['trainer']['percent']*100))
+            exper_name = self.config['name'] + '_' + self.config['train_loss']['type'] + '_asym_' + str(int(self.config['trainer']['percent']*100))
         else:
-            exper_name = self.config['name'] + '_sym_' + str(int(self.config['trainer']['percent']*100))
+            exper_name = self.config['name'] + '_' + self.config['train_loss']['type'] + '_sym_' + str(int(self.config['trainer']['percent']*100))
         self._save_dir = save_dir / 'models' / exper_name
         self._log_dir = save_dir / 'log' / exper_name
 

@@ -39,7 +39,7 @@ class ConfigParser:
         # set config file from arguments (dataset, lr scheduler, loss fn)
         cfg_fname=None
         if args.dataset and args.lr_scheduler and args.loss_fn:
-            cfg_fname = './hyperparams/' + args.lr_scheduler + '/config_' + args.dataset + '_' + args.loss_fn + '.json'
+            cfg_fname = './hyperparams/' + args.lr_scheduler + '/config_' + args.dataset + '_' + args.loss_fn + '_' + args.arch + '.json'
         
         if args.device:
             os.environ["CUDA_VISIBLE_DEVICES"] = args.device

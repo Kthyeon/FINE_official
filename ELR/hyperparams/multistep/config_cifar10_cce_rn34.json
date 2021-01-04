@@ -34,7 +34,7 @@
     },
     
     "train_loss": {
-        "type": "CrossEntropyLoss"
+        "type": "CCELoss"
     },
 
     "val_loss": "CrossEntropyLoss",

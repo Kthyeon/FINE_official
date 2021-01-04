@@ -163,6 +163,8 @@ def main(parse, config: ConfigParser):
                                                      k=config['train_loss']['args']['k'],
                                                      trainset_size=num_examp,
                                                      truncated=config['train_loss']['args']['truncated'])
+    else:
+        train_loss = getattr(module_loss, 'CrossEntropyLoss')
 
         
     val_loss = getattr(module_loss, config['val_loss'])

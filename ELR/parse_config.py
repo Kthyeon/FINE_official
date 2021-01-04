@@ -65,12 +65,15 @@ class ConfigParser:
         # set save_dir where trained model and log will be saved.
         save_dir = Path(self.config['trainer']['save_dir'])
 
-        if self.config['trainer']['asym']:
-            exper_name = self.config['name'] + '_' + self.config['train_loss']['type'] + '_asym_' + str(int(self.config['trainer']['percent']*100))
-        else:
-            exper_name = self.config['name'] + '_' + self.config['train_loss']['type'] + '_sym_' + str(int(self.config['trainer']['percent']*100))
-        self._save_dir = save_dir / 'models' / exper_name
-        self._log_dir = save_dir / 'log' / exper_name
+        dataset_name = self.config['name'].split('_')[0]
+        model_type = self.config['arch']['type']
+        lr_scheduler = self.config['lr_scheduler']['type']
+        loss_fn = self.config['train_loss']['type']
+        sym_setting = 'sym' if not self.config['trainer']['asym'] else 'asym'
+        percent = str(int(self.config['trainer']['percent']*100))
+            
+        self._save_dir = save_dir / 'models' / dataset_name / model_type / lr_scheduler / loss_fn / sym_setting / percent
+        self._log_dir = save_dir / 'log' / dataset_name / model_type / lr_scheduler / loss_fn / sym_setting / percent
 
         self.save_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir.mkdir(parents=True, exist_ok=True)

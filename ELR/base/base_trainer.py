@@ -6,6 +6,8 @@ from numpy import inf
 from logger import TensorboardWriter
 import numpy as np
 
+import wandb
+
 class BaseTrainer:
     """
     Base class for all trainers
@@ -69,6 +71,7 @@ class BaseTrainer:
         Full training logic
         """
         not_improved_count = 0
+        
 
         for epoch in tqdm(range(self.start_epoch, self.epochs + 1), desc='Total progress: '):
             if epoch <= self.config['trainer']['warmup']:
@@ -76,20 +79,25 @@ class BaseTrainer:
             else:
                 result= self._train_epoch(epoch)
 
-            
-
             # save logged informations into log dict
             log = {'epoch': epoch}
             for key, value in result.items():
                 if key == 'metrics':
                     log.update({mtr.__name__: value[i] for i, mtr in enumerate(self.metrics)})
+                elif key == 'metrics_gt':
+                    log.update({mtr.__name__ + '_gt': value[i] for i, mtr in enumerate(self.metrics)})
                 elif key == 'val_metrics':
                     log.update({'val_' + mtr.__name__: value[i] for i, mtr in enumerate(self.metrics)})
                 elif key == 'test_metrics':
                     log.update({'test_' + mtr.__name__: value[i] for i, mtr in enumerate(self.metrics)})
                 else:
                     log[key] = value
-
+            
+            try:
+                wandb.log(log)
+            except:
+                print("wandb not initialized")
+            
             # print logged informations to the screen
             for key, value in log.items():
                 self.logger.info('    {:15s}: {}'.format(str(key), value))
@@ -121,6 +129,7 @@ class BaseTrainer:
 
             if epoch % self.save_period == 0:
                 self._save_checkpoint(epoch, save_best=best)
+        
     
     def _prepare_device(self, n_gpu_use):
         """
@@ -160,9 +169,10 @@ class BaseTrainer:
         # torch.save(state, filename)
         # self.logger.info("Saving checkpoint: {} ...".format(filename))
         if save_best:
-            best_path = str(self.checkpoint_dir / 'model_best.pth')
+            model_name = 'model_best' + str(self.config['seed']) + '.pth'
+            best_path = str(self.checkpoint_dir / model_name)
             torch.save(state, best_path)
-            self.logger.info("Saving current best: model_best.pth at: {} ...".format(best_path))
+            self.logger.info("Saving current best: " + model_name + " at: {} ...".format(best_path))
 
 
     def _resume_checkpoint(self, resume_path):

@@ -1,3 +1,8 @@
+# not upload data
+ELR/dir_to_data/
+ELR/wandb
+.gitignore
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -29,6 +34,7 @@ MANIFEST
 
 data/
 saved/
+dir_to_data/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

@@ -13,10 +13,12 @@ import os
 
 def get_cifar10(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
-                download=True, noise_file = ''):
+                download=True, noise_file = '', teacher_idx=None):
     base_dataset = torchvision.datasets.CIFAR10(root, train=train, download=download)
     if train:
         train_idxs, val_idxs = train_val_split(base_dataset.targets)
+        if teacher_idx != None:
+            train_idxs = teacher_idx
         train_dataset = CIFAR10_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR10_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
         if cfg_trainer['asym']:
@@ -32,15 +34,16 @@ def get_cifar10(root, cfg_trainer, train=True,
         val_dataset = CIFAR10_val(root, cfg_trainer, None, train=train, transform=transform_val)
         print(f"Test: {len(val_dataset)}")
     
-    
-    
-    return train_dataset, val_dataset
+    if len(val_dataset) == 0:
+        return train_dataset, None
+    else:
+        return train_dataset, val_dataset
 
 
 def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
     num_classes = 10
     base_dataset = np.array(base_dataset)
-    train_n = int(len(base_dataset) * 0.9 / num_classes)
+    train_n = int(len(base_dataset) * 1.0 / num_classes)
     train_idxs = []
     val_idxs = []
 
@@ -154,6 +157,7 @@ class CIFAR10_val(torchvision.datasets.CIFAR10):
             self.train_data = self.data
             self.train_labels = np.array(self.targets)
         self.train_labels_gt = self.train_labels.copy()
+        
     def symmetric_noise(self):
         
         indices = np.random.permutation(len(self.train_data))

@@ -9,8 +9,9 @@ from PIL import Image
 
 
 class CIFAR10DataLoader(BaseDataLoader):
-    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True):
-        config = ConfigParser.get_instance()
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True, config=None, teacher_idx = None):
+        if config == None:
+            config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
         
         transform_train = transforms.Compose([
@@ -28,10 +29,11 @@ class CIFAR10DataLoader(BaseDataLoader):
         noise_file='%sCIFAR10_%.1f_Asym_%s.json'%(config['data_loader']['args']['data_dir'],cfg_trainer['percent'],cfg_trainer['asym'])
         
         self.train_dataset, self.val_dataset = get_cifar10(config['data_loader']['args']['data_dir'], cfg_trainer, train=training,
-                                                           transform_train=transform_train, transform_val=transform_val, noise_file = noise_file)
+                                                           transform_train=transform_train, transform_val=transform_val, noise_file = noise_file, teacher_idx = teacher_idx)
 
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
                          val_dataset = self.val_dataset)
+        
     def run_loader(self, batch_size, shuffle, validation_split, num_workers, pin_memory):
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
                          val_dataset = self.val_dataset)
@@ -39,7 +41,7 @@ class CIFAR10DataLoader(BaseDataLoader):
 
 
 class CIFAR100DataLoader(BaseDataLoader):
-    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0, training=True,num_workers=4, pin_memory=True):
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0, training=True,num_workers=4, pin_memory=True, teacher_idx = None):
         config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
         
@@ -61,7 +63,7 @@ class CIFAR100DataLoader(BaseDataLoader):
         noise_file='%sCIFAR100_%.1f_Asym_%s.json'%(config['data_loader']['args']['data_dir'],cfg_trainer['percent'],cfg_trainer['asym'])
 
         self.train_dataset, self.val_dataset = get_cifar100(config['data_loader']['args']['data_dir'], cfg_trainer, train=training,
-                                                           transform_train=transform_train, transform_val=transform_val, noise_file = noise_file)
+                                                           transform_train=transform_train, transform_val=transform_val, noise_file = noise_file, teacher_idx = teacher_idx)
 
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
                          val_dataset = self.val_dataset)

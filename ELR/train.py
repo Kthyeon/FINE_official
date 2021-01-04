@@ -164,7 +164,7 @@ def main(parse, config: ConfigParser):
                                                      trainset_size=num_examp,
                                                      truncated=config['train_loss']['args']['truncated'])
     else:
-        train_loss = getattr(module_loss, 'CrossEntropyLoss')
+        train_loss = getattr(module_loss, 'CCELoss')()
 
         
     val_loss = getattr(module_loss, config['val_loss'])
@@ -230,6 +230,19 @@ def main(parse, config: ConfigParser):
                                       entropy = parse.entropy,
                                       threshold = parse.threshold
                                      )
+    else:
+        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     teacher=teacher,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss,
+                                     mode = parse.mode,
+                                     entropy = parse.entropy,
+                                     threshold = parse.threshold
+                                    )
 
     trainer.train()
     

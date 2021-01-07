@@ -4,7 +4,7 @@ from base import BaseModel
 from .ResNet_Zoo import ResNet, BasicBlock, Bottleneck
 
 def resnet10(num_classes=10):
-    return ResNet(BasickBlock, [1,1,1,1], num_classes=num_classes)
+    return ResNet(BasicBlock, [1,1,1,1], num_classes=num_classes)
 
 def resnet18(num_classes=10):
     return ResNet(BasicBlock, [2,2,2,2], num_classes=num_classes)

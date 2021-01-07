@@ -108,6 +108,8 @@ class ResNet(nn.Module):
     def get_activations_gradient(self):
         return self.gradients
 
+def ResNet10():
+    return ResNet(BasicBlock, [1,1,1,1])
 
 def ResNet18():
     return ResNet(BasicBlock, [2,2,2,2])

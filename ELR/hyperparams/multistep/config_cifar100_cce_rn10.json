@@ -1,5 +1,5 @@
 {
-    "name": "cifar100_resnet18_multistep",
+    "name": "cifar100_resnet10_multistep",
     "n_gpu": 1,
     "seed": 123,
 

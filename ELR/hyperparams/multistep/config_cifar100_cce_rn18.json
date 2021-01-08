@@ -4,14 +4,14 @@
     "seed": 123,
 
     "arch": {
-        "type": "resnet10",
-        "args": {"num_classes":10}
+        "type": "resnet18",
+        "args": {"num_classes":100}
     },
 
-    "num_classes": 10,
+    "num_classes": 100,
 
     "data_loader": {
-        "type": "CIFAR10DataLoader",
+        "type": "CIFAR100DataLoader",
         "args":{
             "data_dir": "./dir_to_data",
             "batch_size": 128,
@@ -34,11 +34,7 @@
     },
     
     "train_loss": {
-        "type": "ELRLoss",
-        "args":{
-            "beta": 0.7,
-            "lambda": 3
-        }
+        "type": "CCELoss"
     },
 
     "val_loss": "CrossEntropyLoss",

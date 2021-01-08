@@ -36,8 +36,8 @@
     "train_loss": {
         "type": "ELRLoss",
         "args":{
-            "beta": 0.7,
-            "lambda": 3
+            "beta": 0.9,
+            "lambda": 1
         }
     },
 

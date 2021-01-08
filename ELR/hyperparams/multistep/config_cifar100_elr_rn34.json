@@ -1,5 +1,5 @@
 {
-    "name": "cifar100_sy_60_resnet34",
+    "name": "cifar100_resnet34_multistep",
     "n_gpu": 1,
     "seed": 123,
 
@@ -27,17 +27,17 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.1,
+            "lr": 0.02,
             "momentum": 0.9,
-            "weight_decay": 5e-3
+            "weight_decay": 1e-3
         }
     },
     
     "train_loss": {
-        "type": "SCELoss",
+        "type": "ELRLoss",
         "args":{
-            "alpha": 6.0,
-            "beta": 0.1
+            "beta": 0.9,
+            "lambda": 7
         }
     },
 
@@ -50,7 +50,7 @@
         "type": "MultiStepLR",
         "args": {
             "milestones": [80,120],
-            "gamma": 0.1
+            "gamma": 0.01
         }
     },
 
@@ -61,7 +61,7 @@
         "save_period": 1,
         "verbosity": 2,
         "label_dir": "saved/",       
-        "monitor": "max test_my_metric",
+        "monitor": "max val_my_metric",
         "early_stop": 2000,
         "tensorboard": false,
         "mlflow": true,

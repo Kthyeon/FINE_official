@@ -38,7 +38,7 @@
         "args":{
             "q": 0.7,
             "k": 0.5,
-            "truncateed": false
+            "truncated": false
         }
     },
 

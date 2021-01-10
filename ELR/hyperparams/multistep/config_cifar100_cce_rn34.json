@@ -45,13 +45,13 @@
     "lr_scheduler": {
         "type": "MultiStepLR",
         "args": {
-            "milestones": [40, 80],
+            "milestones": [80, 120],
             "gamma": 0.01
         }
     },
 
     "trainer": {
-        "epochs": 120,
+        "epochs": 150,
         "warmup": 0,
         "save_dir": "saved/",
         "save_period": 1,

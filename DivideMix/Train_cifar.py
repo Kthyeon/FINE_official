@@ -29,6 +29,10 @@ parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=10, type=int)
 parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to dataset')
 parser.add_argument('--dataset', default='cifar10', type=str)
+# For testing winning tickets
+parser.add_argument('--distill', default=None, type=str, help='initial or dynamic')
+parser.add_argument('--load_model', default=None, type=str, help='path to teacher model')
+
 args = parser.parse_args()
 
 torch.cuda.set_device(args.gpuid)
@@ -220,8 +224,29 @@ if args.dataset=='cifar10':
 elif args.dataset=='cifar100':
     warm_up = 30
 
+if args.distill == 'initial':
+    # initial data loader
+    data_loader = 
+    
+    # teacher model initialize
+    teacher = 
+    for params in teacher.parameters():
+        params.requires_grad = False
+    
+    # get teacher_idx
+    tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+    singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
+    
+    for key in v_ortho_dict.keys():
+        v_ortho_dict[key] = v_ortho_dict[key].cuda()
+
+    teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+
+else:
+    teacher_idx = None
+    
 loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
-    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
+    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),teacher_idx=teacher_idx)
 
 print('| Building net')
 net1 = create_model()

@@ -132,7 +132,7 @@ class cifar_dataset(Dataset):
         
         
 class cifar_dataloader():  
-    def __init__(self, dataset, r, noise_mode, batch_size, num_workers, root_dir, log, noise_file=''):
+    def __init__(self, dataset, r, noise_mode, batch_size, num_workers, root_dir, log, noise_file='', teacher_idx=None):
         self.dataset = dataset
         self.r = r
         self.noise_mode = noise_mode
@@ -141,6 +141,7 @@ class cifar_dataloader():
         self.root_dir = root_dir
         self.log = log
         self.noise_file = noise_file
+        self.teacher_idx = teacher_idx
         if self.dataset=='cifar10':
             self.transform_train = transforms.Compose([
                     transforms.RandomCrop(32, padding=4),

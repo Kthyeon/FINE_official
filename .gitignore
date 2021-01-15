@@ -2,6 +2,8 @@
 ELR/dir_to_data/
 ELR/wandb
 .gitignore
+DivideMix/cifar-10/
+DivideMix/cifar-100/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

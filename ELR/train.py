@@ -143,11 +143,15 @@ def main(parse, config: ConfigParser):
                                                      truncated=config['train_loss']['args']['truncated'])
     # coteaching
     elif config['train_loss']['type'] == 'CoteachingLoss':
-        train_loss = getattr(module_loss, 'CoteachingLoss')(noise_rate=parse.percent,
-                                                            num_gradual=config['train_loss']['args']['num_gradual'],
-                                                            exponent=config['train_loss']['args']['exponent'],
-                                                            tau=config['train_loss']['args']['tau'])
+        train_loss = getattr(module_loss, 'CoteachingLoss')(forget_rate=config['trainer']['percent'],
+                                                            num_gradual=int(config['train_loss']['args']['num_gradual']),
+                                                            n_epoch=config['trainer']['epochs'])
 
+    # coteaching_plus
+    elif config['train_loss']['type'] == 'CoteachingPlusLoss':
+        train_loss = getattr(module_loss, 'CoteachingPlusLoss')(forget_rate=config['trainer']['percent'],
+                                                                num_gradual=int(config['train_loss']['args']['num_gradual']),
+                                                                n_epoch=config['trainer']['epochs'])
         
     val_loss = getattr(module_loss, config['val_loss'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
@@ -212,6 +216,31 @@ def main(parse, config: ConfigParser):
                                       threshold = parse.threshold)
     # coteaching
     elif config['train_loss']['type'] == 'CoteachingLoss':
+        
+        model1, model2 = config.initialize('arch', module_arch), config.initialize('arch', module_arch)
+        
+        trainable_params1 = filter(lambda p: p.requires_grad, model1.parameters())
+        trainable_params2 = filter(lambda p: p.requires_grad, model2.parameters())
+
+        optimizer1 = config.initialize('optimizer', torch.optim, [{'params': trainable_params1}])
+        optimizer2 = config.initialize('optimizer', torch.optim, [{'params': trainable_params2}])
+        
+        trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
+                                    config=config,
+                                    data_loader=data_loader,
+                                    teacher=teacher,
+                                    valid_data_loader=valid_data_loader,
+                                    test_data_loader=test_data_loader,
+                                    lr_scheduler=None,
+                                    val_criterion=val_loss,
+                                    mode=parse.mode,
+                                    entropy=parse.entropy,
+                                    threshold=parse.threshold,
+                                    epoch_decay_start=config['trainer']['epoch_decay_start'],
+                                    n_epoch=config['trainer']['epochs'],
+                                    learning_rate=config['optimizer']['args']['lr'])
+        
+    elif config['train_loss']['type'] == 'CoteachingPlusLoss':
         trainer = CoteachingTrainer(model, train_loss, metrics, optimizer,
                                     config=config,
                                     data_loader=data_loader,
@@ -313,6 +342,10 @@ if __name__ == '__main__':
         options.append(CustomArgs(['--k', '--k'], type=float, target=('train_loss', 'args', 'k')))
         options.append(CustomArgs(['--truncated', '--truncated'], type=bool, target=('train_loss', 'args', 'truncated')))
     elif config['train_loss']['type'] == 'CoteachingLoss':
+        options.append(CustomArgs(['--num_gradual', '--num_gradual'], type=float, target=('train_loss', 'args', 'num_gradual')))
+        options.append(CustomArgs(['--exponent', '--exponent'], type=float, target=('train_loss', 'args', 'exponent')))
+        options.append(CustomArgs(['--tau', '--tau'], type=bool, target=('train_loss', 'args', 'tau')))
+    elif config['train_loss']['type'] == 'CoteachingPlusLoss':
         options.append(CustomArgs(['--num_gradual', '--num_gradual'], type=float, target=('train_loss', 'args', 'num_gradual')))
         options.append(CustomArgs(['--exponent', '--exponent'], type=float, target=('train_loss', 'args', 'exponent')))
         options.append(CustomArgs(['--tau', '--tau'], type=bool, target=('train_loss', 'args', 'tau')))

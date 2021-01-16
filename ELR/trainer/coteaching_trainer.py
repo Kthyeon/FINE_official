@@ -20,7 +20,8 @@ class CoteachingTrainer(BaseTrainer):
         Inherited from BaseTrainer.
     """
     def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
-                 valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None, mode=None, entropy=False, threshold=0.1):
+                 valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None, mode=None, entropy=False, threshold=0.1,
+                 epoch_decay_start=80, n_epoch=200, learning_rate=0.001):
         super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion)
         self.config = config
         self.data_loader = data_loader
@@ -35,28 +36,28 @@ class CoteachingTrainer(BaseTrainer):
         self.valid_data_loader = valid_data_loader
         
         # Specific attribute for coteaching
-        self.model_1, self.model_2 = copy.deepcopy(model), copy.deepcopy(model)
-        self.optimizer_1 = torch.optim.Adam(self.model_1.parameters(), lr=1e-3)
-        self.optimizer_2 = torch.optim.Adam(self.model_2.parameters(), lr=1e-3)
+        self.model_1, self.model_2 = model[0].to(self.device), model[1].to(self.device)
+        self.optimizer_1, self.optimizer_2 = optimizer[0], optimizer[1]
+#         self.lr_scheduler_1, self.lr_scheduler_2 = lr_scheduler[0], lr_scheduler[1]
         
         # TODO: 얘네는 train.py단에서 건드리는게 더 쉬울듯?
         # 아니면 train_epoch에서 건드려도 됨
         # DONE
         
         # re-initialization model
-        for m in self.model_1.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+#         for m in self.model_1.modules():
+#             if isinstance(m, nn.Conv2d):
+#                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
                 
-        for m in self.model_2.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+#         for m in self.model_2.modules():
+#             if isinstance(m, nn.Conv2d):
+#                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
         
 
         self.test_data_loader = test_data_loader
         self.do_validation = self.valid_data_loader is not None
         self.do_test = self.test_data_loader is not None
-        self.lr_scheduler = lr_scheduler
+#         self.lr_scheduler = lr_scheduler
         self.log_step = int(np.sqrt(data_loader.batch_size))
         self.train_loss_list: List[float] = []
         self.val_loss_list: List[float] = []
@@ -66,7 +67,25 @@ class CoteachingTrainer(BaseTrainer):
         self.entropy = entropy
         if self.entropy:
             self.entro_loss = Entropy(threshold)
+            
+        # Adjust learning rate and betas for Adam Optimizer
         
+        self.epoch_decay_start = epoch_decay_start
+        self.n_epoch = n_epoch
+        self.learning_rate = learning_rate
+        
+        mom1, mom2 = 0.9, 0.1
+        self.alpha_plan = [self.learning_rate] * self.n_epoch
+        self.beta1_plan = [mom1] * self.n_epoch
+
+        for i in range(self.epoch_decay_start, self.n_epoch):
+            self.alpha_plan[i] = float(self.n_epoch - i) / (self.n_epoch - self.epoch_decay_start) * self.learning_rate
+            self.beta1_plan[i] = mom2
+
+    def adjust_learning_rate(self, optimizer, epoch):
+        for param_group in optimizer.param_groups:
+            param_group['lr']=self.alpha_plan[epoch]
+            param_group['betas']=(self.beta1_plan[epoch], 0.999)
 
     def _eval_metrics(self, output, label):
         acc_metrics = np.zeros(len(self.metrics))
@@ -118,7 +137,7 @@ class CoteachingTrainer(BaseTrainer):
             
                 # TODO: pure ratio 볼지 안볼지 결정해서 보는 코드 추가할지 안할지 정하기
                 # 지금 당장 학습하는데는 필요하지 않기 때문에 넣지 않도록 하겠습니당
-                loss_1, loss_2 = self.train_criterion(output_1, output_2, label)
+                loss_1, loss_2 = self.train_criterion(output_1, output_2, label, epoch, indexs.cpu().numpy().transpose())
                 
                 self.optimizer_1.zero_grad()
                 loss_1.backward()
@@ -158,7 +177,7 @@ class CoteachingTrainer(BaseTrainer):
             'metrics_gt_1': (total_metrics_gt_1 / self.len_epoch).tolist(),
             'metrics_2': (total_metrics_2 / self.len_epoch).tolist(),
             'metrics_gt_2': (total_metrics_gt_2 / self.len_epoch).tolist(),
-            'learning rate': self.lr_scheduler.get_lr()
+            'learning rate': self.alpha_plan[epoch]
         }
 
 
@@ -172,10 +191,18 @@ class CoteachingTrainer(BaseTrainer):
             test_meta = [0,0]
 
         # TODO: UPDATE FORGET RATE FOR TRAIN LOSS
-        self.train_criterion.update_forget_rate(epoch)
+        # Removed!
+        # Move into Coteaching Loss
         
-#         if self.lr_scheduler is not None:
-#             self.lr_scheduler.step()
+        # TODO : UPDATE PARAMETERS FOR OPTIMIZER
+        self.adjust_learning_rate(self.optimizer_1, epoch)
+        self.adjust_learning_rate(self.optimizer_2, epoch)
+        
+        
+#         if self.lr_scheduler_1 is not None:
+#             self.lr_scheduler_1.step()
+#         if self.lr_scheduler_2 is not None:
+#             self.lr_scheduler_2.step()
             
         return log
 

@@ -4,54 +4,18 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 
-# Loss function
-# def CoteachingLoss(y_1, y_2, t, forget_rate, indexs, noise):
-    
-#     """
-#     noise: bool, whether or not instance is noise or clean
-#     이거 원래 코드에서는 불러왔는데
-#     우리 코드에서는 gt랑 label이랑 비교해서 결정해야 할듯.
-#     """
-    
-#     loss_1 = F.cross_entropy(y_1, t, reduce=False)
-#     ind_1_sorted = np.argsort(loss_1.data).cuda()
-#     loss_1_sorted = loss_1[ind_1_sorted]
-    
-#     loss_2 = F.cross_entropy(y_2, t, reduce=False)
-#     ind_2_sorted = np.argsort(loss_2.data).cuda()
-#     loss_2_sorted = loss_2[ind_2_sorted]
-    
-#     remember_rate = 1 - forget_rate
-#     num_remember = int(remember_rate * len(loss_1_sorted))
-    
-#     # TODO: noise_or_not 계산해서 pure_ratio 계산하는 데 사용할 것.
-#     # 일단은 이게 학습 시키는데 당장 필요한 요소는 아니긴 함.
-# #     pure_ratio_1 = np.sum(noise[indexs[ind_1_sorted[:num_remember]]])/float(num_remember)
-# #     pure_ratio_2 = np.sum(noise[indexs[ind_2_sorted[:num_remember]]])/float(num_remember)
-    
-#     ind_1_update = ind_1_sorted[:num_remember]
-#     ind_2_update = ind_2_sorted[:num_remember]
-    
-#     loss_1_update = F.cross_entropy(y_1[ind_2_update], t[ind_2_update])
-#     loss_2_update = F.cross_entropy(y_2[ind_1_update], t[ind_1_update])
-    
-#     return torch.sum(loss_1_update)/num_remember, torch.sum(loss_2_update)/num_remember
-
 class CoteachingLoss(nn.Module):
-    def __init__(self, noise_rate, num_gradual=10., exponent=1., tau=1.):
+    def __init__(self, forget_rate, num_gradual, n_epoch):
         super(CoteachingLoss, self).__init__()
         
         # decay of R(T) affects co-teaching
-        # --num_gradual : Tk
-        # --exponent : c
-        # --tau : {0.5, 0.75, 1, 1.25, 1.5} * epsilon
-        self.forget_rate = 0
-        self.noise_rate = noise_rate
-        self.num_gradual = num_gradual
-        self.exponent = exponent
-        self.tau = tau
+        # forget_rate : noise rate와 동일하게 설정.
+        #               noise rate는 실제로 알 수 없지만 validation set을 보면 알 수 있다고 했음.
+        # num_gradual : forget rate를 유지할 것인지!
         
-    def forward(self, logits_1, logits_2, targets):
+        self.rate_schedule = self.generate_forget_rate(forget_rate, num_gradual, n_epoch)
+        
+    def forward(self, logits_1, logits_2, targets, epoch, index=None):
         
         # model 1
         loss_1 = F.cross_entropy(logits_1, targets, reduction='none')
@@ -64,7 +28,7 @@ class CoteachingLoss(nn.Module):
         loss_2_sorted = loss_2[ind_2_sorted]
         
         # sample small loss instances
-        remember_rate = 1 - self.forget_rate
+        remember_rate = 1 - self.rate_schedule[epoch]
         num_remember =  int(remember_rate * len(loss_1_sorted))
         ind_1_update = ind_1_sorted[:num_remember]
         ind_2_update = ind_2_sorted[:num_remember]
@@ -76,72 +40,24 @@ class CoteachingLoss(nn.Module):
         return loss_1_update, loss_2_update
         
         
-    def update_forget_rate(self, epoch):
+    def generate_forget_rate(self, forget_rate, num_gradual, n_epoch):
         
         # TODO: UPDATE FORGET RATE FOR EVERY EPOCH
-        # drop forget rate
+        # Based on Coteaching+ code
+
+        rate_schedule = np.ones(n_epoch)*forget_rate
+        rate_schedule[:num_gradual] = np.linspace(0, forget_rate, num_gradual)
         
-        if epoch > 30:
-            factor = (epoch ** self.exponent) / self.num_gradual
-            self.forget_rate = self.tau * self.noise_rate * min(factor, 1)
-            
-# def loss_coteaching_plus(logits, logits2, labels, forget_rate, ind, noise_or_not, step):
-#     outputs = F.softmax(logits, dim=1)
-#     outputs2 = F.softmax(logits2, dim=1)
-
-#     _, pred1 = torch.max(logits.data, 1)
-#     _, pred2 = torch.max(logits2.data, 1)
-
-#     pred1, pred2 = pred1.cpu().numpy(), pred2.cpu().numpy()
-
-#     logical_disagree_id=np.zeros(labels.size(), dtype=bool)
-#     disagree_id = []
-#     for idx, p1 in enumerate(pred1): 
-#         if p1 != pred2[idx]:
-#             disagree_id.append(idx) 
-#             logical_disagree_id[idx] = True
-    
-#     temp_disagree = ind*logical_disagree_id.astype(np.int64)
-#     ind_disagree = np.asarray([i for i in temp_disagree if i != 0]).transpose()
-#     try:
-#         assert ind_disagree.shape[0]==len(disagree_id)
-#     except:
-#         disagree_id = disagree_id[:ind_disagree.shape[0]]
-     
-#     _update_step = np.logical_or(logical_disagree_id, step < 5000).astype(np.float32)
-#     update_step = Variable(torch.from_numpy(_update_step)).cuda()
-
-#     if len(disagree_id) > 0:
-#         update_labels = labels[disagree_id]
-#         update_outputs = outputs[disagree_id] 
-#         update_outputs2 = outputs2[disagree_id] 
-        
-#         loss_1, loss_2, pure_ratio_1, pure_ratio_2 = loss_coteaching(update_outputs, update_outputs2, update_labels, forget_rate, ind_disagree, noise_or_not)
-#     else:
-#         update_labels = labels
-#         update_outputs = outputs
-#         update_outputs2 = outputs2
-
-#         cross_entropy_1 = F.cross_entropy(update_outputs, update_labels)
-#         cross_entropy_2 = F.cross_entropy(update_outputs2, update_labels)
-
-#         loss_1 = torch.sum(update_step*cross_entropy_1)/labels.size()[0]
-#         loss_2 = torch.sum(update_step*cross_entropy_2)/labels.size()[0]
- 
-#         pure_ratio_1 = np.sum(noise_or_not[ind])/ind.shape[0]
-#         pure_ratio_2 = np.sum(noise_or_not[ind])/ind.shape[0]
-#     return loss_1, loss_2, pure_ratio_1, pure_ratio_2
+        return rate_schedule
         
 def CoteachingPlusLoss(CoteachingLoss):
-    def __init__(self, noise_rate, num_gradual=10., exponent=1., tau=1.):
-        super(CoteachingPlusLoss, self).__init__(noise_rate, num_gradual, exponent, tau)
+    def __init__(self, forget_rate, num_gradual, n_epoch):
+#         super(CoteachingPlusLoss, self).__init__(noise_rate, num_gradual, exponent, tau)
+        super(CoteachingPlusLoss, self).__init__(forget_rate, num_gradual, n_epoch)
     
-    def forward(self, logit, logit2, labels):
+    def forward(self, logit, logit2, labels, ind):
         
         # disagreement
-        outputs = F.softmax(logits, dim=1)
-        outputs2 = F.softmax(logits2, dim=1)
-        
         _, pred1 = torch.max(logits.data, 1)
         _, pred2 = torch.max(logits2.data, 1)
         
@@ -161,19 +77,22 @@ def CoteachingPlusLoss(CoteachingLoss):
         except:
             disagree_id = disagree_id[:ind_disagree.shape[0]]
 
+        # TODO : step이 뭐하는 함수인지 한 번 봐야하는데..!    
+        
         _update_step = np.logical_or(logical_disagree_id, step < 5000).astype(np.float32)
         update_step = Variable(torch.from_numpy(_update_step)).cuda()
         
         if len(disagree_id) > 0:
             update_labels = labels[disagree_id]
-            update_outputs = outputs[disagree_id] 
-            update_outputs2 = outputs2[disagree_id] 
+            update_outputs = logits[disagree_id] 
+            update_outputs2 = logits2[disagree_id] 
 
             loss_1, loss_2 = super().forward(update_outputs, update_outputs2, update_labels)
+            
         else:
             update_labels = labels
-            update_outputs = outputs
-            update_outputs2 = outputs2
+            update_outputs = logits
+            update_outputs2 = logits2
 
             cross_entropy_1 = F.cross_entropy(update_outputs, update_labels)
             cross_entropy_2 = F.cross_entropy(update_outputs2, update_labels)
@@ -181,9 +100,9 @@ def CoteachingPlusLoss(CoteachingLoss):
             loss_1 = torch.sum(update_step*cross_entropy_1)/labels.size()[0]
             loss_2 = torch.sum(update_step*cross_entropy_2)/labels.size()[0]
 
-            pure_ratio_1 = np.sum(noise_or_not[ind])/ind.shape[0]
-            pure_ratio_2 = np.sum(noise_or_not[ind])/ind.shape[0]
-        return loss_1, loss_2, pure_ratio_1, pure_ratio_2
+#             pure_ratio_1 = np.sum(noise_or_not[ind])/ind.shape[0]
+#             pure_ratio_2 = np.sum(noise_or_not[ind])/ind.shape[0]
+        return loss_1, loss_2
         
     
         

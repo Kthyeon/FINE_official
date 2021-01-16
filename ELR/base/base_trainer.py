@@ -32,8 +32,11 @@ class BaseTrainer:
         
         self.val_criterion = val_criterion
         self.metrics = metrics
-
-        self.optimizer = optimizer
+        
+        if type(optimizer) is not list:
+            self.optimizer = optimizer
+        else:
+            self.optimizer = optimizer[0]
 
         cfg_trainer = config['trainer']
         self.epochs = cfg_trainer['epochs']

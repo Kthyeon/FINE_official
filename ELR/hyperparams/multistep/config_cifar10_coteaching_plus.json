@@ -32,7 +32,7 @@
     },
     
     "train_loss": {
-        "type": "CoteachingLoss",
+        "type": "CoteachingPlusLoss",
         "args":{
             "num_gradual" : 10
         }

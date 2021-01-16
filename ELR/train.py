@@ -21,6 +21,16 @@ import copy
 
 import wandb
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def log_params(conf: OrderedDict, parent_key: str = None):
     for key, value in conf.items():
         if parent_key is not None:
@@ -241,17 +251,29 @@ def main(parse, config: ConfigParser):
                                     learning_rate=config['optimizer']['args']['lr'])
         
     elif config['train_loss']['type'] == 'CoteachingPlusLoss':
-        trainer = CoteachingTrainer(model, train_loss, metrics, optimizer,
+        
+        model1, model2 = config.initialize('arch', module_arch), config.initialize('arch', module_arch)
+        
+        trainable_params1 = filter(lambda p: p.requires_grad, model1.parameters())
+        trainable_params2 = filter(lambda p: p.requires_grad, model2.parameters())
+
+        optimizer1 = config.initialize('optimizer', torch.optim, [{'params': trainable_params1}])
+        optimizer2 = config.initialize('optimizer', torch.optim, [{'params': trainable_params2}])
+        
+        trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
                                     config=config,
                                     data_loader=data_loader,
                                     teacher=teacher,
                                     valid_data_loader=valid_data_loader,
                                     test_data_loader=test_data_loader,
-                                    lr_scheduler=lr_scheduler,
+                                    lr_scheduler=None,
                                     val_criterion=val_loss,
                                     mode=parse.mode,
                                     entropy=parse.entropy,
-                                    threshold=parse.threshold)
+                                    threshold=parse.threshold,
+                                    epoch_decay_start=config['trainer']['epoch_decay_start'],
+                                    n_epoch=config['trainer']['epochs'],
+                                    learning_rate=config['optimizer']['args']['lr'])
 
     trainer.train()
     
@@ -320,7 +342,7 @@ if __name__ == '__main__':
         CustomArgs(['--lr', '--learning_rate'], type=float, target=('optimizer', 'args', 'lr')),
         CustomArgs(['--bs', '--batch_size'], type=int, target=('data_loader', 'args', 'batch_size')),
         CustomArgs(['--percent', '--percent'], type=float, target=('trainer', 'percent')),
-        CustomArgs(['--asym', '--asym'], type=bool, target=('trainer', 'asym')),
+        CustomArgs(['--asym', '--asym'], type=str2bool, target=('trainer', 'asym')),
         CustomArgs(['--name', '--exp_name'], type=str, target=('name',)),
         CustomArgs(['--seed', '--seed'], type=int, target=('seed',))
     ]
@@ -343,12 +365,8 @@ if __name__ == '__main__':
         options.append(CustomArgs(['--truncated', '--truncated'], type=bool, target=('train_loss', 'args', 'truncated')))
     elif config['train_loss']['type'] == 'CoteachingLoss':
         options.append(CustomArgs(['--num_gradual', '--num_gradual'], type=float, target=('train_loss', 'args', 'num_gradual')))
-        options.append(CustomArgs(['--exponent', '--exponent'], type=float, target=('train_loss', 'args', 'exponent')))
-        options.append(CustomArgs(['--tau', '--tau'], type=bool, target=('train_loss', 'args', 'tau')))
     elif config['train_loss']['type'] == 'CoteachingPlusLoss':
         options.append(CustomArgs(['--num_gradual', '--num_gradual'], type=float, target=('train_loss', 'args', 'num_gradual')))
-        options.append(CustomArgs(['--exponent', '--exponent'], type=float, target=('train_loss', 'args', 'exponent')))
-        options.append(CustomArgs(['--tau', '--tau'], type=bool, target=('train_loss', 'args', 'tau')))
 
 #     elif config['train_loss']['type'] == ...:
 #         options.append(somethings...)
@@ -359,7 +377,7 @@ if __name__ == '__main__':
     
     if parse.percent is not None:
         config['trainer']['percent'] = parse.percent
-    config['trainer']['asym'] = False
+#     config['trainer']['asym'] = False
 
     ### TRAINING ###
     main(parse, config)

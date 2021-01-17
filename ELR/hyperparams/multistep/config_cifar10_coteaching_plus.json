@@ -1,10 +1,10 @@
 {
-    "name": "cifar10_resnet34_multistep",
+    "name": "cifar10_preactresnet18_coteaching",
     "n_gpu": 1,
     "seed": 123,
 
     "arch": {
-        "type": "resnet34",
+        "type": "preact_resnet18",
         "args": {"num_classes":10}
     },
 

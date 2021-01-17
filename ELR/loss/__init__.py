@@ -4,3 +4,4 @@ from .sce import SCELoss
 from .cl import CLoss, NPCLoss
 from .entropy import Entropy
 from .coteaching import CoteachingLoss, CoteachingPlusLoss
+from .gt import GroundTruthLoss

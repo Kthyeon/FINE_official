@@ -1,10 +1,10 @@
 {
-    "name": "cifar10_preactresnet18_coteaching",
+    "name": "cifar10_resnet34_groundtruth",
     "n_gpu": 1,
     "seed": 123,
 
     "arch": {
-        "type": "preact_resnet18",
+        "type": "resnet34",
         "args": {"num_classes":10}
     },
 
@@ -25,16 +25,17 @@
 
 
     "optimizer": {
-        "type": "Adam",
+        "type": "SGD",
         "args":{
-            "lr": 0.001
+            "lr": 0.02,
+            "momentum": 0.9,
+            "weight_decay": 1e-3
         }
     },
     
     "train_loss": {
-        "type": "CoteachingLoss",
+        "type": "GroundTruthLoss",
         "args":{
-            "num_gradual" : 40
         }
     },
 
@@ -52,8 +53,7 @@
     },
 
     "trainer": {
-        "epochs": 200,
-        "epoch_decay_start": 80,
+        "epochs": 120,
         "warmup": 0,
         "save_dir": "saved/",
         "save_period": 1,

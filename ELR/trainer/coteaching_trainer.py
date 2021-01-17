@@ -38,20 +38,24 @@ class CoteachingTrainer(BaseTrainer):
         # Specific attribute for coteaching
         self.model_1, self.model_2 = model[0].to(self.device), model[1].to(self.device)
         self.optimizer_1, self.optimizer_2 = optimizer[0], optimizer[1]
-#         self.lr_scheduler_1, self.lr_scheduler_2 = lr_scheduler[0], lr_scheduler[1]
+        
+        if lr_scheduler is not None:
+            self.lr_scheduler_1, self.lr_scheduler_2 = lr_scheduler[0], lr_scheduler[1]
+        else:
+            self.lr_scheduler_1, self.lr_scheduler_2 = None, None
         
         # TODO: 얘네는 train.py단에서 건드리는게 더 쉬울듯?
         # 아니면 train_epoch에서 건드려도 됨
         # DONE
         
         # re-initialization model
-#         for m in self.model_1.modules():
-#             if isinstance(m, nn.Conv2d):
-#                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+        for m in self.model_1.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
                 
-#         for m in self.model_2.modules():
-#             if isinstance(m, nn.Conv2d):
-#                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+        for m in self.model_2.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
         
 
         self.test_data_loader = test_data_loader
@@ -74,7 +78,7 @@ class CoteachingTrainer(BaseTrainer):
         self.n_epoch = n_epoch
         self.learning_rate = learning_rate
         
-        mom1, mom2 = 0.9, 0.1
+        mom1, mom2 = 0.9, 0.9
         self.alpha_plan = [self.learning_rate] * self.n_epoch
         self.beta1_plan = [mom1] * self.n_epoch
 
@@ -195,9 +199,12 @@ class CoteachingTrainer(BaseTrainer):
         # Move into Coteaching Loss
         
         # TODO : UPDATE PARAMETERS FOR OPTIMIZER
-        self.adjust_learning_rate(self.optimizer_1, epoch)
-        self.adjust_learning_rate(self.optimizer_2, epoch)
-        
+        if self.lr_scheduler_1 is None:
+            self.adjust_learning_rate(self.optimizer_1, epoch)
+            self.adjust_learning_rate(self.optimizer_2, epoch)
+        else:
+            self.lr_scheduler_1.step()
+            self.lr_scheduler_2.step()
         
 #         if self.lr_scheduler_1 is not None:
 #             self.lr_scheduler_1.step()

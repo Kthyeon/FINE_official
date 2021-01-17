@@ -11,7 +11,7 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, CoteachingTrainer
+from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, CoteachingTrainer, GroundTruthTrainer
 from collections import OrderedDict
 from trainer.svd_classifier import singular_label, get_out_list, get_singular_value_vector
 
@@ -94,7 +94,6 @@ def main(parse, config: ConfigParser):
         num_workers=2
     ).split_validation()
 
-
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch)
     
@@ -162,6 +161,12 @@ def main(parse, config: ConfigParser):
         train_loss = getattr(module_loss, 'CoteachingPlusLoss')(forget_rate=config['trainer']['percent'],
                                                                 num_gradual=int(config['train_loss']['args']['num_gradual']),
                                                                 n_epoch=config['trainer']['epochs'])
+        
+    # ground truth
+    elif config['train_loss']['type'] == 'GroundTruthLoss':
+        noise_indx = data_loader.train_dataset.noise_indx
+        train_loss = getattr(module_loss, 'GroundTruthLoss')(noise_indx=noise_indx,
+                                                             num_examp=num_examp)
         
     val_loss = getattr(module_loss, config['val_loss'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
@@ -235,13 +240,20 @@ def main(parse, config: ConfigParser):
         optimizer1 = config.initialize('optimizer', torch.optim, [{'params': trainable_params1}])
         optimizer2 = config.initialize('optimizer', torch.optim, [{'params': trainable_params2}])
         
+        if isinstance(optimizer1, torch.optim.Adam):
+            lr_scheduler = None
+        else:
+            lr_scheduler1 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer1)
+            lr_scheduler2 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer2)
+            lr_scheduler = [lr_scheduler1, lr_scheduler2]
+        
         trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
                                     config=config,
                                     data_loader=data_loader,
                                     teacher=teacher,
                                     valid_data_loader=valid_data_loader,
                                     test_data_loader=test_data_loader,
-                                    lr_scheduler=None,
+                                    lr_scheduler=lr_scheduler,
                                     val_criterion=val_loss,
                                     mode=parse.mode,
                                     entropy=parse.entropy,
@@ -260,13 +272,20 @@ def main(parse, config: ConfigParser):
         optimizer1 = config.initialize('optimizer', torch.optim, [{'params': trainable_params1}])
         optimizer2 = config.initialize('optimizer', torch.optim, [{'params': trainable_params2}])
         
+        if isinstance(optimizer1, torch.optim.Adam):
+            lr_scheduler = None
+        else:
+            lr_scheduler1 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer1)
+            lr_scheduler2 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer2)
+            lr_scheduler = [lr_scheduler1, lr_scheduler2]
+        
         trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
                                     config=config,
                                     data_loader=data_loader,
                                     teacher=teacher,
                                     valid_data_loader=valid_data_loader,
                                     test_data_loader=test_data_loader,
-                                    lr_scheduler=None,
+                                    lr_scheduler=lr_scheduler,
                                     val_criterion=val_loss,
                                     mode=parse.mode,
                                     entropy=parse.entropy,
@@ -275,6 +294,33 @@ def main(parse, config: ConfigParser):
                                     n_epoch=config['trainer']['epochs'],
                                     learning_rate=config['optimizer']['args']['lr'])
 
+        
+    elif config['train_loss']['type'] == 'GroundTruthLoss':
+#         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+#                                      config=config,
+#                                      data_loader=data_loader,
+#                                      teacher=teacher,
+#                                      valid_data_loader=valid_data_loader,
+#                                      test_data_loader=test_data_loader,
+#                                      lr_scheduler=lr_scheduler,
+#                                      val_criterion=val_loss,
+#                                      mode = parse.mode,
+#                                      entropy = parse.entropy,
+#                                      threshold = parse.threshold                                    
+#                                 )
+        trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     teacher=teacher,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss,
+                                     mode = parse.mode,
+                                     entropy = parse.entropy,
+                                     threshold = parse.threshold
+                                    )
+        
     trainer.train()
     
     logger = config.get_logger('trainer', config['trainer']['verbosity'])

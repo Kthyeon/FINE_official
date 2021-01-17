@@ -11,7 +11,7 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer
+from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer
 from collections import OrderedDict
 from trainer.svd_classifier import singular_label, get_out_list, get_singular_value_vector, get_loss_list
 
@@ -167,6 +167,9 @@ def main(parse, config: ConfigParser):
                                                      k=config['train_loss']['args']['k'],
                                                      trainset_size=num_examp,
                                                      truncated=config['train_loss']['args']['truncated'])
+    elif config['train_loss']['type'] == 'GTLoss':
+        train_loss = getattr(module_loss, 'GTLoss')()
+        
     else:
         train_loss = getattr(module_loss, 'CCELoss')()
 
@@ -234,6 +237,19 @@ def main(parse, config: ConfigParser):
                                       entropy = parse.entropy,
                                       threshold = parse.threshold
                                      )
+    elif config['train_loss']['type'] == 'GTLoss':
+        trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     teacher=teacher,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss,
+                                     mode = parse.mode,
+                                     entropy = parse.entropy,
+                                     threshold = parse.threshold
+                                    )
     else:
         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,

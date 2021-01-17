@@ -259,7 +259,7 @@ if __name__ == '__main__':
     args.add_argument('--lr_scheduler', type=str, default=None, help='type of lr_scheduler name')
     args.add_argument('--loss_fn', type=str, default=None, help='loss_fn type name')
     args.add_argument('--arch', type=str, default=None, help='type of model name')
-    args.add_argument('--')
+    args.add_argument('--num_gradual', type=int, default=10, help='epoch for stop decaying R(T)')
 
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
@@ -270,6 +270,7 @@ if __name__ == '__main__':
         CustomArgs(['--seed', '--seed'], type=int, target=('seed',)),
         CustomArgs(['--percent', '--percent'], type=float, target=('trainer', 'percent')),
         CustomArgs(['--asym', '--asym'], type=str2bool, target=('trainer', 'asym')),
+        CustomArgs(['--num_gradual', '--num_gradual'], type=int, target=('train_loss', 'args', 'num_gradual'))
     ]
     config = ConfigParser.get_instance(args, options)
     parse = args.parse_args()

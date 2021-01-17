@@ -13,7 +13,7 @@ class CCELoss(nn.Module):
     
 class GTLoss(nn.Module):
     def __init__(self):
-        suepr(GTLoss, self).__init__()
+        super(GTLoss, self).__init__()
         
     def forward(self, logits, labels, clean_indexs):
         loss = torch.sum(F.cross_entropy(logits, labels, reduction='none')[clean_indexs]) / logits.shape[0]

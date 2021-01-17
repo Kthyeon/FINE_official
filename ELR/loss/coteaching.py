@@ -108,14 +108,10 @@ class CoteachingPlusLoss(CoteachingLoss):
             update_outputs = logits
             update_outputs2 = logits2
 
-            cross_entropy_1 = F.cross_entropy(update_outputs, update_labels)
-            cross_entropy_2 = F.cross_entropy(update_outputs2, update_labels)
+            cross_entropy_1 = F.cross_entropy(update_outputs, update_labels, reduction='none')
+            cross_entropy_2 = F.cross_entropy(update_outputs2, update_labels, reduction='none')
 
             loss_1 = torch.sum(update_step*cross_entropy_1)/labels.size()[0]
             loss_2 = torch.sum(update_step*cross_entropy_2)/labels.size()[0]
             
         return loss_1, loss_2
-        
-    
-        
-        

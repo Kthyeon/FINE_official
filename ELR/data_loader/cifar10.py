@@ -43,7 +43,6 @@ def get_cifar10(root, cfg_trainer, train=True,
         return train_dataset, val_dataset
 
 
-
 class CIFAR10_train(torchvision.datasets.CIFAR10):
     def __init__(self, root, cfg_trainer, indexs, train=True,
                  transform=None, target_transform=None,

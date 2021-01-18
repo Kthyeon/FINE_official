@@ -133,19 +133,36 @@ def main(parse, config: ConfigParser):
         else:
             teacher_idx = get_out_list(teacher, data_loader)
         
-        data_loader = getattr(module_data, config['data_loader']['type'])(
-            config['data_loader']['args']['data_dir'],
-            batch_size= config['data_loader']['args']['batch_size'],
-            shuffle=config['data_loader']['args']['shuffle'],
-            validation_split=0.0,
-            num_batches=config['data_loader']['args']['num_batches'],
-            training=True,
-            num_workers=config['data_loader']['args']['num_workers'],
-            pin_memory=config['data_loader']['args']['pin_memory']
-        )
-#         teacher_idx = teacher_idx)
+#         data_loader = getattr(module_data, config['data_loader']['type'])(
+#             config['data_loader']['args']['data_dir'],
+#             batch_size= config['data_loader']['args']['batch_size'],
+#             shuffle=config['data_loader']['args']['shuffle'],
+#             validation_split=0.0,
+#             num_batches=config['data_loader']['args']['num_batches'],
+#             training=True,
+#             num_workers=config['data_loader']['args']['num_workers'],
+#             pin_memory=config['data_loader']['args']['pin_memory'],
+#             teacher_idx = teacher_idx
+#         )
+        
     else:
         teacher = None
+        
+#     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+    
+    
+#     print (teacher_idx)
+    
+#     num_examp = len(data_loader.train_dataset)
+#     real = torch.Tensor([True for _ in range(num_examp)])
+#     pred = torch.Tensor([False for _ in range(num_examp)])
+#     real[torch.Tensor(data_loader.train_dataset.noise_indx).long()] = False
+#     pred[teacher_idx] = True
+    
+#     true_positive = torch.Tensor([pred[i].long() & real[i].long() for i in range(len(real))])
+#     print (torch.sum(true_positive) / torch.sum(pred))
+    
+#     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
 
     # get function handles of loss and metrics
     logger.info(config.config)
@@ -166,13 +183,17 @@ def main(parse, config: ConfigParser):
                                                                 num_gradual=int(config['train_loss']['args']['num_gradual']),
                                                                 n_epoch=config['trainer']['epochs'])
     
-    # coteaching + winning_ticket
+    # coteaching + winning_ticket!
     elif config['train_loss']['type'] == 'CoteachingDistillLoss':
         train_loss = getattr(module_loss, 'CoteachingDistillLoss')(forget_rate=config['trainer']['percent'],
                                                                    num_gradual=int(config['train_loss']['args']['num_gradual']),
                                                                    n_epoch=config['trainer']['epochs'],
                                                                    num_examp=num_examp,
                                                                    clean_indexs=teacher_idx)
+        
+    # coteaching_plus + winning_ticket!
+    elif config['train_loss']['type'] == 'CoteachingPlusDistillLoss':
+        pass
 
         
     val_loss = getattr(module_loss, config['val_loss'])
@@ -277,6 +298,9 @@ def main(parse, config: ConfigParser):
                                     n_epoch=config['trainer']['epochs'],
                                     learning_rate=config['optimizer']['args']['lr']
                                    )
+        
+    elif config['train_loss']['type'] == 'CoteachingPlusDistillLoss':
+        pass
 
     trainer.train()
     

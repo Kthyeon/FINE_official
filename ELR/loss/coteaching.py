@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
+import math
 
 class EntropyLoss(nn.Module):
     def __init__(self):
@@ -132,31 +133,38 @@ class CoteachingPlusLoss(CoteachingLoss):
 # 아니면 아예 포함을 안시키거나.
 # 태현이형한테 물어봐서 distill할 때 clean instance 어떻게 찾는지 물어볼 것.
 
+# TODO (2021-01-18)
+# 지금 non-filtered들에 대해서 entropy를 크게 하는 방향으로 계산을 하면
+# Loss 레벨에서 Nan이 뜨게 됨.
+# CE를 작게 하는 방향으로 학습을 하면 Nan 안뜨고 학습이 되긴 함.
+
 class CoteachingDistillLoss(CoteachingLoss):
     def __init__(self, forget_rate, num_gradual, n_epoch, num_examp, clean_indexs):
         super(CoteachingDistillLoss, self).__init__(forget_rate, num_gradual, n_epoch)
         
         # 이거는 train_coteaching.py 레벨에서 만드는 것으로 하자!
         self.h_loss = EntropyLoss()
+        self.A = math.exp(-4)
         self.generate_filtered_array(num_examp, clean_indexs)
         
     def generate_filtered_array(self, num_examp, clean_indexs):
-        self.is_in_teacher_idx = torch.Tensor([False in _ in range(num_examp)])
+        self.is_in_teacher_idx = torch.Tensor([False for _ in range(num_examp)])
         self.is_in_teacher_idx[clean_indexs] = True
         
     def forward(self, logits, logits2, labels, epoch, index, step=None):
         
         # determine filtered or non-filtered
-        filtered = self.is_in_teacher_idx[index]
+        filtered = self.is_in_teacher_idx[index].bool()
+        
         
         # model 1
-        loss_1 = F.cross_entropy(logits_1, targets, reduction='none')
+        loss_1 = F.cross_entropy(logits, labels, reduction='none')
         ind_1_sorted = torch.argsort(loss_1.data).cuda()
         loss_1_sorted = loss_1[ind_1_sorted]
         filtered_1_sorted = filtered[ind_1_sorted]
         
         # model 2
-        loss_2 = F.cross_entropy(logits_2, targets, reduction='none')
+        loss_2 = F.cross_entropy(logits2, labels, reduction='none')
         ind_2_sorted = torch.argsort(loss_2.data).cuda()
         loss_2_sorted = loss_2[ind_2_sorted]
         filtered_2_sorted = filtered[ind_2_sorted]
@@ -181,16 +189,32 @@ class CoteachingDistillLoss(CoteachingLoss):
         nonfiltered_2_update = (1 - filtered_2_update.long()).bool()
             
         # exchange
-        ce_loss_1_update = F.cross_entropy(logits_1[ind_2_update], targets[ind_2_update], reduction='none')
-        ce_loss_2_update = F.cross_entropy(logits_2[ind_1_update], targets[ind_1_update], reduction='none')
-        h_loss_1_update = self.h_loss(logits_1[ind_2_update])
-        h_loss_2_update = self.h_loss(logits_2[ind_1_update])
+#         logits = torch.clamp(logits, min=self.A)
+#         logits2 = torch.clamp(logits2, min=self.A)
+        ce_loss_1_update = F.cross_entropy(logits[ind_2_update], labels[ind_2_update], reduction='none')
+        ce_loss_2_update = F.cross_entropy(logits2[ind_1_update], labels[ind_1_update], reduction='none')
+#         h_loss_1_update = self.h_loss(logits[ind_2_update])
+#         h_loss_2_update = self.h_loss(logits2[ind_1_update])
+
+#         ce_loss_1_update = F.cross_entropy(logits[filtered_2_update], labels[filtered_2_update], reduction='none')
+#         ce_loss_2_update = F.cross_entropy(logits2[filtered_1_update], labels[filtered_1_update], reduction='none')
+#         h_loss_1_update = self.h_loss(logits[nonfiltered_2_update])
+#         h_loss_2_update = self.h_loss(logits2[nonfiltered_1_update])
         
-        loss_1_update = ce_loss_1_update[filtered_2_update] - h_loss_1_update[nonfiltered_2_update]
-        loss_2_update = ce_loss_2_update[filtered_1_update] - h_loss_2_update[nonfiltered_1_update]
+#         loss_1_update = torch.sum(ce_loss_1_update) - torch.sum(h_loss_1_update)
+#         loss_2_update = torch.sum(ce_loss_2_update) - torch.sum(h_loss_2_update)
         
-        loss_1_update = torch.mean(loss_1_update)
-        loss_2_update = torch.mean(loss_2_update)
+#         loss_1_update = torch.sum(ce_loss_1_update[filtered_2_update]) - torch.sum(ce_loss_1_update[nonfiltered_2_update])
+#         loss_2_update = torch.sum(ce_loss_2_update[filtered_1_update]) - torch.sum(ce_loss_2_update[nonfiltered_1_update])
+
+        loss_1_update = torch.sum(ce_loss_1_update[filtered_2_update])
+        loss_2_update = torch.sum(ce_loss_2_update[filtered_1_update])
+    
+#         loss_1_update = torch.sum(ce_loss_1_update[filtered_2_update]) - 0.3 * torch.sum(h_loss_1_update[nonfiltered_2_update])
+#         loss_2_update = torch.sum(ce_loss_2_update[filtered_1_update]) - 0.3 * torch.sum(h_loss_2_update[nonfiltered_1_update])
+        
+        loss_1_update = loss_1_update / num_remember
+        loss_2_update = loss_2_update / num_remember
         
         return loss_1_update, loss_2_update
     

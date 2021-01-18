@@ -137,7 +137,7 @@ class CoteachingTrainer(BaseTrainer):
             
                 # TODO: pure ratio 볼지 안볼지 결정해서 보는 코드 추가할지 안할지 정하기
                 # 지금 당장 학습하는데는 필요하지 않기 때문에 넣지 않도록 하겠습니당
-                loss_1, loss_2 = self.train_criterion(output_1, output_2, label, epoch, indexs.cpu().numpy().transpose(), epoch*batch_idx)
+                loss_1, loss_2 = self.train_criterion(output_1, output_2, label, epoch, indexs, epoch*batch_idx)
                 
                 self.optimizer_1.zero_grad()
                 loss_1.backward()

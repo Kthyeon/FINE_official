@@ -13,7 +13,7 @@ import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import CoteachingTrainer
 from collections import OrderedDict
-from trainer.svd_classifier import singular_label, get_out_list, get_singular_value_vector
+from trainer.svd_classifier import singular_label, get_out_list, get_singular_value_vector, get_loss_list
 
 import random
 import numpy as np
@@ -52,7 +52,10 @@ def main(parse, config: ConfigParser):
     wandb_run_name_list = []
     
     if parse.distillation:
-        wandb_run_name_list.append('distil')
+        if parse.distill_mode == 'eigen':
+            wandb_run_name_list.append('distil')
+        else:
+            wandb_run_name_list.append('kmeans')
     else:
         wandb_run_name_list.append('baseline')
     wandb_run_name_list.append(dataset_name)
@@ -113,33 +116,34 @@ def main(parse, config: ConfigParser):
         wandb.watch(model)
     
     if parse.distillation:
-        teacher = config.initialize('arch', module_arch)
+        teacher = config.initialize('teacher_arch', module_arch)
         teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
         if not parse.reinit:
             model.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
-        
         for params in teacher.parameters():
             params.requires_grad = False
-                    
-        tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
-        singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
+        if parse.distill_mode == 'eigen':
+            tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+            singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
 
-        for key in v_ortho_dict.keys():
-            v_ortho_dict[key] = v_ortho_dict[key].cuda()
+            for key in v_ortho_dict.keys():
+                v_ortho_dict[key] = v_ortho_dict[key].cuda()
 
-        teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+            teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+        else:
+            teacher_idx = get_out_list(teacher, data_loader)
         
         data_loader = getattr(module_data, config['data_loader']['type'])(
-        config['data_loader']['args']['data_dir'],
-        batch_size= config['data_loader']['args']['batch_size'],
-        shuffle=config['data_loader']['args']['shuffle'],
-#         validation_split=config['data_loader']['args']['validation_split'],
-        validation_split=0.0,
-        num_batches=config['data_loader']['args']['num_batches'],
-        training=True,
-        num_workers=config['data_loader']['args']['num_workers'],
-        pin_memory=config['data_loader']['args']['pin_memory'],
-        teacher_idx = teacher_idx)
+            config['data_loader']['args']['data_dir'],
+            batch_size= config['data_loader']['args']['batch_size'],
+            shuffle=config['data_loader']['args']['shuffle'],
+            validation_split=0.0,
+            num_batches=config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=config['data_loader']['args']['num_workers'],
+            pin_memory=config['data_loader']['args']['pin_memory']
+        )
+#         teacher_idx = teacher_idx)
     else:
         teacher = None
 
@@ -161,6 +165,14 @@ def main(parse, config: ConfigParser):
         train_loss = getattr(module_loss, 'CoteachingPlusLoss')(forget_rate=config['trainer']['percent'],
                                                                 num_gradual=int(config['train_loss']['args']['num_gradual']),
                                                                 n_epoch=config['trainer']['epochs'])
+    
+    # coteaching + winning_ticket
+    elif config['train_loss']['type'] == 'CoteachingDistillLoss':
+        train_loss = getattr(module_loss, 'CoteachingDistillLoss')(forget_rate=config['trainer']['percent'],
+                                                                   num_gradual=int(config['train_loss']['args']['num_gradual']),
+                                                                   n_epoch=config['trainer']['epochs'],
+                                                                   num_examp=num_examp,
+                                                                   clean_indexs=teacher_idx)
 
         
     val_loss = getattr(module_loss, config['val_loss'])
@@ -197,7 +209,8 @@ def main(parse, config: ConfigParser):
                                     threshold=parse.threshold,
                                     epoch_decay_start=config['trainer']['epoch_decay_start'],
                                     n_epoch=config['trainer']['epochs'],
-                                    learning_rate=config['optimizer']['args']['lr'])
+                                    learning_rate=config['optimizer']['args']['lr']
+                                   )
         
     elif config['train_loss']['type'] == 'CoteachingPlusLoss':
         
@@ -229,7 +242,41 @@ def main(parse, config: ConfigParser):
                                     threshold=parse.threshold,
                                     epoch_decay_start=config['trainer']['epoch_decay_start'],
                                     n_epoch=config['trainer']['epochs'],
-                                    learning_rate=config['optimizer']['args']['lr'])
+                                    learning_rate=config['optimizer']['args']['lr']
+                                   )
+        
+    elif config['train_loss']['type'] == 'CoteachingDistillLoss':
+        
+        model1, model2 = config.initialize('arch', module_arch), config.initialize('arch', module_arch)
+        
+        trainable_params1 = filter(lambda p: p.requires_grad, model1.parameters())
+        trainable_params2 = filter(lambda p: p.requires_grad, model2.parameters())
+
+        optimizer1 = config.initialize('optimizer', torch.optim, [{'params': trainable_params1}])
+        optimizer2 = config.initialize('optimizer', torch.optim, [{'params': trainable_params2}])
+        
+        if isinstance(optimizer1, torch.optim.Adam):
+            lr_scheduler = None
+        else:
+            lr_scheduler1 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer1)
+            lr_scheduler2 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer2)
+            lr_scheduler = [lr_scheduler1, lr_scheduler2]
+            
+        trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
+                                    config=config,
+                                    data_loader=data_loader,
+                                    teacher=teacher,
+                                    valid_data_loader=valid_data_loader,
+                                    test_data_loader=test_data_loader,
+                                    lr_scheduler=lr_scheduler,
+                                    val_criterion=val_loss,
+                                    mode=parse.mode,
+                                    entropy=parse.entropy,
+                                    threshold=parse.threshold,
+                                    epoch_decay_start=config['trainer']['epoch_decay_start'],
+                                    n_epoch=config['trainer']['epochs'],
+                                    learning_rate=config['optimizer']['args']['lr']
+                                   )
 
     trainer.train()
     
@@ -246,6 +293,7 @@ if __name__ == '__main__':
     args.add_argument('-d', '--device', default='1', type=str,
                       help='indices of GPUs to enable (default: all)')
     args.add_argument('--distillation', help='whether to distill knowledge', action='store_true')
+    args.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen'], help='mode for distillation kmeans or eigen.')
     args.add_argument('--mode', type=str, default='ce', choices=['ce', 'same'], help = 'distill_type. same means the same loss of teacher recipe')
     args.add_argument('--entropy', help='whether to use entropy loss', action='store_true')
     args.add_argument('--threshold', type=float, default=0.1, help='threshold for the use of entropy loss.')
@@ -259,6 +307,7 @@ if __name__ == '__main__':
     args.add_argument('--lr_scheduler', type=str, default=None, help='type of lr_scheduler name')
     args.add_argument('--loss_fn', type=str, default=None, help='loss_fn type name')
     args.add_argument('--arch', type=str, default=None, help='type of model name')
+    args.add_argument('--teacher_arch', type=str, default=None, help='type of teacher model name')
 
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')

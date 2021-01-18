@@ -41,7 +41,7 @@ class ELR_GTLoss(ELRLoss):
         
         ce_loss = F.cross_entropy(output, label, reduction='none')[clean_indexs]
         elr_reg = ((1-(self.target[index] * y_pred).sum(dim=1)).log())[clean_indexs]
-        size = logits.shape[0] if sum(clean_indexs) == 0 else sum(clean_indexs)
+        size = logits.shape[0] if torch.sum(clean_indexs) == 0 else torch.sum(clean_indexs)
         
         final_loss = torch.sum(ce_loss) + self.config['train_loss']['args']['lambda'] * torch.sum(elr_reg)
         final_loss /= size

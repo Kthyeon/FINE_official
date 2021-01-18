@@ -52,7 +52,7 @@ class SCE_GTLoss(SCELoss):
         label_one_hot = torch.clamp(label_one_hot, min=self.A, max=1.0)
         rce = (-1*torch.sum(pred * torch.log(label_one_hot), dim=1))[clean_indexs]
         
-        size = logits.shape[0] if sum(clean_indexs) == 0 else sum(clean_indexs)
+        size = logits.shape[0] if torch.sum(clean_indexs) == 0 else torch.sum(clean_indexs)
         loss = self.alpha * torch.sum(ce) + self.beta * torch.sum(rce)
         loss /= size
         return loss

@@ -58,7 +58,8 @@ class GCE_GTLoss(GCELoss):
         
         p = F.softmax(logits, dim=1)
         Yg = torch.gather(p, 1, torch.unsqueeze(targets, 1))
-        size = logits.shape[0] if sum(clean_indexs) == 0 else sum(clean_indexs)
+        size = logits.shape[0] if torch.sum(clean_indexs) == 0 else torch.sum(clean_indexs)
+#         print (torch.mean(((1-(Yg**self.q))/self.q)))
         
         loss = ((1-(Yg**self.q))/self.q)[clean_indexs]
         loss = torch.sum(loss) / size

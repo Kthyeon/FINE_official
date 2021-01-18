@@ -11,7 +11,7 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer
+from trainer import GroundTruthTrainer
 from collections import OrderedDict
 from trainer.svd_classifier import singular_label, get_out_list, get_singular_value_vector, get_loss_list
 
@@ -154,24 +154,21 @@ def main(parse, config: ConfigParser):
     else:
         num_examp = len(data_loader.dataset)
     
-    if config['train_loss']['type'] == 'ELRLoss':
-        train_loss = getattr(module_loss, 'ELRLoss')(num_examp=num_examp,
+    if config['train_loss']['type'] == 'ELR_GTLoss':
+        train_loss = getattr(module_loss, 'ELR_GTLoss')(num_examp=num_examp,
                                                      num_classes=config['num_classes'],
                                                      beta=config['train_loss']['args']['beta'])
-    elif config['train_loss']['type'] == 'SCELoss':
-        train_loss = getattr(module_loss, 'SCELoss')(alpha=config['train_loss']['args']['alpha'],
+    elif config['train_loss']['type'] == 'SCE_GTLoss':
+        train_loss = getattr(module_loss, 'SCE_GTLoss')(alpha=config['train_loss']['args']['alpha'],
                                                      beta=config['train_loss']['args']['beta'],
                                                      num_classes=config['num_classes'])
-    elif config['train_loss']['type'] == 'GCELoss':
-        train_loss = getattr(module_loss, 'GCELoss')(q=config['train_loss']['args']['q'],
+    elif config['train_loss']['type'] == 'GCE_GTLoss':
+        train_loss = getattr(module_loss, 'GCE_GTLoss')(q=config['train_loss']['args']['q'],
                                                      k=config['train_loss']['args']['k'],
                                                      trainset_size=num_examp,
                                                      truncated=config['train_loss']['args']['truncated'])
-    elif config['train_loss']['type'] == 'GTLoss':
-        train_loss = getattr(module_loss, 'GTLoss')()
-        
-    else:
-        train_loss = getattr(module_loss, 'CCELoss')()
+    elif config['train_loss']['type'] == 'CCE_GTLoss':
+        train_loss = getattr(module_loss, 'CCE_GTLoss')()
 
         
     val_loss = getattr(module_loss, config['val_loss'])
@@ -184,60 +181,7 @@ def main(parse, config: ConfigParser):
 
     lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
-    if config['train_loss']['type'] == 'ELRLoss':
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
-                                     config=config,
-                                     data_loader=data_loader,
-                                     teacher=teacher,
-                                     valid_data_loader=valid_data_loader,
-                                     test_data_loader=test_data_loader,
-                                     lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss,
-                                     mode = parse.mode,
-                                     entropy = parse.entropy,
-                                     threshold = parse.threshold
-                                )
-    elif config['train_loss']['type'] == 'SCELoss':
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
-                                     config=config,
-                                     data_loader=data_loader,
-                                     teacher=teacher,
-                                     valid_data_loader=valid_data_loader,
-                                     test_data_loader=test_data_loader,
-                                     lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss,
-                                     mode = parse.mode,
-                                     entropy = parse.entropy,
-                                     threshold = parse.threshold                                  
-                                )
-    elif config['train_loss']['type'] == 'GCELoss':
-        if config['train_loss']['args']['truncated'] == False:
-            trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
-                                     config=config,
-                                     data_loader=data_loader,
-                                     teacher=teacher,
-                                     valid_data_loader=valid_data_loader,
-                                     test_data_loader=test_data_loader,
-                                     lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss,
-                                     mode = parse.mode,
-                                     entropy = parse.entropy,
-                                     threshold = parse.threshold
-                                    )
-        elif config['train_loss']['args']['truncated'] == True:
-            trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
-                                      config=config,
-                                      data_loader=data_loader,
-                                      teacher=teacher,
-                                      valid_data_loader=valid_data_loader,
-                                      test_data_loader=test_data_loader,
-                                      lr_scheduler=lr_scheduler,
-                                      val_criterion=val_loss,
-                                      mode = parse.mode,
-                                      entropy = parse.entropy,
-                                      threshold = parse.threshold
-                                     )
-    elif config['train_loss']['type'] == 'GTLoss':
+    if config['train_loss']['type'] == 'ELR_GTLoss':
         trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
@@ -250,8 +194,34 @@ def main(parse, config: ConfigParser):
                                      entropy = parse.entropy,
                                      threshold = parse.threshold
                                     )
-    else:
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+    elif config['train_loss']['type'] == 'SCE_GTLoss':
+        trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     teacher=teacher,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss,
+                                     mode = parse.mode,
+                                     entropy = parse.entropy,
+                                     threshold = parse.threshold
+                                    )
+    elif config['train_loss']['type'] == 'GCE_GTLoss':
+        trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
+                                     config=config,
+                                     data_loader=data_loader,
+                                     teacher=teacher,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss,
+                                     mode = parse.mode,
+                                     entropy = parse.entropy,
+                                     threshold = parse.threshold
+                                    )
+    elif config['train_loss']['type'] == 'CCE_GTLoss':
+        trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      teacher=teacher,

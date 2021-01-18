@@ -209,16 +209,16 @@ def main(parse, config: ConfigParser):
                                     )
     elif config['train_loss']['type'] == 'GCE_GTLoss':
         trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
-                                 config=config,
-                                 data_loader=data_loader,
-                                 teacher=teacher,
-                                 valid_data_loader=valid_data_loader,
-                                 test_data_loader=test_data_loader,
-                                 lr_scheduler=lr_scheduler,
-                                 val_criterion=val_loss,
-                                 mode = parse.mode,
-                                 entropy = parse.entropy,
-                                 threshold = parse.threshold
+                                     config=config,
+                                     data_loader=data_loader,
+                                     teacher=teacher,
+                                     valid_data_loader=valid_data_loader,
+                                     test_data_loader=test_data_loader,
+                                     lr_scheduler=lr_scheduler,
+                                     val_criterion=val_loss,
+                                     mode = parse.mode,
+                                     entropy = parse.entropy,
+                                     threshold = parse.threshold
                                     )
     elif config['train_loss']['type'] == 'CCE_GTLoss':
         trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,

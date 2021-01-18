@@ -28,3 +28,21 @@ class ELRLoss(nn.Module):
         else:
             final_loss = ce_loss +  self.config['train_loss']['args']['lambda']*elr_reg
         return  final_loss
+    
+class ELR_GTLoss(ELRLoss):
+    def __init__(self, num_examp, num_classes, beta=0.3):
+        super(ELR_GTLoss, self).__init__(num_examp, num_classes, beta)
+        
+    def forward(self, output, label, clean_indexs, index):
+        y_pred = F.softmax(output, dim=1)
+        y_pred = torch.clamp(y_pred, 1e-4, 1.0-1e-4)
+        y_pred_ = y_pred.data.detach()
+        self.target[index] = self.beta * self.target[index] + (1-self.beta) * ((y_pred_)/(y_pred_).sum(dim=1,keepdim=True))
+        
+        ce_loss = F.cross_entropy(output, label, reduction='none')[clean_indexs]
+        elr_reg = ((1-(self.target[index] * y_pred).sum(dim=1)).log())[clean_indexs]
+        size = logits.shape[0] if sum(clean_indexs) == 0 else sum(clean_indexs)
+        
+        final_loss = torch.sum(ce_loss) + self.config['train_loss']['args']['lambda'] * torch.sum(elr_reg)
+        final_loss /= size
+        return final_loss

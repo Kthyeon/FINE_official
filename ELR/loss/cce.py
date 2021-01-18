@@ -15,6 +15,9 @@ class GTLoss(nn.Module):
     def __init__(self):
         super(GTLoss, self).__init__()
         
-    def forward(self, logits, labels, clean_indexs):
+    def forward(self, logits, labels, clean_indexs, index=None):
+        
+        # index : redundant variable. This is only used in ELR.
+        
         loss = torch.sum(F.cross_entropy(logits, labels, reduction='none')[clean_indexs]) / logits.shape[0]
         return loss

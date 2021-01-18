@@ -33,3 +33,24 @@ class SCELoss(torch.nn.Module):
         else:
             loss = self.alpha * ce + self.beta * rce.mean()
         return loss
+    
+class SCE_GTLoss(SCELoss):
+    def __init__(self, alpha, beta, num_classes=10):
+        super(SCE_GTLoss, self).__init__(alpha, beta, num_classes)
+    
+    def forward(self, pred, labels, clean_indexs, index=None):
+        
+        # CE
+        ce = F.cross_entropy(pred, labels, reduction='none')[clean_indexs]
+        
+        # RCE
+        pred = F.softmax(pred, dim=1)
+        pred = torch.clamp(pred, min=1e-7, max=1.0)
+        label_one_hot = torch.nn.functional.one_hot(labels, self.num_classes).float().to(self.device)
+        label_one_hot = torch.clamp(label_one_hot, min=self.A, max=1.0)
+        rce = (-1*torch.sum(pred * torch.log(label_one_hot), dim=1))[clean_indexs]
+        
+        size = logits.shape[0] if sum(clean_indexs) == 0 else sum(clean_indexs)
+        loss = (self.alpha * torch.sum(ce) + self.beta * torch.sum(rce)) / size
+        return loss
+        

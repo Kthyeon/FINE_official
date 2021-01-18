@@ -156,7 +156,6 @@ class CoteachingDistillLoss(CoteachingLoss):
         # determine filtered or non-filtered
         filtered = self.is_in_teacher_idx[index].bool()
         
-        
         # model 1
         loss_1 = F.cross_entropy(logits, labels, reduction='none')
         ind_1_sorted = torch.argsort(loss_1.data).cuda()
@@ -189,17 +188,11 @@ class CoteachingDistillLoss(CoteachingLoss):
         nonfiltered_2_update = (1 - filtered_2_update.long()).bool()
             
         # exchange
-#         logits = torch.clamp(logits, min=self.A)
-#         logits2 = torch.clamp(logits2, min=self.A)
         ce_loss_1_update = F.cross_entropy(logits[ind_2_update], labels[ind_2_update], reduction='none')
         ce_loss_2_update = F.cross_entropy(logits2[ind_1_update], labels[ind_1_update], reduction='none')
+        
 #         h_loss_1_update = self.h_loss(logits[ind_2_update])
 #         h_loss_2_update = self.h_loss(logits2[ind_1_update])
-
-#         ce_loss_1_update = F.cross_entropy(logits[filtered_2_update], labels[filtered_2_update], reduction='none')
-#         ce_loss_2_update = F.cross_entropy(logits2[filtered_1_update], labels[filtered_1_update], reduction='none')
-#         h_loss_1_update = self.h_loss(logits[nonfiltered_2_update])
-#         h_loss_2_update = self.h_loss(logits2[nonfiltered_1_update])
         
 #         loss_1_update = torch.sum(ce_loss_1_update) - torch.sum(h_loss_1_update)
 #         loss_2_update = torch.sum(ce_loss_2_update) - torch.sum(h_loss_2_update)
@@ -209,18 +202,63 @@ class CoteachingDistillLoss(CoteachingLoss):
 
         loss_1_update = torch.sum(ce_loss_1_update[filtered_2_update])
         loss_2_update = torch.sum(ce_loss_2_update[filtered_1_update])
-    
-#         loss_1_update = torch.sum(ce_loss_1_update[filtered_2_update]) - 0.3 * torch.sum(h_loss_1_update[nonfiltered_2_update])
-#         loss_2_update = torch.sum(ce_loss_2_update[filtered_1_update]) - 0.3 * torch.sum(h_loss_2_update[nonfiltered_1_update])
         
         loss_1_update = loss_1_update / num_remember
         loss_2_update = loss_2_update / num_remember
         
         return loss_1_update, loss_2_update
     
-class CoteachingDistillPlusLoss(CoteachingLoss):
-    def __init__(self, forget_rate, num_gradual, n_epoch, clean_indx):
-        super(CoteachingDistillPlusLoss, self).__init__(forget_rate, num_gradual, n_epoch)
+class CoteachingPlusDistillLoss(CoteachingDistillLoss):
+    def __init__(self, forget_rate, num_gradual, n_epoch, num_examp, clean_indexs):
+        super(CoteachingPlusDistillLoss, self).__init__(forget_rate, num_gradual, n_epoch, num_examp, clean_indexs)
         
-    def forward(self, logits, logits2, labels, epoch):
-        pass
+    def forward(self, logits, logits2, labels, epoch, index, step=None):
+        ind = index.cpu().numpy().transpose()
+        
+        # disagreement
+        _, pred1 = torch.max(logits.data, 1)
+        _, pred2 = torch.max(logits2.data, 1)
+        
+        pred1, pred2 = pred1.cpu().numpy(), pred2.cpu().numpy()
+        
+        logical_disagree_id=np.zeros(labels.size(), dtype=bool)
+        disagree_id = []
+        for idx, p1 in enumerate(pred1):
+            if p1 != pred2[idx]:
+                disagree_id.append(idx)
+                logical_disagree_id[idx] = True
+
+        temp_disagree = ind*logical_disagree_id.astype(np.int64)
+        ind_disagree = np.asarray([i for i in temp_disagree if i != 0]).transpose()
+        try:
+            assert ind_disagree.shape[0]==len(disagree_id)
+        except:
+            disagree_id = disagree_id[:ind_disagree.shape[0]]
+        
+        _update_step = np.logical_or(logical_disagree_id, step < 5000).astype(np.float32)
+        update_step = Variable(torch.from_numpy(_update_step)).cuda()
+        
+        if len(disagree_id) > 0:
+            update_labels = labels[disagree_id]
+            update_outputs = logits[disagree_id] 
+            update_outputs2 = logits2[disagree_id]
+
+            loss_1, loss_2 = super().forward(update_outputs, update_outputs2, update_labels, epoch, index)
+            
+        else:
+            update_labels = labels
+            update_outputs = logits
+            update_outputs2 = logits2
+            
+            filtered = self.is_in_teacher_idx[index].bool()
+
+            cross_entropy_1 = F.cross_entropy(update_outputs, update_labels, reduction='none')[filtered]
+            cross_entropy_2 = F.cross_entropy(update_outputs2, update_labels, reduction='none')[filtered]
+            update_step = update_step[filtered]
+            
+            size = labels.size(0) if torch.sum(update_step) == 0 else torch.sum(update_step)
+
+            loss_1 = torch.sum(update_step*cross_entropy_1)/size
+            loss_2 = torch.sum(update_step*cross_entropy_2)/size
+            
+        return loss_1, loss_2

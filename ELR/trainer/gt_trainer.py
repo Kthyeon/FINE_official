@@ -89,7 +89,7 @@ class GroundTruthTrainer(BaseTrainer):
                 
                 _, output = self.model(data)
 #                 sing_lbl = None
-                loss = self.train_criterion(output, label, clean_index)
+                loss = self.train_criterion(output, label, clean_index, indexs)
                 
                 self.optimizer.zero_grad()
                 loss.backward()

@@ -11,7 +11,7 @@ class CCELoss(nn.Module):
     def forward(self, output, target, index):
         return F.cross_entropy(output, target)
     
-class GTLoss(nn.Module):
+class CCE_GTLoss(nn.Module):
     def __init__(self):
         super(GTLoss, self).__init__()
         

@@ -19,9 +19,9 @@ def get_cifar100(root, cfg_trainer, train=True,
                 download=True, noise_file = '', teacher_idx = None):
     base_dataset = torchvision.datasets.CIFAR100(root, train=train, download=download)
     if train:
-        train_idxs, val_idxs = train_val_split(base_dataset.targets)
-        if teacher_idx != None:
-            train_idxs = teacher_idx
+        train_idxs = range(0,50000)
+        val_idxs = []
+        
         train_dataset = CIFAR100_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR100_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
         if cfg_trainer['asym']:
@@ -32,6 +32,9 @@ def get_cifar100(root, cfg_trainer, train=True,
             train_dataset.symmetric_noise()
             if len(val_dataset) > 0:
                 val_dataset.symmetric_noise()
+        
+        if teacher_idx:
+            train_dataset.truncate(teacher_idx)
         
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
     else:
@@ -46,23 +49,6 @@ def get_cifar100(root, cfg_trainer, train=True,
 
 #     return train_dataset, val_dataset
 
-
-def train_val_split(base_dataset: torchvision.datasets.CIFAR100):
-    num_classes = 100
-    base_dataset = np.array(base_dataset)
-    train_n = int(len(base_dataset) * 1.0 / num_classes)
-    train_idxs = []
-    val_idxs = []
-
-    for i in range(num_classes):
-        idxs = np.where(base_dataset == i)[0]
-        np.random.shuffle(idxs)
-        train_idxs.extend(idxs[:train_n])
-        val_idxs.extend(idxs[train_n:])
-    np.random.shuffle(train_idxs)
-    np.random.shuffle(val_idxs)
-
-    return train_idxs, val_idxs
 
 
 class CIFAR100_train(torchvision.datasets.CIFAR100):
@@ -164,8 +150,12 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
             assert actual_noise > 0.0
             self.train_labels = y_train_noisy
             
-            
-
+    def truncate(self, teacher_idx):
+        self.train_data = self.train_data[teacher_idx]
+        self.train_labels = self.train_labels[teacher_idx]
+        self.train_labels_gt = self.train_labels_gt[teacher_idx]    
+        
+        
     def __getitem__(self, index):
         """
         Args:

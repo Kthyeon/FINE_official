@@ -16,12 +16,16 @@ def unpickle(file):
     return dict
 
 class cifar_dataset(Dataset): 
-    def __init__(self, dataset, r, noise_mode, root_dir, transform, mode, noise_file='', pred=[], probability=[], log=''): 
+    def __init__(self, dataset, r, noise_mode, root_dir, transform, mode, noise_file='', pred=[], probability=[], log='', teacher_idx=None, truncate_mode=None): 
         
         self.r = r # noise ratio
         self.transform = transform
         self.mode = mode  
         self.transition = {0:0,2:0,4:7,7:7,1:1,9:1,3:5,5:3,6:6,8:8} # class transition for asymmetric noise
+        
+        # For distill test
+        self.teacher_idx = teacher_idx
+        self.truncate_mode = truncate_mode
      
         if self.mode=='test':
             if dataset=='cifar10':                
@@ -53,15 +57,19 @@ class cifar_dataset(Dataset):
             train_data = train_data.reshape((50000, 3, 32, 32))
             train_data = train_data.transpose((0, 2, 3, 1))
 
+            if self.truncate_mode == 'initial':
+                train_data = train_data[self.teacher_idx]
+            train_data_len = train_data.shape[0]
+            
             if os.path.exists(noise_file):
                 noise_label = json.load(open(noise_file,"r"))
             else:    #inject noise   
                 noise_label = []
-                idx = list(range(50000))
+                idx = list(range(train_data_len))
                 random.shuffle(idx)
-                num_noise = int(self.r*50000)            
+                num_noise = int(self.r*train_data_len)            
                 noise_idx = idx[:num_noise]
-                for i in range(50000):
+                for i in range(train_data_len):
                     if i in noise_idx:
                         if noise_mode=='sym':
                             if dataset=='cifar10': 
@@ -132,7 +140,7 @@ class cifar_dataset(Dataset):
         
         
 class cifar_dataloader():  
-    def __init__(self, dataset, r, noise_mode, batch_size, num_workers, root_dir, log, noise_file='', teacher_idx=None):
+    def __init__(self, dataset, r, noise_mode, batch_size, num_workers, root_dir, log, noise_file='', teacher_idx=None, truncate_mode=None):
         self.dataset = dataset
         self.r = r
         self.noise_mode = noise_mode
@@ -142,6 +150,7 @@ class cifar_dataloader():
         self.log = log
         self.noise_file = noise_file
         self.teacher_idx = teacher_idx
+        self.truncate_mode = truncate_mode
         if self.dataset=='cifar10':
             self.transform_train = transforms.Compose([
                     transforms.RandomCrop(32, padding=4),
@@ -166,7 +175,7 @@ class cifar_dataloader():
                 ])   
     def run(self,mode,pred=[],prob=[]):
         if mode=='warmup':
-            all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file)                
+            all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)                
             trainloader = DataLoader(
                 dataset=all_dataset, 
                 batch_size=self.batch_size*2,
@@ -175,14 +184,14 @@ class cifar_dataloader():
             return trainloader
                                      
         elif mode=='train':
-            labeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="labeled", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log)              
+            labeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="labeled", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)              
             labeled_trainloader = DataLoader(
                 dataset=labeled_dataset, 
                 batch_size=self.batch_size,
                 shuffle=True,
                 num_workers=self.num_workers)   
             
-            unlabeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled", noise_file=self.noise_file, pred=pred)                    
+            unlabeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled", noise_file=self.noise_file, pred=pred,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)                    
             unlabeled_trainloader = DataLoader(
                 dataset=unlabeled_dataset, 
                 batch_size=self.batch_size,

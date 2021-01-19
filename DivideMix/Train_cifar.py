@@ -13,6 +13,8 @@ from PreResNet import *
 from sklearn.mixture import GaussianMixture
 import dataloader_cifar as dataloader
 
+from svd_classifier import singular_label, get_out_list, get_singular_value_vector, get_loss_list
+
 parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
 parser.add_argument('--batch_size', default=64, type=int, help='train batchsize') 
 parser.add_argument('--lr', '--learning_rate', default=0.02, type=float, help='initial learning rate')
@@ -225,8 +227,6 @@ elif args.dataset=='cifar100':
     warm_up = 30
 
 if args.distill == 'initial':
-    # initial data loader
-    data_loader = 
     
     # teacher model initialize
     teacher = 
@@ -246,7 +246,7 @@ else:
     teacher_idx = None
     
 loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
-    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),teacher_idx=teacher_idx)
+    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),teacher_idx=teacher_idx,truncate_mode='initial')
 
 print('| Building net')
 net1 = create_model()

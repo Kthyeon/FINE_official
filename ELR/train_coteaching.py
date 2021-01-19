@@ -150,9 +150,6 @@ def main(parse, config: ConfigParser):
         
 #     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
     
-    
-#     print (teacher_idx)
-    
 #     num_examp = len(data_loader.train_dataset)
 #     real = torch.Tensor([True for _ in range(num_examp)])
 #     pred = torch.Tensor([False for _ in range(num_examp)])
@@ -193,7 +190,11 @@ def main(parse, config: ConfigParser):
         
     # coteaching_plus + winning_ticket!
     elif config['train_loss']['type'] == 'CoteachingPlusDistillLoss':
-        pass
+        train_loss = getattr(module_loss, 'CoteachingPlusDistillLoss')(forget_rate=config['trainer']['percent'],
+                                                                       num_gradual=int(config['train_loss']['args']['num_gradual']),
+                                                                       n_epoch=config['trainer']['epochs'],
+                                                                       num_examp=num_examp,
+                                                                       clean_indexs=teacher_idx)
 
         
     val_loss = getattr(module_loss, config['val_loss'])
@@ -300,8 +301,38 @@ def main(parse, config: ConfigParser):
                                    )
         
     elif config['train_loss']['type'] == 'CoteachingPlusDistillLoss':
-        pass
+        
+        model1, model2 = config.initialize('arch', module_arch), config.initialize('arch', module_arch)
+        
+        trainable_params1 = filter(lambda p: p.requires_grad, model1.parameters())
+        trainable_params2 = filter(lambda p: p.requires_grad, model2.parameters())
 
+        optimizer1 = config.initialize('optimizer', torch.optim, [{'params': trainable_params1}])
+        optimizer2 = config.initialize('optimizer', torch.optim, [{'params': trainable_params2}])
+        
+        if isinstance(optimizer1, torch.optim.Adam):
+            lr_scheduler = None
+        else:
+            lr_scheduler1 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer1)
+            lr_scheduler2 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer2)
+            lr_scheduler = [lr_scheduler1, lr_scheduler2]
+            
+        trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
+                                    config=config,
+                                    data_loader=data_loader,
+                                    teacher=teacher,
+                                    valid_data_loader=valid_data_loader,
+                                    test_data_loader=test_data_loader,
+                                    lr_scheduler=lr_scheduler,
+                                    val_criterion=val_loss,
+                                    mode=parse.mode,
+                                    entropy=parse.entropy,
+                                    threshold=parse.threshold,
+                                    epoch_decay_start=config['trainer']['epoch_decay_start'],
+                                    n_epoch=config['trainer']['epochs'],
+                                    learning_rate=config['optimizer']['args']['lr']
+                                   )
+        
     trainer.train()
     
     logger = config.get_logger('trainer', config['trainer']['verbosity'])

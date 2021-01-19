@@ -26,6 +26,7 @@ class CoteachingLoss(nn.Module):
         self.rate_schedule = self.generate_forget_rate(forget_rate, num_gradual, n_epoch)
         
     def forward(self, logits_1, logits_2, targets, epoch, index=None, step=None):
+        
         # model 1
         loss_1 = F.cross_entropy(logits_1, targets, reduction='none')
         ind_1_sorted = torch.argsort(loss_1.data).cuda()
@@ -37,7 +38,7 @@ class CoteachingLoss(nn.Module):
         loss_2_sorted = loss_2[ind_2_sorted]
         
         # sample small loss instances
-        remember_rate = 1 - self.rate_schedule[epoch]
+        remember_rate = 1 - self.rate_schedule[epoch-1]
         num_remember =  int(remember_rate * len(loss_1_sorted))
         
         ind_1_update = ind_1_sorted[:num_remember]

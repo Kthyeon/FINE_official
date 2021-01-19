@@ -228,8 +228,10 @@ elif args.dataset=='cifar100':
 
 if args.distill == 'initial':
     
-    # teacher model initialize
-    teacher = 
+    teacher = ResNet34(num_classes=args.num_class)
+    teacher.load_state_dict(torch.load('./pretrained/multistep_asym_40_elr.pth')['state_dict'])
+    teacher.eval()
+    
     for params in teacher.parameters():
         params.requires_grad = False
     

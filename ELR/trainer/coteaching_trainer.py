@@ -77,7 +77,7 @@ class CoteachingTrainer(BaseTrainer):
         self.n_epoch = n_epoch
         self.learning_rate = learning_rate
         
-        mom1, mom2 = 0.9, 0.9
+        mom1, mom2 = 0.9, 0.1
         self.alpha_plan = [self.learning_rate] * self.n_epoch
         self.beta1_plan = [mom1] * self.n_epoch
 

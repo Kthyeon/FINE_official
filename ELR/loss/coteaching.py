@@ -123,8 +123,8 @@ class CoteachingPlusLoss(CoteachingLoss):
             cross_entropy_1 = F.cross_entropy(update_outputs, update_labels, reduction='none')
             cross_entropy_2 = F.cross_entropy(update_outputs2, update_labels, reduction='none')
 
-            loss_1 = torch.sum(update_step*cross_entropy_1)/labels.size()[0]
-            loss_2 = torch.sum(update_step*cross_entropy_2)/labels.size()[0]
+            loss_1 = torch.sum(update_step*cross_entropy_1)/labels.size(0)
+            loss_2 = torch.sum(update_step*cross_entropy_2)/labels.size(0)
             
         return loss_1, loss_2
     
@@ -258,7 +258,7 @@ class CoteachingPlusDistillLoss(CoteachingDistillLoss):
             
             size = labels.size(0) if torch.sum(update_step) == 0 else torch.sum(update_step)
 
-            loss_1 = torch.sum(update_step*cross_entropy_1)/size
-            loss_2 = torch.sum(update_step*cross_entropy_2)/size
+            loss_1 = torch.sum(update_step*cross_entropy_1) / size
+            loss_2 = torch.sum(update_step*cross_entropy_2) / size
             
         return loss_1, loss_2

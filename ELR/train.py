@@ -13,7 +13,7 @@ import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer
 from collections import OrderedDict
-from trainer.svd_classifier import singular_label, get_out_list, get_singular_value_vector, get_loss_list
+from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list
 
 import random
 import numpy as np
@@ -54,6 +54,8 @@ def main(parse, config: ConfigParser):
     if parse.distillation:
         if parse.distill_mode == 'eigen':
             wandb_run_name_list.append('distil')
+        elif parse.distill_mode == 'fulleigen':
+            wandb_run_name_list.append('fulldistill')
         else:
             wandb_run_name_list.append('kmeans')
     else:
@@ -124,12 +126,10 @@ def main(parse, config: ConfigParser):
                 params.requires_grad = False
         if parse.distill_mode == 'eigen':
             tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
-            singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
-
-            for key in v_ortho_dict.keys():
-                v_ortho_dict[key] = v_ortho_dict[key].cuda()
-
-            teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+            teacher_idx = iterative_eigen(1,tea_label_list,tea_out_list)
+        elif parse.distill_mode == 'fulleigen':
+            tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+            teacher_idx = iterative_eigen(100,tea_label_list,tea_out_list)
         else:
             teacher_idx = get_out_list(teacher, data_loader)
         
@@ -279,7 +279,7 @@ if __name__ == '__main__':
     args.add_argument('-d', '--device', default='1', type=str,
                       help='indices of GPUs to enable (default: all)')
     args.add_argument('--distillation', help='whether to distill knowledge', action='store_true')
-    args.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen'], help='mode for distillation kmeans or eigen.')
+    args.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen','fulleigen'], help='mode for distillation kmeans or eigen.')
     args.add_argument('--mode', type=str, default='ce', choices=['ce', 'same'], help = 'distill_type. same means the same loss of teacher recipe')
     args.add_argument('--entropy', help='whether to use entropy loss', action='store_true')
     args.add_argument('--threshold', type=float, default=0.1, help='threshold for the use of entropy loss.')

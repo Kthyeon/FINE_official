@@ -18,8 +18,8 @@ def get_cifar100(root, cfg_trainer, train=True,
                 download=True, noise_file = '', teacher_idx = None):
     base_dataset = torchvision.datasets.CIFAR100(root, train=train, download=download)
     if train:
-        train_idxs = range(0,50000)
-        val_idxs = []
+        train_idxs, val_idxs = train_val_split(base_dataset.targets)
+
         
         train_dataset = CIFAR100_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR100_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
@@ -49,6 +49,22 @@ def get_cifar100(root, cfg_trainer, train=True,
 #     return train_dataset, val_dataset
 
 
+def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
+    num_classes = 10
+    base_dataset = np.array(base_dataset)
+    train_n = int(len(base_dataset) * 1.0 / num_classes)
+    train_idxs = []
+    val_idxs = []
+
+    for i in range(num_classes):
+        idxs = np.where(base_dataset == i)[0]
+        np.random.shuffle(idxs)
+        train_idxs.extend(idxs[:train_n])
+        val_idxs.extend(idxs[train_n:])
+    np.random.shuffle(train_idxs)
+    np.random.shuffle(val_idxs)
+
+    return train_idxs, val_idxs
 
 class CIFAR100_train(torchvision.datasets.CIFAR100):
     def __init__(self, root, cfg_trainer, indexs, train=True,

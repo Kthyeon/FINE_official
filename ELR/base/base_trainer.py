@@ -18,7 +18,9 @@ class BaseTrainer:
 
         # setup GPU device if available, move model into configured device
         self.device, device_ids = self._prepare_device(config['n_gpu'])
-        self.model = model.to(self.device)
+        
+        self.model = model.to(self.device) if type(model) is not list else model[0].to(self.device)
+#         self.model = model.to(self.device)
 
         if len(device_ids) > 1:
             self.model = torch.nn.DataParallel(model, device_ids=device_ids)
@@ -28,8 +30,9 @@ class BaseTrainer:
         
         self.val_criterion = val_criterion
         self.metrics = metrics
-
-        self.optimizer = optimizer
+        
+        self.optimizer = optimizer if type(optimizer) is not list else optimizer[0]
+#         self.optimizer = optimizer
 
         cfg_trainer = config['trainer']
         self.epochs = cfg_trainer['epochs']

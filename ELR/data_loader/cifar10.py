@@ -11,14 +11,15 @@ import random
 import json
 import os
 
+
 def get_cifar10(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
                 download=True, noise_file = '', teacher_idx=None):
     base_dataset = torchvision.datasets.CIFAR10(root, train=train, download=download)
     if train:
         train_idxs, val_idxs = train_val_split(base_dataset.targets)
-        if teacher_idx != None:
-            train_idxs = teacher_idx
+
+
         train_dataset = CIFAR10_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR10_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
         if cfg_trainer['asym']:
@@ -27,6 +28,9 @@ def get_cifar10(root, cfg_trainer, train=True,
         else:
             train_dataset.symmetric_noise()
             val_dataset.symmetric_noise()
+            
+        if teacher_idx:
+            train_dataset.truncate(teacher_idx)
         
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
     else:
@@ -38,7 +42,6 @@ def get_cifar10(root, cfg_trainer, train=True,
         return train_dataset, None
     else:
         return train_dataset, val_dataset
-
 
 def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
     num_classes = 10
@@ -57,7 +60,6 @@ def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
 
     return train_idxs, val_idxs
 
-
 class CIFAR10_train(torchvision.datasets.CIFAR10):
     def __init__(self, root, cfg_trainer, indexs, train=True,
                  transform=None, target_transform=None,
@@ -67,8 +69,8 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
                                             download=download)
         self.num_classes = 10
         self.cfg_trainer = cfg_trainer
-        self.train_data = self.data[indexs]#self.train_data[indexs]
-        self.train_labels = np.array(self.targets)[indexs]#np.array(self.train_labels)[indexs]
+        self.train_data = self.data[indexs] # self.train_data[indexs]
+        self.train_labels = np.array(self.targets)[indexs] # np.array(self.train_labels)[indexs]
         self.indexs = indexs
         self.prediction = np.zeros((len(self.train_data), self.num_classes, self.num_classes), dtype=np.float32)
         self.noise_indx = []
@@ -105,8 +107,13 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
                     # deer -> horse
                     elif i == 4:
                         self.train_labels[idx] = 7
-                
-            
+    
+    def truncate(self, teacher_idx):
+        self.train_data = self.train_data[teacher_idx]
+        self.train_labels = self.train_labels[teacher_idx]
+        self.train_labels_gt = self.train_labels_gt[teacher_idx]           
+    
+    
 
     def __getitem__(self, index):
         """

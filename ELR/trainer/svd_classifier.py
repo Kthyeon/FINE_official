@@ -1,7 +1,34 @@
 import torch
 import numpy as np
 from tqdm import tqdm
+from sklearn import cluster
 
+def get_loss_list(model, data_loader):
+    loss_list = np.empty((0,))
+
+    with tqdm(data_loader) as progress:
+        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
+            data = data.cuda()
+            label, label_gt = label.long().cuda(), label_gt.long().cuda()
+
+            _, prediction = base_model(data)
+            loss = torch.nn.CrossEntropyLoss(reduction='none')(prediction, label)
+
+            loss_list = np.concatenate((loss_list, loss.detach().cpu()))
+    
+    kmeans = cluster.KMeans(n_clusters=2, random_state=0).fit(loss_list.reshape(-1,1))
+    
+    if np.mean(loss_list[kmeans.labels_==0]) > np.mean(loss_list[kmeans.labels_==1]):
+        clean_label = 1
+    else:
+        clean_label = 0
+    
+    output=[]
+    for idx, value in enumerate(kmeans.labels_):
+        if value==clean_label:
+            output.append(idx)
+    
+    return output
 
 
 def singular_label(v_ortho_dict, model_represents, label):

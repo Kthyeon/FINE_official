@@ -145,7 +145,6 @@ class CoteachingDistillLoss(CoteachingLoss):
         
         # 이거는 train_coteaching.py 레벨에서 만드는 것으로 하자!
         self.h_loss = EntropyLoss()
-        self.A = math.exp(-4)
         self.generate_filtered_array(num_examp, clean_indexs)
         
     def generate_filtered_array(self, num_examp, clean_indexs):
@@ -170,7 +169,7 @@ class CoteachingDistillLoss(CoteachingLoss):
         filtered_2_sorted = filtered[ind_2_sorted]
         
         # sample small loss instances
-        remember_rate = 1 - self.rate_schedule[epoch]
+        remember_rate = 1 - self.rate_schedule[epoch-1]
         num_remember =  int(remember_rate * len(loss_1_sorted))
         
         ind_1_update = ind_1_sorted[:num_remember]
@@ -183,7 +182,7 @@ class CoteachingDistillLoss(CoteachingLoss):
             ind_2_update = ind_2_sorted
             filtered_1_update = filtered_1_sorted
             filtered_2_update = filtered_2_sorted
-            num_remember = ind_1_update
+            num_remember = len(ind_1_update)
             
         nonfiltered_1_update = (1 - filtered_1_update.long()).bool()
         nonfiltered_2_update = (1 - filtered_2_update.long()).bool()
@@ -204,14 +203,23 @@ class CoteachingDistillLoss(CoteachingLoss):
         loss_1_update = torch.sum(ce_loss_1_update[filtered_2_update])
         loss_2_update = torch.sum(ce_loss_2_update[filtered_1_update])
         
-        loss_1_update = loss_1_update / num_remember
-        loss_2_update = loss_2_update / num_remember
+        size_1 = num_remember if torch.sum(filtered_2_update) == 0 else torch.sum(filtered_2_update)
+        size_2 = num_remember if torch.sum(filtered_1_update) == 0 else torch.sum(filtered_1_update) 
+        
+        loss_1_update = loss_1_update / size_1
+        loss_2_update = loss_2_update / size_2
         
         return loss_1_update, loss_2_update
     
-class CoteachingPlusDistillLoss(CoteachingDistillLoss):
+class CoteachingPlusDistillLoss(CoteachingLoss):
     def __init__(self, forget_rate, num_gradual, n_epoch, num_examp, clean_indexs):
-        super(CoteachingPlusDistillLoss, self).__init__(forget_rate, num_gradual, n_epoch, num_examp, clean_indexs)
+        super(CoteachingPlusDistillLoss, self).__init__(forget_rate, num_gradual, n_epoch)
+        
+        self.generate_filtered_array(num_examp, clean_indexs)
+        
+    def generate_filtered_array(self, num_examp, clean_indexs):
+        self.is_in_teacher_idx = torch.Tensor([False for _ in range(num_examp)])
+        self.is_in_teacher_idx[clean_indexs] = True
         
     def forward(self, logits, logits2, labels, epoch, index, step=None):
         ind = index.cpu().numpy().transpose()
@@ -239,12 +247,16 @@ class CoteachingPlusDistillLoss(CoteachingDistillLoss):
         _update_step = np.logical_or(logical_disagree_id, step < 5000).astype(np.float32)
         update_step = Variable(torch.from_numpy(_update_step)).cuda()
         
+        disagree_instances = index[disagree_id]
+        filtered = self.is_in_teacher_idx[disagree_instances].bool()
+        disagree_id = torch.Tensor(disagree_id)[filtered].long()
+        
         if len(disagree_id) > 0:
             update_labels = labels[disagree_id]
             update_outputs = logits[disagree_id] 
             update_outputs2 = logits2[disagree_id]
 
-            loss_1, loss_2 = super().forward(update_outputs, update_outputs2, update_labels, epoch, index)
+            loss_1, loss_2 = super().forward(update_outputs, update_outputs2, update_labels, epoch)
             
         else:
             update_labels = labels

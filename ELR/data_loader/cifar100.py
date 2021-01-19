@@ -13,6 +13,7 @@ import json
 from numpy.testing import assert_array_almost_equal
 
 
+
 def get_cifar100(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
                 download=True, noise_file = '', teacher_idx = None):

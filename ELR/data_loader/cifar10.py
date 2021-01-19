@@ -11,6 +11,7 @@ import random
 import json
 import os
 
+
 def get_cifar10(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
                 download=True, noise_file = '', teacher_idx=None):

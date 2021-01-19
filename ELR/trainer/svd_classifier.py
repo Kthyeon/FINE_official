@@ -30,19 +30,27 @@ def get_loss_list(model, data_loader):
     
     return output
 
+def iterative_eigen(number, label_list, out_list):
+    sin_lbls = {}
+    
+    for i in range(number):
+        tmp_lbl = torch.zeros(50000)
+        for k in range(i):
+            tmp_lbl += sin_lbls[k] 
+        singular_dict, v_ortho_dict = get_singular_value_vector(label_list[tmp_lbl==0], out_list[tmp_lbl==0])
 
-def singular_label(v_ortho_dict, model_represents, label):
-    
-    sing_lbl = torch.zeros(model_represents.shape[0]) == 0.
-    
-    for i, data in enumerate(model_represents):
-        data = torch.from_numpy(data).cuda()
-        if torch.dot(v_ortho_dict[label[i].item()][0], data).abs() < torch.dot(v_ortho_dict[label[i].item()][1], data).abs():
-            sing_lbl[i] = False
-    
+        for key in v_ortho_dict.keys():
+            v_ortho_dict[key] = v_ortho_dict[key].cuda()
+
+        sing_lbl, sin_score_lbl = singular_label(v_ortho_dict, out_list, label_list)
+        sin_lbls[i]=sing_lbl
+        if i>0 and torch.all(torch.eq(sin_lbls[i], sin_lbls[i-1])):
+            print(i)
+            break
+            
     output=[]
     for idx, value in enumerate(sing_lbl):
-        if value:
+        if value==0:
             output.append(idx)
         
     return output

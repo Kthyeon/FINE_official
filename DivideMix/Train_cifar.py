@@ -218,6 +218,25 @@ def create_model():
     model = model.cuda()
     return model
 
+def save_checkpoint(model1, model2, epoch):
+    state1 = {
+        'epoch': epoch,
+        'state_dict': model1.state_dict()
+    }
+    state2 = {
+        'epoch': epoch,
+        'state_dict': model2.state_dict()
+    }
+    
+    model1_name = 'model1_' + str(args.seed) + '.pth'
+    model2_name = 'model2_' + str(args.seed) + '.pth'
+    model1_save_path = './saved/' + args.dataset + model1_name
+    model2_save_path = './saved/' + args.dataset + model2_name
+    torch.save(state1, model1_save_path)
+    torch.save(state2, model2_save_path)
+    print("Saving model1 checkpoint: " + model1_save_path)
+    print("Saving model2 checkpoint: " + model2_save_path)
+
 stats_log=open('./checkpoint/%s_%.1f_%s'%(args.dataset,args.r,args.noise_mode)+'_stats.txt','w') 
 test_log=open('./checkpoint/%s_%.1f_%s'%(args.dataset,args.r,args.noise_mode)+'_acc.txt','w')     
 
@@ -233,7 +252,7 @@ if args.distill == 'initial':
     data_loader = loader.run('warmup')
     
     teacher = ResNet34(num_classes=args.num_class)
-    teacher.load_state_dict(torch.load('./pretrained/multistep_asym_40_elr.pth')['state_dict'])
+    teacher.load_state_dict(torch.load(args.load_model)['state_dict'])
     teacher.eval()
     
     for params in teacher.parameters():
@@ -252,10 +271,8 @@ if args.distill == 'initial':
 else:
     teacher_idx = None
 
-print(len(teacher_idx))
-    
 loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
-    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),teacher_idx=teacher_idx,truncate_mode='initial')
+    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),teacher_idx=teacher_idx,truncate_mode=args.distill)
 
 print('| Building net')
 net1 = create_model()
@@ -305,7 +322,7 @@ for epoch in range(args.num_epochs+1):
         print('\nTrain Net2')
         labeled_trainloader, unlabeled_trainloader = loader.run('train',pred1,prob1) # co-divide
         train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2         
-
+    save_checkpoint(net1, net2, epoch)
     test(epoch,net1,net2)  
 
 

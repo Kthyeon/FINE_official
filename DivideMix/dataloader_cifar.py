@@ -61,17 +61,16 @@ class cifar_dataset(Dataset):
 
             if self.truncate_mode == 'initial':
                 train_data = train_data[self.teacher_idx]
-            train_data_len = train_data.shape[0]
             
             if os.path.exists(noise_file):
                 noise_label = json.load(open(noise_file,"r"))
             else:    #inject noise   
                 noise_label = []
-                idx = list(range(train_data_len))
+                idx = list(range(50000))
                 random.shuffle(idx)
-                num_noise = int(self.r*train_data_len)            
+                num_noise = int(self.r*50000)            
                 noise_idx = idx[:num_noise]
-                for i in range(train_data_len):
+                for i in range(50000):
                     if i in noise_idx:
                         if noise_mode=='sym':
                             if dataset=='cifar10': 
@@ -108,7 +107,8 @@ class cifar_dataset(Dataset):
                 
                 self.train_data = train_data[pred_idx]
                 self.noise_label = [noise_label[i] for i in pred_idx]                          
-                print("%s data has a size of %d"%(self.mode,len(self.noise_label)))            
+                print("%s data has a size of %d"%(self.mode,len(self.noise_label)))
+
                 
     def __getitem__(self, index):
         if self.mode=='labeled':
@@ -204,7 +204,7 @@ class cifar_dataloader():
     
     def run(self,mode,pred=[],prob=[]):
         if mode=='warmup':
-            all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)                
+            all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)
             trainloader = DataLoader(
                 dataset=all_dataset, 
                 batch_size=self.batch_size*2,

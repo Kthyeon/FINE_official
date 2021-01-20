@@ -26,6 +26,7 @@ class cifar_dataset(Dataset):
         # For distill test
         self.teacher_idx = teacher_idx
         self.truncate_mode = truncate_mode
+        self.train_label = None
      
         if self.mode=='test':
             if dataset=='cifar10':                
@@ -56,6 +57,7 @@ class cifar_dataset(Dataset):
                 train_label = train_dic['fine_labels']
             train_data = train_data.reshape((50000, 3, 32, 32))
             train_data = train_data.transpose((0, 2, 3, 1))
+            self.train_label = train_label
 
             if self.truncate_mode == 'initial':
                 train_data = train_data[self.teacher_idx]
@@ -136,7 +138,30 @@ class cifar_dataset(Dataset):
         if self.mode!='test':
             return len(self.train_data)
         else:
-            return len(self.test_data)         
+            return len(self.test_data)
+    
+    def _print_statistics(self, teacher_idx):
+        fn = 0
+        tn = 0
+        tp = 0
+        fp = 0
+        noisy = 0
+        clean = 0
+        for i in teacher_idx:
+            if self.noise_label[i] == self.train_label[i]:
+                tn += 1
+            else:
+                fn += 1
+        for i in range(50000):
+            if self.noise_label[i] == self.train_label[i]:
+                clean += 1
+            else:
+                noisy += 1
+        fp = clean - tn
+        tp = noisy - fn
+        print("precision : " + str(tp / (tp + fp)))
+        print("recall : " + str(tp / (tp + fn)))
+        print("specificity : " + str(tn / (tn + fp)))      
         
         
 class cifar_dataloader():  
@@ -173,6 +198,10 @@ class cifar_dataloader():
                     transforms.ToTensor(),
                     transforms.Normalize((0.507, 0.487, 0.441), (0.267, 0.256, 0.276)),
                 ])   
+    def print_statistics(self, teacher_idx):
+        all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)
+        all_dataset._print_statistics(teacher_idx)
+    
     def run(self,mode,pred=[],prob=[]):
         if mode=='warmup':
             all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)                

@@ -227,6 +227,10 @@ elif args.dataset=='cifar100':
     warm_up = 30
 
 if args.distill == 'initial':
+    loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
+    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
+    
+    data_loader = loader.run('warmup')
     
     teacher = ResNet34(num_classes=args.num_class)
     teacher.load_state_dict(torch.load('./pretrained/multistep_asym_40_elr.pth')['state_dict'])
@@ -243,9 +247,12 @@ if args.distill == 'initial':
         v_ortho_dict[key] = v_ortho_dict[key].cuda()
 
     teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+    loader.print_statistics(teacher_idx)
 
 else:
     teacher_idx = None
+
+print(len(teacher_idx))
     
 loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
     root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),teacher_idx=teacher_idx,truncate_mode='initial')

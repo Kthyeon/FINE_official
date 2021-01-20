@@ -7,9 +7,9 @@ def get_loss_list(model, data_loader):
     loss_list = np.empty((0,))
 
     with tqdm(data_loader) as progress:
-        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
+        for batch_idx, (data, label, index) in enumerate(progress):
             data = data.cuda()
-            label, label_gt = label.long().cuda(), label_gt.long().cuda()
+            label = label.long().cuda()
 
             _, prediction = base_model(data)
             loss = torch.nn.CrossEntropyLoss(reduction='none')(prediction, label)
@@ -55,10 +55,10 @@ def get_out_list(model, data_loader):
     model.eval()
     model.cuda()
     with tqdm(data_loader) as progress:
-        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
+        for batch_idx, (data, label, index) in enumerate(progress):
             data = data.cuda()
-            label, label_gt = label.long().cuda(), label_gt.long().cuda()
-            output, _ = model(data)
+            label = label.long().cuda()
+            output = model(data)
 
             label_list = np.concatenate((label_list, label.cpu()))
             if batch_idx == 0:

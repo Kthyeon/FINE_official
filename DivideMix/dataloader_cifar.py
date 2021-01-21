@@ -58,9 +58,6 @@ class cifar_dataset(Dataset):
             train_data = train_data.reshape((50000, 3, 32, 32))
             train_data = train_data.transpose((0, 2, 3, 1))
             self.train_label = train_label
-
-            if self.truncate_mode == 'initial':
-                train_data = train_data[self.teacher_idx]
             
             if os.path.exists(noise_file):
                 noise_label = json.load(open(noise_file,"r"))
@@ -103,21 +100,32 @@ class cifar_dataset(Dataset):
                     log.flush()      
                     
                 elif self.mode == "unlabeled":
-                    pred_idx = (1-pred).nonzero()[0]                                               
+                    pred_idx = (1-pred).nonzero()[0]
+                    
+                elif self.mode == "labeled_svd":
+                    pred_idx = teacher_idx
+                    probability = torch.ones(50000,)
+                    self.probability = [probability[i] for i in pred_idx]
+                    log.write('Number of labeled samples (by svd) : %d' % teacher_idx.shape[0])
+                
+                elif self.mode == "unlabeled_svd":
+                    pred_idx = torch.arange(0, 50000)
+                    pred_idx_set = set(pred_idx.tolist()) - set(teacher_idx.tolist())
+                    pred_idx = torch.tensor(list(pred_idx_set))
                 
                 self.train_data = train_data[pred_idx]
-                self.noise_label = [noise_label[i] for i in pred_idx]                          
+                self.noise_label = [noise_label[i] for i in pred_idx]
                 print("%s data has a size of %d"%(self.mode,len(self.noise_label)))
 
                 
     def __getitem__(self, index):
-        if self.mode=='labeled':
+        if self.mode=='labeled' or self.mode=='labeled_svd':
             img, target, prob = self.train_data[index], self.noise_label[index], self.probability[index]
             img = Image.fromarray(img)
             img1 = self.transform(img) 
             img2 = self.transform(img) 
             return img1, img2, target, prob            
-        elif self.mode=='unlabeled':
+        elif self.mode=='unlabeled' or self.mode=='unlabeled_svd':
             img = self.train_data[index]
             img = Image.fromarray(img)
             img1 = self.transform(img) 
@@ -165,7 +173,7 @@ class cifar_dataset(Dataset):
         
         
 class cifar_dataloader():  
-    def __init__(self, dataset, r, noise_mode, batch_size, num_workers, root_dir, log, noise_file='', teacher_idx=None, truncate_mode=None):
+    def __init__(self, dataset, r, noise_mode, batch_size, num_workers, root_dir, log, noise_file='', _teacher_idx=None, _truncate_mode=None):
         self.dataset = dataset
         self.r = r
         self.noise_mode = noise_mode
@@ -174,8 +182,8 @@ class cifar_dataloader():
         self.root_dir = root_dir
         self.log = log
         self.noise_file = noise_file
-        self.teacher_idx = teacher_idx
-        self.truncate_mode = truncate_mode
+        self.teacher_idx = _teacher_idx
+        self.truncate_mode = _truncate_mode
         if self.dataset=='cifar10':
             self.transform_train = transforms.Compose([
                     transforms.RandomCrop(32, padding=4),
@@ -202,7 +210,7 @@ class cifar_dataloader():
         all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)
         all_dataset._print_statistics(teacher_idx)
     
-    def run(self,mode,pred=[],prob=[]):
+    def run(self,mode,pred=[],prob=[], teacher_idx=None):
         if mode=='warmup':
             all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)
             trainloader = DataLoader(
@@ -211,6 +219,23 @@ class cifar_dataloader():
                 shuffle=True,
                 num_workers=self.num_workers)             
             return trainloader
+        
+        elif mode=='train_svd':
+            labeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="labeled_svd", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log,teacher_idx=teacher_idx)
+            labeled_trainloader = DataLoader(
+                dataset=labeled_dataset, 
+                batch_size=self.batch_size,
+                shuffle=True,
+                num_workers=self.num_workers)
+            
+            unlabeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled_svd", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log,teacher_idx=teacher_idx)
+            unlabeled_trainloader = DataLoader(
+                dataset=unlabeled_dataset, 
+                batch_size=self.batch_size,
+                shuffle=True,
+                num_workers=self.num_workers)
+            
+            return labeled_trainloader, unlabeled_trainloader
                                      
         elif mode=='train':
             labeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="labeled", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)              

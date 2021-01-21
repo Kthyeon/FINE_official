@@ -230,21 +230,55 @@ def save_checkpoint(model1, model2, epoch):
     
     model1_name = 'model1_' + str(args.seed) + '.pth'
     model2_name = 'model2_' + str(args.seed) + '.pth'
+    
+    if args.distill:
+        model1_name = args.distill + '_' + model1_name
+        model2_name = args.distill + '_' + model2_name
+    
     model1_save_path = './saved/' + args.dataset + model1_name
     model2_save_path = './saved/' + args.dataset + model2_name
+    
     torch.save(state1, model1_save_path)
     torch.save(state2, model2_save_path)
-    print("Saving model1 checkpoint: " + model1_save_path)
-    print("Saving model2 checkpoint: " + model2_save_path)
+    print("\nSaving model1 checkpoint: " + model1_save_path)
+    print("\nSaving model2 checkpoint: " + model2_save_path)
 
-stats_log=open('./checkpoint/%s_%.1f_%s'%(args.dataset,args.r,args.noise_mode)+'_stats.txt','w') 
-test_log=open('./checkpoint/%s_%.1f_%s'%(args.dataset,args.r,args.noise_mode)+'_acc.txt','w')     
+def get_teacher_idx(model, loader):
+    model.eval()
+    for params in model.parameters():
+        params.requires_grad = False
+    # get teacher_idx
+    tea_label_list, tea_out_list = get_out_list(model, loader)
+    singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
+    
+    for key in v_ortho_dict.keys():
+        v_ortho_dict[key] = v_ortho_dict[key].cuda()
+
+    teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+    
+    #loader.print_statistics(teacher_idx)
+    
+    for params in model.parameters():
+        params.requires_grad = True
+    model.train()
+    
+    teacher_idx = torch.tensor(teacher_idx)
+    return teacher_idx
+    
+
+if args.distill:
+    stats_log=open('./checkpoint/%s_%s_%.1f_%s'%(args.distill,args.dataset,args.r,args.noise_mode)+'_stats.txt','w') 
+    test_log=open('./checkpoint/%s_%s_%.1f_%s'%(args.distill,args.dataset,args.r,args.noise_mode)+'_acc.txt','w')
+else:
+    stats_log=open('./checkpoint/%s_%.1f_%s'%(args.dataset,args.r,args.noise_mode)+'_stats.txt','w') 
+    test_log=open('./checkpoint/%s_%.1f_%s'%(args.dataset,args.r,args.noise_mode)+'_acc.txt','w')
+     
 
 if args.dataset=='cifar10':
     warm_up = 10
 elif args.dataset=='cifar100':
     warm_up = 30
-
+    
 if args.distill == 'initial':
     loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
     root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
@@ -272,7 +306,7 @@ else:
     teacher_idx = None
 
 loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
-    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),teacher_idx=teacher_idx,truncate_mode=args.distill)
+    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),_teacher_idx=teacher_idx,_truncate_mode=args.distill)
 
 print('| Building net')
 net1 = create_model()
@@ -309,19 +343,37 @@ for epoch in range(args.num_epochs+1):
         warmup(epoch,net2,optimizer2,warmup_trainloader) 
    
     else:         
-        prob1,all_loss[0]=eval_train(net1,all_loss[0])   
-        prob2,all_loss[1]=eval_train(net2,all_loss[1])          
-               
-        pred1 = (prob1 > args.p_threshold)      
-        pred2 = (prob2 > args.p_threshold)      
+        if args.distill == 'dynamic':
+            loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
+    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
+            all_loader = loader.run('warmup')
         
-        print('Train Net1')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train',pred2,prob2) # co-divide
-        train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader) # train net1  
+            teacher_idx_1 = get_teacher_idx(net1, all_loader)
+            teacher_idx_2 = get_teacher_idx(net2, all_loader)
+            
+            print('Train Net1 with dynamic distill')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd', None, None, teacher_idx=teacher_idx_2) # co-divide
+            train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader) # train net1  
+
+            print('\nTrain Net2 with dynamic distill')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd', None, None, teacher_idx=teacher_idx_1) # co-divide
+            train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2
         
-        print('\nTrain Net2')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train',pred1,prob1) # co-divide
-        train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2         
+        else:
+        
+            prob1,all_loss[0]=eval_train(net1,all_loss[0])   
+            prob2,all_loss[1]=eval_train(net2,all_loss[1])          
+
+            pred1 = (prob1 > args.p_threshold)      
+            pred2 = (prob2 > args.p_threshold)      
+
+            print('Train Net1')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train',pred2,prob2) # co-divide
+            train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader) # train net1  
+
+            print('\nTrain Net2')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train',pred1,prob1) # co-divide
+            train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2         
     save_checkpoint(net1, net2, epoch)
     test(epoch,net1,net2)  
 

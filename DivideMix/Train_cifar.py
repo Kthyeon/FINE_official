@@ -33,7 +33,6 @@ parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to
 parser.add_argument('--dataset', default='cifar10', type=str)
 # For testing winning tickets
 parser.add_argument('--distill', default=None, type=str, help='initial or dynamic')
-parser.add_argument('--load_model', default=None, type=str, help='path to teacher model')
 
 args = parser.parse_args()
 
@@ -275,7 +274,7 @@ else:
      
 
 if args.dataset=='cifar10':
-    warm_up = 10
+    warm_up = 1
 elif args.dataset=='cifar100':
     warm_up = 30
     
@@ -285,21 +284,21 @@ if args.distill == 'initial':
     
     data_loader = loader.run('warmup')
     
-    teacher = ResNet34(num_classes=args.num_class)
-    teacher.load_state_dict(torch.load(args.load_model)['state_dict'])
-    teacher.eval()
+    teacher1 = create_model()
+    teacher2 = create_model()
+    teacher1.load_state_dict(torch.load('pretrained/baseline_asym_40_cifar10model1_123.pth')['state_dict'])
+    teacher2.load_state_dict(torch.load('pretrained/baseline_asym_40_cifar10model2_123.pth')['state_dict'])
     
-    for params in teacher.parameters():
-        params.requires_grad = False
     
-    # get teacher_idx
-    tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
-    singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
+    teacher_idx1 = get_teacher_idx(teacher1, data_loader).tolist()
+    teacher_idx2 = get_teacher_idx(teacher2, data_loader).tolist()
     
-    for key in v_ortho_dict.keys():
-        v_ortho_dict[key] = v_ortho_dict[key].cuda()
-
-    teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+    teacher_idx = []
+    for i in range(50000):
+        if i in teacher_idx1 and i in teacher_idx2:
+            teacher_idx.append(i)
+    
+    teacher_idx = torch.tensor(teacher_idx)
     loader.print_statistics(teacher_idx)
 
 else:
@@ -360,7 +359,6 @@ for epoch in range(args.num_epochs+1):
             train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2
         
         else:
-        
             prob1,all_loss[0]=eval_train(net1,all_loss[0])   
             prob2,all_loss[1]=eval_train(net2,all_loss[1])          
 

@@ -86,9 +86,19 @@ class cifar_dataset(Dataset):
             if self.mode == 'all':
                 self.train_data = train_data
                 self.noise_label = noise_label
+                if self.truncate_mode == 'initial':
+                    self.train_data = self.train_data[teacher_idx]
+                    self.noise_label = [noise_label[i] for i in teacher_idx]
             else:                   
                 if self.mode == "labeled":
                     pred_idx = pred.nonzero()[0]
+                    if self.truncate_mode == 'initial':
+                        pred_idx = pred_idx.tolist()
+                        teacher_idx = teacher_idx.tolist()
+                        tmp_set = set(pred_idx) - set(teacher_idx)
+                        pred_idx = list(set(pred_idx) - tmp_set)
+                        pred_idx = torch.tensor(pred_idx)
+                    
                     self.probability = [probability[i] for i in pred_idx]   
                     
                     clean = (np.array(noise_label)==np.array(train_label))                                                       
@@ -101,6 +111,12 @@ class cifar_dataset(Dataset):
                     
                 elif self.mode == "unlabeled":
                     pred_idx = (1-pred).nonzero()[0]
+                    if self.truncate_mode == 'initial':
+                        pred_idx = pred_idx.tolist()
+                        teacher_idx = teacher_idx.tolist()
+                        tmp_set = set(pred_idx) - set(teacher_idx)
+                        pred_idx = list(set(pred_idx) - tmp_set)
+                        pred_idx = torch.tensor(pred_idx)
                     
                 elif self.mode == "labeled_svd":
                     pred_idx = teacher_idx

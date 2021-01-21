@@ -88,3 +88,16 @@ def get_singular_value_vector(label_list, out_list):
         v_ortho_dict[index] = torch.from_numpy(v[:2])
 
     return singular_dict, v_ortho_dict
+
+def singular_label(v_ortho_dict, model_represents, label):
+    
+    model_represents = torch.from_numpy(model_represents).to(device)
+    sing_lbl = torch.zeros(model_represents.shape[0]) 
+    sin_score_lbl = torch.zeros(model_represents.shape[0])
+    
+    for i, data in enumerate(model_represents):
+        sin_score_lbl[i] = torch.dot(v_ortho_dict[label[i]][0], data).abs() - torch.dot(v_ortho_dict[label[i]][1], data).abs()
+        if torch.dot(v_ortho_dict[label[i]][0], data).abs() < torch.dot(v_ortho_dict[label[i]][1], data).abs():
+            sing_lbl[i] = 1
+        
+    return sing_lbl, sin_score_lbl

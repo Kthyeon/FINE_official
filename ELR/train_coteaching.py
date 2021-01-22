@@ -218,9 +218,12 @@ def main(parse, config: ConfigParser):
             lr_scheduler2 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer2)
             lr_scheduler = [lr_scheduler1, lr_scheduler2]
         
+        print (config['optimizer'])
+        
         trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
                                     config=config,
                                     data_loader=data_loader,
+                                    parse=parse,
                                     teacher=teacher,
                                     valid_data_loader=valid_data_loader,
                                     test_data_loader=test_data_loader,
@@ -254,6 +257,7 @@ def main(parse, config: ConfigParser):
         trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
                                     config=config,
                                     data_loader=data_loader,
+                                    parse=parse,
                                     teacher=teacher,
                                     valid_data_loader=valid_data_loader,
                                     test_data_loader=test_data_loader,

@@ -9,7 +9,7 @@ from PIL import Image
 
 
 class CIFAR10DataLoader(BaseDataLoader):
-    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True, config=None, teacher_idx = None):
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True, config=None, teacher_idx=None):
         if config == None:
             config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
@@ -41,8 +41,10 @@ class CIFAR10DataLoader(BaseDataLoader):
 
 
 class CIFAR100DataLoader(BaseDataLoader):
-    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0, training=True,num_workers=4, pin_memory=True, teacher_idx = None):
-        config = ConfigParser.get_instance()
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0,  training=True, num_workers=4,  pin_memory=True, config=None, teacher_idx=None):
+        
+        if config is None:
+            config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
         
         transform_train = transforms.Compose([
@@ -57,8 +59,7 @@ class CIFAR100DataLoader(BaseDataLoader):
             transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
         ])
         self.data_dir = data_dir
-        config = ConfigParser.get_instance()
-        cfg_trainer = config['trainer']
+#         cfg_trainer = config['trainer']
 
         noise_file='%sCIFAR100_%.1f_Asym_%s.json'%(config['data_loader']['args']['data_dir'],cfg_trainer['percent'],cfg_trainer['asym'])
 

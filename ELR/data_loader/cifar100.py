@@ -20,7 +20,6 @@ def get_cifar100(root, cfg_trainer, train=True,
     base_dataset = torchvision.datasets.CIFAR100(root, train=train, download=download)
     if train:
         train_idxs, val_idxs = train_val_split(base_dataset.targets)
-
         
         train_dataset = CIFAR100_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR100_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
@@ -51,7 +50,7 @@ def get_cifar100(root, cfg_trainer, train=True,
 
 
 def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
-    num_classes = 10
+    num_classes = 100
     base_dataset = np.array(base_dataset)
     train_n = int(len(base_dataset) * 1.0 / num_classes)
     train_idxs = []

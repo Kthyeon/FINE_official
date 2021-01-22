@@ -173,7 +173,7 @@ class BaseTrainer:
         # self.logger.info("Saving checkpoint: {} ...".format(filename))
         if save_best:
             if self.parse.distillation:
-                model_naem = self.parse.distill_mode + '_' + 'model_best' + str(self.config['seed']) + '.pth'
+                model_name = self.parse.distill_mode + '_' + 'model_best' + str(self.config['seed']) + '.pth'
             else:
                 model_name = 'model_best' + str(self.config['seed']) + '.pth'
             best_path = str(self.checkpoint_dir / model_name)

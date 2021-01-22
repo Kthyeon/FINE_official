@@ -8,6 +8,7 @@ import numpy as np
 
 import wandb
 
+
 class BaseTrainer:
     """
     Base class for all trainers

@@ -283,7 +283,7 @@ else:
      
 
 if args.dataset=='cifar10':
-    warm_up = 1
+    warm_up = 10
 elif args.dataset=='cifar100':
     warm_up = 30
     

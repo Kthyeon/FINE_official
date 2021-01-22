@@ -16,7 +16,7 @@ def unpickle(file):
     return dict
 
 class cifar_dataset(Dataset): 
-    def __init__(self, dataset, r, noise_mode, root_dir, transform, mode, noise_file='', pred=[], probability=[], log='', teacher_idx=None, truncate_mode=None): 
+    def __init__(self, dataset, r, noise_mode, root_dir, transform, mode, noise_file='', pred=[], probability=[], log='', teacher_idx=None, truncate_mode=None, refinement=None): 
         
         self.r = r # noise ratio
         self.transform = transform
@@ -27,6 +27,7 @@ class cifar_dataset(Dataset):
         self.teacher_idx = teacher_idx
         self.truncate_mode = truncate_mode
         self.train_label = None
+        self.refinement = refinement
      
         if self.mode=='test':
             if dataset=='cifar10':                
@@ -119,15 +120,38 @@ class cifar_dataset(Dataset):
                         pred_idx = torch.tensor(pred_idx)
                     
                 elif self.mode == "labeled_svd":
-                    pred_idx = teacher_idx
-                    probability = torch.ones(50000,)
-                    self.probability = [probability[i] for i in pred_idx]
-                    log.write('Number of labeled samples (by svd) : %d' % teacher_idx.shape[0])
+                    if self.refinement:
+                        pred_idx = pred.nonzero()[0]
+                        pred_idx_set = set(pred_idx.tolist())
+                        teacher_idx_set = set(teacher_idx.tolist())
+                        pred_idx = torch.tensor(list(pred_idx_set & teacher_idx_set))
+                        self.probability = [probability[i] for i in pred_idx]
+                        
+                        clean = (np.array(noise_label)==np.array(train_label))
+                        auc_meter = AUCMeter()
+                        auc_meter.reset()
+                        auc_meter.add(probability,clean)        
+                        auc,_,_ = auc_meter.value()               
+                        log.write('Numer of labeled samples:%d   AUC:%.3f\n'%(pred.sum(),auc))
+                        log.flush()
+                    else:
+                        pred_idx = teacher_idx
+                        probability = torch.ones(50000,)
+                        self.probability = [probability[i] for i in pred_idx]
+
+                        log.write('Number of labeled samples (by svd) : %d' % teacher_idx.shape[0])
                 
                 elif self.mode == "unlabeled_svd":
-                    pred_idx = torch.arange(0, 50000)
-                    pred_idx_set = set(pred_idx.tolist()) - set(teacher_idx.tolist())
-                    pred_idx = torch.tensor(list(pred_idx_set))
+                    if self.refinement:
+                        clean_pred_idx = pred.nonzero()[0]
+                        clean_pred_idx_set = set(clean_pred_idx.tolist())
+                        teacher_idx_set = set(teacher_idx.tolist())
+                        all_idx_set = set(range(50000))
+                        pred_idx = torch.tensor(list(all_idx_set - (clean_pred_idx_set & teacher_idx_set)))                    
+                    else:
+                        pred_idx = torch.arange(0, 50000)
+                        pred_idx_set = set(pred_idx.tolist()) - set(teacher_idx.tolist())
+                        pred_idx = torch.tensor(list(pred_idx_set))
                 
                 self.train_data = train_data[pred_idx]
                 self.noise_label = [noise_label[i] for i in pred_idx]
@@ -226,7 +250,7 @@ class cifar_dataloader():
         all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)
         all_dataset._print_statistics(teacher_idx)
     
-    def run(self,mode,pred=[],prob=[], teacher_idx=None):
+    def run(self,mode,pred=[],prob=[], teacher_idx=None, refinement=None):
         if mode=='warmup':
             all_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="all",noise_file=self.noise_file,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)
             trainloader = DataLoader(
@@ -237,14 +261,14 @@ class cifar_dataloader():
             return trainloader
         
         elif mode=='train_svd':
-            labeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="labeled_svd", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log,teacher_idx=teacher_idx)
+            labeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="labeled_svd", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log,teacher_idx=teacher_idx, refinement=refinement)
             labeled_trainloader = DataLoader(
                 dataset=labeled_dataset, 
                 batch_size=self.batch_size,
                 shuffle=True,
                 num_workers=self.num_workers)
             
-            unlabeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled_svd", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log,teacher_idx=teacher_idx)
+            unlabeled_dataset = cifar_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r, root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled_svd", noise_file=self.noise_file, pred=pred, probability=prob,log=self.log,teacher_idx=teacher_idx, refinement=refinement)
             unlabeled_trainloader = DataLoader(
                 dataset=unlabeled_dataset, 
                 batch_size=self.batch_size,

@@ -5,7 +5,7 @@ from sklearn import cluster
 
 def get_loss_list(model, data_loader):
     loss_list = np.empty((0,))
-
+    
     with tqdm(data_loader) as progress:
         for batch_idx, (data, label, index, label_gt) in enumerate(progress):
             data = data.cuda()
@@ -22,6 +22,45 @@ def get_loss_list(model, data_loader):
         clean_label = 1
     else:
         clean_label = 0
+    
+    output=[]
+    for idx, value in enumerate(kmeans.labels_):
+        if value==clean_label:
+            output.append(idx)
+    
+    return output
+
+def get_loss_list_2d(model, data_loader, n_clusters=2):
+    loss_list = np.empty((0, 2))
+    model.cuda()
+    
+    with tqdm(data_loader) as progress:
+        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
+            data = data.cuda()
+            label, label_gt = label.long().cuda(), label_gt.long().cuda()
+
+            _, pred = model(data)
+            loss = torch.nn.CrossEntropyLoss(reduction='none')(pred, label)
+            
+            prob = torch.softmax(pred, dim=-1)
+            
+            top2_log_pred, top2_ind = torch.topk(torch.log(prob), k=2, dim=-1)
+            is_pred_wrong = (top2_ind[:, 0] != label).bool()
+            is_pred_correct = (top2_ind[:, 0] == label).bool()
+            
+            label_top1 = torch.stack([loss, -top2_log_pred[:, 0]], dim=1) # for pred wrong
+            top2_log_pred = -top2_log_pred
+            top2_log_pred[is_pred_wrong] = label_top1[is_pred_wrong]
+
+            loss_list = np.concatenate((loss_list, top2_log_pred.detach().cpu().numpy()), axis=0)
+    
+    kmeans = cluster.KMeans(n_clusters=n_clusters, random_state=0).fit(loss_list.reshape(50000,2))
+    
+    mean_losses = []
+    for itr in range(n_clusters):
+        mean_losses.append(np.mean(loss_list[kmeans.labels_==itr][:, 0]))
+    
+    _, clean_label = torch.topk(-torch.tensor(mean_losses), k=1)
     
     output=[]
     for idx, value in enumerate(kmeans.labels_):
@@ -91,7 +130,7 @@ def get_singular_value_vector(label_list, out_list):
 
 def singular_label(v_ortho_dict, model_represents, label):
     
-    model_represents = torch.from_numpy(model_represents).to(device)
+    model_represents = torch.from_numpy(model_represents).cuda()
     sing_lbl = torch.zeros(model_represents.shape[0]) 
     sin_score_lbl = torch.zeros(model_represents.shape[0])
     

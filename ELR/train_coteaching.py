@@ -13,7 +13,7 @@ import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import CoteachingTrainer
 from collections import OrderedDict
-from trainer.svd_classifier import singular_label, get_out_list, get_singular_value_vector, get_loss_list
+from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, get_loss_list_2d
 
 import random
 import numpy as np
@@ -131,7 +131,7 @@ def main(parse, config: ConfigParser):
 
             teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
         else:
-            teacher_idx = get_out_list(teacher, data_loader)
+            teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3)
         
 #         data_loader = getattr(module_data, config['data_loader']['type'])(
 #             config['data_loader']['args']['data_dir'],

@@ -234,6 +234,9 @@ def save_checkpoint(model1, model2, epoch):
     if args.distill:
         model1_name = args.distill + '_' + model1_name
         model2_name = args.distill + '_' + model2_name
+        if args.refinement:
+            model1_name = 'refinement_' + model1_name
+            model2_name = 'refinement_' + model2_name
     
     model1_save_path = './saved/' + args.dataset + model1_name
     model2_save_path = './saved/' + args.dataset + model2_name
@@ -267,8 +270,13 @@ def get_teacher_idx(model, loader):
     
 
 if args.distill:
-    stats_log=open('./checkpoint/%s_%s_%.1f_%s'%(args.distill,args.dataset,args.r,args.noise_mode)+'_stats.txt','w') 
-    test_log=open('./checkpoint/%s_%s_%.1f_%s'%(args.distill,args.dataset,args.r,args.noise_mode)+'_acc.txt','w')
+    stats_log_name = '%s_%s_%.1f_%s'%(args.distill,args.dataset,args.r,args.noise_mode)+'_stats.txt'
+    test_log_name = '%s_%s_%.1f_%s'%(args.distill,args.dataset,args.r,args.noise_mode)+'_acc.txt'
+    if args.refinement:
+        stats_log_name = 'refinement_' + stats_log_name
+        test_log_name = 'refinement_' + test_log_name
+    stats_log=open('./checkpoint/' + stats_log_name,'w') 
+    test_log=open('./checkpoint/' + test_log_name,'w')
 else:
     stats_log=open('./checkpoint/%s_%.1f_%s'%(args.dataset,args.r,args.noise_mode)+'_stats.txt','w') 
     test_log=open('./checkpoint/%s_%.1f_%s'%(args.dataset,args.r,args.noise_mode)+'_acc.txt','w')

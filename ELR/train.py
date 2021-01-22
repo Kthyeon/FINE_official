@@ -120,10 +120,11 @@ def main(parse, config: ConfigParser):
     if parse.distillation:
         teacher = config.initialize('arch', module_arch)
         teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
+        teacher = teacher.cuda()
         if not parse.reinit:
             model.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
         for params in teacher.parameters():
-                params.requires_grad = False
+            params.requires_grad = False
         if parse.distill_mode == 'eigen':
             tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
             teacher_idx = iterative_eigen(1,tea_label_list,tea_out_list)

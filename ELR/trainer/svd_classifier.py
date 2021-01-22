@@ -11,7 +11,7 @@ def get_loss_list(model, data_loader):
             data = data.cuda()
             label, label_gt = label.long().cuda(), label_gt.long().cuda()
 
-            _, prediction = base_model(data)
+            _, prediction = model(data)
             loss = torch.nn.CrossEntropyLoss(reduction='none')(prediction, label)
 
             loss_list = np.concatenate((loss_list, loss.detach().cpu()))

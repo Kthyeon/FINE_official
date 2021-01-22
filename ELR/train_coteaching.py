@@ -54,6 +54,8 @@ def main(parse, config: ConfigParser):
     if parse.distillation:
         if parse.distill_mode == 'eigen':
             wandb_run_name_list.append('distil')
+        elif parse.distill_mode == 'fulleigen':
+            wandb_run_name_list.append('fulldistill')
         else:
             wandb_run_name_list.append('kmeans')
     else:

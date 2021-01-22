@@ -87,8 +87,8 @@ class CoteachingTrainer(BaseTrainer):
 
     def adjust_learning_rate(self, optimizer, epoch):
         for param_group in optimizer.param_groups:
-            param_group['lr']=self.alpha_plan[epoch]
-            param_group['betas']=(self.beta1_plan[epoch], 0.999)
+            param_group['lr']=self.alpha_plan[epoch-1]
+            param_group['betas']=(self.beta1_plan[epoch-1], 0.999)
 
     def _eval_metrics(self, output, label):
         acc_metrics = np.zeros(len(self.metrics))
@@ -177,7 +177,7 @@ class CoteachingTrainer(BaseTrainer):
             'metrics_gt_1': (total_metrics_gt_1 / self.len_epoch).tolist(),
             'metrics_2': (total_metrics_2 / self.len_epoch).tolist(),
             'metrics_gt_2': (total_metrics_gt_2 / self.len_epoch).tolist(),
-            'learning rate': self.alpha_plan[epoch]
+            'learning rate': self.alpha_plan[epoch-1]
         }
 
 

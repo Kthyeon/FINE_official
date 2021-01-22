@@ -131,8 +131,9 @@ def main(parse, config: ConfigParser):
             tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
             teacher_idx = iterative_eigen(100,tea_label_list,tea_out_list)
         else:
-            teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3)
-        
+#             teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3)
+            teacher_idx = get_loss_list(teacher, data_loader)
+    
         data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],

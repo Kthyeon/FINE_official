@@ -12,10 +12,10 @@ class BaseTrainer:
     """
     Base class for all trainers
     """
-    def __init__(self, model, train_criterion, metrics, optimizer, config, val_criterion):
+    def __init__(self, model, train_criterion, metrics, optimizer, config, val_criterion, parse):
         self.config = config
         self.logger = config.get_logger('trainer', config['trainer']['verbosity'])
-
+        self.parse = parse
         # setup GPU device if available, move model into configured device
         self.device, device_ids = self._prepare_device(config['n_gpu'])
         
@@ -172,7 +172,10 @@ class BaseTrainer:
         # torch.save(state, filename)
         # self.logger.info("Saving checkpoint: {} ...".format(filename))
         if save_best:
-            model_name = 'model_best' + str(self.config['seed']) + '.pth'
+            if self.parse.distillation:
+                model_naem = self.parse.distill_mode + '_' + 'model_best' + str(self.config['seed']) + '.pth'
+            else:
+                model_name = 'model_best' + str(self.config['seed']) + '.pth'
             best_path = str(self.checkpoint_dir / model_name)
             torch.save(state, best_path)
             self.logger.info("Saving current best: " + model_name + " at: {} ...".format(best_path))

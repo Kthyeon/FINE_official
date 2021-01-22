@@ -18,10 +18,10 @@ class CoteachingTrainer(BaseTrainer):
     Note:
         Inherited from BaseTrainer.
     """
-    def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
+    def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader, parse,
                  valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None, mode=None, entropy=False, threshold=0.1,
                  epoch_decay_start=80, n_epoch=200, learning_rate=0.001):
-        super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion)
+        super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion,parse)
         self.config = config
         self.data_loader = data_loader
         self.mode = mode

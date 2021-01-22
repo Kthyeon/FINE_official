@@ -6,9 +6,9 @@ from .default_trainer import DefaultTrainer
 
 
 class TruncatedTrainer(DefaultTrainer):
-    def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
+    def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader, parse,
                  valid_data_loader=None, test_data_loader=None, lr_scheduler=None, len_epoch=None, val_criterion=None, teacher = None, mode = None,entropy = False,threshold = 0.1):
-        super().__init__(model, train_criterion, metrics, optimizer, config, data_loader,
+        super().__init__(model, train_criterion, metrics, optimizer, config, data_loader,parse,
                          valid_data_loader=valid_data_loader,
                          test_data_loader=test_data_loader,
                          lr_scheduler=lr_scheduler,

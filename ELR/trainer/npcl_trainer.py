@@ -16,9 +16,9 @@ class NPCLTrainer(BaseTrainer):
     Note:
         Inherited from BaseTrainer.
     """
-    def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader,
+    def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader, parse,
                  valid_data_loader=None, test_data_loader=None, lr_scheduler=None, len_epoch=None, val_criterion=None):
-        super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion)
+        super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion, parse)
         self.config = config
         self.data_loader = data_loader
         if len_epoch is None:

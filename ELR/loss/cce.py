@@ -8,14 +8,14 @@ class CCELoss(nn.Module):
     def __init__(self):
         super(CCELoss, self).__init__()
         
-    def forward(self, output, target, index):
+    def forward(self, output, target, index, mode):
         return F.cross_entropy(output, target)
     
 class CCE_GTLoss(nn.Module):
     def __init__(self):
         super(CCE_GTLoss, self).__init__()
         
-    def forward(self, logits, labels, clean_indexs, index=None):
+    def forward(self, logits, labels, clean_indexs, mode, index=None):
         
         # index : redundant variable. This is only used in ELR.
         size = logits.shape[0] if torch.sum(clean_indexs) == 0 else torch.sum(clean_indexs)

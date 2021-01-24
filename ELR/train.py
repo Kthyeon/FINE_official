@@ -13,7 +13,7 @@ import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer
 from collections import OrderedDict
-from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list
+from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio
 
 import random
 import numpy as np
@@ -146,6 +146,9 @@ def main(parse, config: ConfigParser):
         num_workers=config['data_loader']['args']['num_workers'],
         pin_memory=config['data_loader']['args']['pin_memory'],
         teacher_idx = teacher_idx)
+        
+        isNoisy_ratio(data_loader)
+        
     else:
         teacher = None
 

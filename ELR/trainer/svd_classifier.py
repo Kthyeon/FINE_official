@@ -140,3 +140,16 @@ def singular_label(v_ortho_dict, model_represents, label):
             sing_lbl[i] = 1
         
     return sing_lbl, sin_score_lbl
+
+def isNoisy_ratio(data_loader):
+    isNoisy_list = np.empty((0,))
+    with tqdm(data_loader) as progress:
+        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
+            data = data.cuda()
+            isNoisy = label != label_gt
+
+            isNoisy_list = np.concatenate((isNoisy_list, isNoisy.cpu()))
+
+    
+    print('purity in this dataset: {}'.format(isNoisy_list.sum() / isNoisy_list.shape))
+    

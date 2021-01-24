@@ -177,6 +177,10 @@ class BaseTrainer:
                 model_name = self.parse.distill_mode + '_' + 'model_best' + str(self.config['seed']) + '.pth'
             else:
                 model_name = 'model_best' + str(self.config['seed']) + '.pth'
+                
+            if not self.parse.reinit:
+                model_name = 'keep_' + model_name
+            
             best_path = str(self.checkpoint_dir / model_name)
             torch.save(state, best_path)
             self.logger.info("Saving current best: " + model_name + " at: {} ...".format(best_path))

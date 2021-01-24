@@ -153,3 +153,5 @@ def isNoisy_ratio(data_loader):
     
     print('purity in this dataset: {}'.format(isNoisy_list.sum() / isNoisy_list.shape))
     
+    return isNoisy_list
+    

@@ -13,7 +13,7 @@ import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import CoteachingTrainer
 from collections import OrderedDict
-from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, get_loss_list_2d
+from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, get_loss_list_2d, isNoisy_ratio
 
 import random
 import numpy as np
@@ -133,33 +133,40 @@ def main(parse, config: ConfigParser):
         else:
             teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3)
         
-#         data_loader = getattr(module_data, config['data_loader']['type'])(
-#             config['data_loader']['args']['data_dir'],
-#             batch_size= config['data_loader']['args']['batch_size'],
-#             shuffle=config['data_loader']['args']['shuffle'],
-#             validation_split=0.0,
-#             num_batches=config['data_loader']['args']['num_batches'],
-#             training=True,
-#             num_workers=config['data_loader']['args']['num_workers'],
-#             pin_memory=config['data_loader']['args']['pin_memory'],
+#         print('||||||original||||||')
+#         isNoisy_ratio(data_loader)
+        
+        data_loader = getattr(module_data, config['data_loader']['type'])(
+            config['data_loader']['args']['data_dir'],
+            batch_size= config['data_loader']['args']['batch_size'],
+            shuffle=config['data_loader']['args']['shuffle'],
+            validation_split=0.0,
+            num_batches=config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=config['data_loader']['args']['num_workers'],
+            pin_memory=config['data_loader']['args']['pin_memory'],
 #             teacher_idx = teacher_idx
-#         )
+        )
+#         print('||||||truncated||||||')
+#         isNoisy_ratio(data_loader)
         
     else:
         teacher = None
         
-#     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+    print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
     
-#     num_examp = len(data_loader.train_dataset)
-#     real = torch.Tensor([True for _ in range(num_examp)])
-#     pred = torch.Tensor([False for _ in range(num_examp)])
-#     real[torch.Tensor(data_loader.train_dataset.noise_indx).long()] = False
-#     pred[teacher_idx] = True
+    print (len(teacher_idx))
     
-#     true_positive = torch.Tensor([pred[i].long() & real[i].long() for i in range(len(real))])
-#     print (torch.sum(true_positive) / torch.sum(pred))
+    num_examp = len(data_loader.train_dataset)
+    real = torch.Tensor([True for _ in range(num_examp)])
+    pred = torch.Tensor([False for _ in range(num_examp)])
+    real[torch.Tensor(data_loader.train_dataset.noise_indx).long()] = False
+    pred[teacher_idx] = True
     
-#     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+    true_positive = torch.Tensor([pred[i].long() & real[i].long() for i in range(len(real))])
+    print (torch.sum(true_positive) / torch.sum(pred))
+    
+    print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
 
     # get function handles of loss and metrics
     logger.info(config.config)

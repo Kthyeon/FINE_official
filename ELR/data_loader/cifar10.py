@@ -104,7 +104,6 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
         for i in range(self.num_classes):
             indices = np.where(self.train_labels == i)[0]
             np.random.shuffle(indices)
-            print(indices)
             for j, idx in enumerate(indices):
                 if j < self.cfg_trainer['percent'] * len(indices):
                     self.noise_indx.append(idx)

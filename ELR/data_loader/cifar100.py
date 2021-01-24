@@ -12,13 +12,20 @@ import os
 import json
 from numpy.testing import assert_array_almost_equal
 
-
+def fix_seed(seed=888):
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(seed)
 
 def get_cifar100(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
                 download=True, noise_file = '', teacher_idx = None):
     base_dataset = torchvision.datasets.CIFAR100(root, train=train, download=download)
     if train:
+        fix_seed()
         train_idxs, val_idxs = train_val_split(base_dataset.targets)
         
         train_dataset = CIFAR100_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
@@ -37,6 +44,7 @@ def get_cifar100(root, cfg_trainer, train=True,
         
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
     else:
+        fix_seed()
         train_dataset = []
         val_dataset = CIFAR100_val(root, cfg_trainer, None, train=train, transform=transform_val)
         print(f"Test: {len(val_dataset)}")
@@ -49,7 +57,9 @@ def get_cifar100(root, cfg_trainer, train=True,
 #     return train_dataset, val_dataset
 
 
+
 def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
+    fix_seed()
     num_classes = 100
     base_dataset = np.array(base_dataset)
     train_n = int(len(base_dataset) * 1.0 / num_classes)
@@ -73,6 +83,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
         super(CIFAR100_train, self).__init__(root, train=train,
                                             transform=transform, target_transform=target_transform,
                                             download=download)
+        fix_seed()
         self.num_classes = 100
         self.cfg_trainer = cfg_trainer
         self.train_data = self.data[indexs]
@@ -86,7 +97,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
 
     def symmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
-        np.random.seed(seed=888)
+        fix_seed()
         indices = np.random.permutation(len(self.train_data))
         for i, idx in enumerate(indices):
             if i < self.cfg_trainer['percent'] * len(self.train_data):
@@ -97,7 +108,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
         """ Flip classes according to transition probability matrix T.
         It expects a number between 0 and the number of classes - 1.
         """
-        np.random.seed(seed=888)
+        fix_seed()
         assert P.shape[0] == P.shape[1]
         assert np.max(y) < P.shape[0]
 
@@ -154,7 +165,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
         n = self.cfg_trainer['percent']
         nb_superclasses = 20
         nb_subclasses = 5
-        np.random.seed(seed=888)
+        fix_seed()
         if n > 0.0:
             for i in np.arange(nb_superclasses):
                 init, end = i * nb_subclasses, (i+1) * nb_subclasses

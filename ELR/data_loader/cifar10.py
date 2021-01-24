@@ -10,16 +10,23 @@ import torch.nn.functional as F
 import random 
 import json
 import os
+import copy
 
+def fix_seed(seed=888):
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(seed)
 
 def get_cifar10(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
                 download=True, noise_file = '', teacher_idx=None):
     base_dataset = torchvision.datasets.CIFAR10(root, train=train, download=download)
     if train:
+        fix_seed()
         train_idxs, val_idxs = train_val_split(base_dataset.targets)
-
-
 
         train_dataset = CIFAR10_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR10_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
@@ -35,6 +42,7 @@ def get_cifar10(root, cfg_trainer, train=True,
         
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
     else:
+        fix_seed()
         train_dataset = []
         val_dataset = CIFAR10_val(root, cfg_trainer, None, train=train, transform=transform_val)
         print(f"Test: {len(val_dataset)}")
@@ -45,6 +53,7 @@ def get_cifar10(root, cfg_trainer, train=True,
         return train_dataset, val_dataset
 
 def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
+    fix_seed()
     num_classes = 10
     base_dataset = np.array(base_dataset)
     train_n = int(len(base_dataset) * 1.0 / num_classes)
@@ -68,6 +77,7 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
         super(CIFAR10_train, self).__init__(root, train=train,
                                             transform=transform, target_transform=target_transform,
                                             download=download)
+        fix_seed()
         self.num_classes = 10
         self.cfg_trainer = cfg_trainer
         self.train_data = self.data[indexs] # self.train_data[indexs]
@@ -75,11 +85,12 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
         self.indexs = indexs
         self.prediction = np.zeros((len(self.train_data), self.num_classes, self.num_classes), dtype=np.float32)
         self.noise_indx = []
-        
+                
+
         
     def symmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
-        np.random.seed(seed=888)
+        fix_seed()
         indices = np.random.permutation(len(self.train_data))
         for i, idx in enumerate(indices):
             if i < self.cfg_trainer['percent'] * len(self.train_data):
@@ -87,12 +98,13 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
                 self.train_labels[idx] = np.random.randint(self.num_classes, dtype=np.int32)
 
     def asymmetric_noise(self):
-        self.train_labels_gt = self.train_labels.copy()
-        np.random.seed(seed=888)
+        self.train_labels_gt = copy.deepcopy(self.train_labels)
+        fix_seed()
 
         for i in range(self.num_classes):
             indices = np.where(self.train_labels == i)[0]
             np.random.shuffle(indices)
+            print(indices)
             for j, idx in enumerate(indices):
                 if j < self.cfg_trainer['percent'] * len(indices):
                     self.noise_indx.append(idx)

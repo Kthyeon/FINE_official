@@ -28,8 +28,7 @@ class CIFAR10DataLoader(BaseDataLoader):
 
         noise_file='%sCIFAR10_%.1f_Asym_%s.json'%(config['data_loader']['args']['data_dir'],cfg_trainer['percent'],cfg_trainer['asym'])
         
-        self.train_dataset, self.val_dataset = get_cifar10(config['data_loader']['args']['data_dir'], cfg_trainer, train=training,
-                                                           transform_train=transform_train, transform_val=transform_val, noise_file = noise_file, teacher_idx = teacher_idx)
+        self.train_dataset, self.val_dataset = get_cifar10(config['data_loader']['args']['data_dir'], cfg_trainer, train=training, transform_train=transform_train, transform_val=transform_val, noise_file = noise_file, teacher_idx = teacher_idx)
 
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
                          val_dataset = self.val_dataset)

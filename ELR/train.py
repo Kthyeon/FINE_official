@@ -83,11 +83,12 @@ def main(parse, config: ConfigParser):
     torch.backends.cudnn.deterministic = True
     np.random.seed(config['seed'])
     
+    
+    
     data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],
         shuffle=False if parse.distillation else config['data_loader']['args']['shuffle'] ,
-#         validation_split=config['data_loader']['args']['validation_split'],
         validation_split=0.0,
         num_batches=config['data_loader']['args']['num_batches'],
         training=True,
@@ -134,7 +135,9 @@ def main(parse, config: ConfigParser):
         else:
 #             teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3)
             teacher_idx = get_loss_list(teacher, data_loader)
-    
+        print('||||||original||||||')
+        isNoisy_ratio(data_loader)
+
         data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],
@@ -146,7 +149,7 @@ def main(parse, config: ConfigParser):
         num_workers=config['data_loader']['args']['num_workers'],
         pin_memory=config['data_loader']['args']['pin_memory'],
         teacher_idx = teacher_idx)
-        
+        print('||||||truncated||||||')
         isNoisy_ratio(data_loader)
         
     else:

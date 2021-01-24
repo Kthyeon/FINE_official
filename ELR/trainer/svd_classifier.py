@@ -146,7 +146,7 @@ def isNoisy_ratio(data_loader):
     with tqdm(data_loader) as progress:
         for batch_idx, (data, label, index, label_gt) in enumerate(progress):
             data = data.cuda()
-            isNoisy = label != label_gt
+            isNoisy = label == label_gt
 
             isNoisy_list = np.concatenate((isNoisy_list, isNoisy.cpu()))
 

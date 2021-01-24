@@ -86,6 +86,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
 
     def symmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
+        np.random.seed(seed=888)
         indices = np.random.permutation(len(self.train_data))
         for i, idx in enumerate(indices):
             if i < self.cfg_trainer['percent'] * len(self.train_data):
@@ -96,7 +97,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
         """ Flip classes according to transition probability matrix T.
         It expects a number between 0 and the number of classes - 1.
         """
-
+        np.random.seed(seed=888)
         assert P.shape[0] == P.shape[1]
         assert np.max(y) < P.shape[0]
 
@@ -153,7 +154,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
         n = self.cfg_trainer['percent']
         nb_superclasses = 20
         nb_subclasses = 5
-
+        np.random.seed(seed=888)
         if n > 0.0:
             for i in np.arange(nb_superclasses):
                 init, end = i * nb_subclasses, (i+1) * nb_subclasses

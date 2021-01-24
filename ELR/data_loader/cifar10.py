@@ -20,6 +20,7 @@ def get_cifar10(root, cfg_trainer, train=True,
         train_idxs, val_idxs = train_val_split(base_dataset.targets)
 
 
+
         train_dataset = CIFAR10_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR10_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
         if cfg_trainer['asym']:
@@ -28,8 +29,8 @@ def get_cifar10(root, cfg_trainer, train=True,
         else:
             train_dataset.symmetric_noise()
             val_dataset.symmetric_noise()
-            
         if teacher_idx:
+            print(len(teacher_idx))    
             train_dataset.truncate(teacher_idx)
         
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
@@ -77,7 +78,7 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
         
     def symmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
-        #np.random.seed(seed=888)
+        np.random.seed(seed=888)
         indices = np.random.permutation(len(self.train_data))
         for i, idx in enumerate(indices):
             if i < self.cfg_trainer['percent'] * len(self.train_data):
@@ -86,6 +87,8 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
 
     def asymmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
+        np.random.seed(seed=888)
+
         for i in range(self.num_classes):
             indices = np.where(self.train_labels == i)[0]
             np.random.shuffle(indices)

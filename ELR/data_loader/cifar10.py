@@ -76,6 +76,7 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
         self.prediction = np.zeros((len(self.train_data), self.num_classes, self.num_classes), dtype=np.float32)
         self.noise_indx = []
         
+        
     def symmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
         np.random.seed(seed=888)

@@ -86,11 +86,24 @@ def iterative_eigen(number, label_list, out_list):
         if i>0 and torch.all(torch.eq(sin_lbls[i], sin_lbls[i-1])):
             print(i)
             break
-            
-    output=[]
-    for idx, value in enumerate(sing_lbl):
-        if value==0:
-            output.append(idx)
+    if number ==1:
+        output=[]
+        for idx, value in enumerate(sing_lbl):
+            if value==0:
+                output.append(idx)
+    else:
+        kmeans = cluster.KMeans(n_clusters=2, random_state=0).fit(loss_list.reshape(-1,1))
+    
+        if np.mean(sin_score_lbl[kmeans.labels_==0]) > np.mean(sin_score_lbl[kmeans.labels_==1]):
+            clean_label = 0
+        else:
+            clean_label = 1
+        
+        output=[]
+        for idx, value in enumerate(kmeans.labels_):
+            if value==clean_label:
+                output.append(idx)
+        
         
     return output
 
@@ -152,6 +165,4 @@ def isNoisy_ratio(data_loader):
 
     
     print('purity in this dataset: {}'.format(isNoisy_list.sum() / isNoisy_list.shape))
-    
-    return isNoisy_list
     

@@ -166,7 +166,8 @@ def test(epoch,net1,net2):
     acc = 100.*correct/total
     print("\n| Test Epoch #%d\t Accuracy: %.2f%%\n" %(epoch,acc))  
     test_log.write('Epoch:%d   Accuracy:%.2f\n'%(epoch,acc))
-    test_log.flush()  
+    test_log.flush()
+    return acc
 
 def eval_train(model,all_loss):    
     model.eval()
@@ -331,6 +332,7 @@ if args.noise_mode=='asym':
     conf_penalty = NegEntropy()
 
 all_loss = [[],[]] # save the history of losses from two networks
+best_acc = 0
 
 for epoch in range(args.num_epochs+1):   
     lr=args.lr
@@ -392,7 +394,10 @@ for epoch in range(args.num_epochs+1):
             print('\nTrain Net2')
             labeled_trainloader, unlabeled_trainloader = loader.run('train',pred1,prob1) # co-divide
             train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2         
-    save_checkpoint(net1, net2, epoch)
-    test(epoch,net1,net2)  
+    test_acc = test(epoch,net1,net2)
+    
+    if test_acc > best_acc:
+        best_acc = test_acc
+        save_checkpoint(net1, net2, epoch)
 
 

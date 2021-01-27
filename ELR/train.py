@@ -133,10 +133,44 @@ def main(parse, config: ConfigParser):
             tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
             teacher_idx = iterative_eigen(100,tea_label_list,tea_out_list)
         else:
-#             teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3)
             teacher_idx = get_loss_list(teacher, data_loader)
         print('||||||original||||||')
         isNoisy_ratio(data_loader)
+        if parse.second_load_name !=None:
+            teacher.load_state_dict(torch.load('./checkpoint/' + parse.second_load_name)['state_dict'])
+            teacher = teacher.cuda()
+            if not parse.reinit:
+                model.load_state_dict(torch.load('./checkpoint/' + parse.second_load_name)['state_dict'])
+            for params in teacher.parameters():
+                params.requires_grad = False
+            if parse.distill_mode == 'eigen':
+                tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+                teacher_idx2 = iterative_eigen(1,tea_label_list,tea_out_list)
+            elif parse.distill_mode == 'fulleigen':
+                tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+                teacher_idx2 = iterative_eigen(100,tea_label_list,tea_out_list)
+            else:
+                teacher_idx2 = get_loss_list(teacher, data_loader)
+            teacher_idx = list(set(teacher_idx) & set(teacher_idx2))
+            print('second_distillation')
+            if parse.third_load_name !=None:
+                teacher.load_state_dict(torch.load('./checkpoint/' + parse.third_load_name)['state_dict'])
+                teacher = teacher.cuda()
+                if not parse.reinit:
+                    model.load_state_dict(torch.load('./checkpoint/' + parse.third_load_name)['state_dict'])
+                for params in teacher.parameters():
+                    params.requires_grad = False
+                if parse.distill_mode == 'eigen':
+                    tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+                    teacher_idx3 = iterative_eigen(1,tea_label_list,tea_out_list)
+                elif parse.distill_mode == 'fulleigen':
+                    tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+                    teacher_idx3 = iterative_eigen(100,tea_label_list,tea_out_list)
+                else:
+                    teacher_idx3 = get_loss_list(teacher, data_loader)
+                teacher_idx = list(set(teacher_idx) & set(teacher_idx3))
+                print('third_ distillation')
+
 
         data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
@@ -298,6 +332,8 @@ if __name__ == '__main__':
     args.add_argument('--threshold', type=float, default=0.1, help='threshold for the use of entropy loss.')
     args.add_argument('--wd', type=float, default=None, help = 'weight_decay')
     args.add_argument('--load_name', type=str, default=None, help = 'teacher checkpoint for distillation')
+    args.add_argument('--second_load_name', type=str, default=None, help = '2nd teacher checkpoint for distillation')
+    args.add_argument('--third_load_name', type=str, default=None, help = '3rd teacher checkpoint for distillation')
     args.add_argument('--reinit', help='if false, reuse teacher checkpoint', action='store_true')
     
     args.add_argument('--no_wandb', action='store_false', help='if false, not to use wandb')

@@ -174,11 +174,11 @@ class BaseTrainer:
         # self.logger.info("Saving checkpoint: {} ...".format(filename))
         if save_best:
             if self.parse.distillation:
-                model_name = self.parse.distill_mode + '_' + 'model_best' + str(self.config['seed']) + '.pth'
+                model_name = self.parse.distill_mode + '_' + 'model_best' + str(self.parse.dataseed) + '.pth'
                 if not self.parse.reinit:
                     model_name = 'keep_' + model_name
             else:
-                model_name = 'model_best' + str(self.config['seed']) + '.pth'
+                model_name = 'model_best' + str(self.parse.dataseed) + '.pth'
             
             
             

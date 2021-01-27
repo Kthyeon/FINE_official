@@ -376,6 +376,7 @@ if __name__ == '__main__':
     args.add_argument('--loss_fn', type=str, default=None, help='loss_fn type name')
     args.add_argument('--arch', type=str, default=None, help='type of model name')
     args.add_argument('--teacher_arch', type=str, default=None, help='type of teacher model name')
+    args.add_argument('--dataseed', type=int, default=123, help='seed for save name')
 
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')

@@ -229,8 +229,8 @@ def save_checkpoint(model1, model2, epoch):
         'state_dict': model2.state_dict()
     }
     
-    model1_name = 'model1_' + str(args.seed) + '.pth'
-    model2_name = 'model2_' + str(args.seed) + '.pth'
+    model1_name = 'model1_' + args.noise_mode + str(args.r) + str(args.seed) + '.pth'
+    model2_name = 'model2_' + args.noise_mode + str(args.r) + str(args.seed) + '.pth'
     
     if args.distill:
         model1_name = args.distill + '_' + model1_name

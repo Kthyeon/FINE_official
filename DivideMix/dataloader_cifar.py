@@ -8,6 +8,14 @@ import os
 import torch
 from torchnet.meter import AUCMeter
 
+
+def fix_seed(seed=888):
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(seed)
             
 def unpickle(file):
     import _pickle as cPickle
@@ -60,9 +68,11 @@ class cifar_dataset(Dataset):
             train_data = train_data.transpose((0, 2, 3, 1))
             self.train_label = train_label
             
+            noise_count = 0
             if os.path.exists(noise_file):
                 noise_label = json.load(open(noise_file,"r"))
             else:    #inject noise   
+                fix_seed()
                 noise_label = []
                 idx = list(range(50000))
                 random.shuffle(idx)
@@ -78,11 +88,16 @@ class cifar_dataset(Dataset):
                             noise_label.append(noiselabel)
                         elif noise_mode=='asym':   
                             noiselabel = self.transition[train_label[i]]
-                            noise_label.append(noiselabel)                    
+                            noise_label.append(noiselabel)
                     else:    
-                        noise_label.append(train_label[i])   
+                        noise_label.append(train_label[i]) 
+                print(noise_count)
                 print("save noisy labels to %s ..."%noise_file)        
                 json.dump(noise_label,open(noise_file,"w"))       
+            for i in range(50000):
+                if noise_label[i] != train_label[i]:
+                    noise_count += 1
+            print("noise_count : " + str(noise_count))
             
             if self.mode == 'all':
                 self.train_data = train_data

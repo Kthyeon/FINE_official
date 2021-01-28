@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from sklearn import cluster
+import torch.nn.functional as F
 
 def get_loss_list(model, data_loader):
     loss_list = np.empty((0,))
@@ -58,7 +59,9 @@ def get_out_list(model, data_loader):
         for batch_idx, (data, label, index) in enumerate(progress):
             data = data.cuda()
             label = label.long().cuda()
-            output = model(data)
+            output = model.forward(data, lout=4)
+            output = F.avg_pool2d(output, 4)
+            output = output.view(output.size(0), -1)
 
             label_list = np.concatenate((label_list, label.cpu()))
             if batch_idx == 0:
@@ -76,7 +79,7 @@ def get_singular_value_vector(label_list, out_list):
     
     for index in np.unique(label_list):
         u, s, v = np.linalg.svd(out_list[label_list==index])
-        singular_dict[index] = s[0] / s[1]
+        singular_dict[index] = s[0] - s[1]
         v_ortho_dict[index] = torch.from_numpy(v[:2])
 
     return singular_dict, v_ortho_dict

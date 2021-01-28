@@ -65,7 +65,7 @@ class BaseDataLoader(DataLoader):
 
         return train_sampler, valid_sampler
 
-    def split_validation(self, bs = 1000):
+    def split_validation(self, bs = 100):
         if self.val_dataset is not None:
             kwargs = {
                 'dataset': self.val_dataset,

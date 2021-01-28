@@ -76,6 +76,7 @@ def iterative_eigen(number, label_list, out_list, teacher_idx=None):
         if teacher_idx !=None:
             for num in (set(range(0,50000)) - set(teacher_idx)):
                 tmp_lbl[num] += 1
+        print(tmp_lbl.sum().item())
         for k in range(i):
             tmp_lbl += sin_lbls[k] 
         singular_dict, v_ortho_dict = get_singular_value_vector(label_list[tmp_lbl==0], out_list[tmp_lbl==0])

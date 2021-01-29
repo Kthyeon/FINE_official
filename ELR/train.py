@@ -145,12 +145,14 @@ def main(parse, config: ConfigParser):
                 params.requires_grad = False
             if parse.distill_mode == 'eigen':
                 tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
-                teacher_idx2 = iterative_eigen(1,tea_label_list,tea_out_list)
+                teacher_idx2 = iterative_eigen(1,tea_label_list,tea_out_list,teacher_idx)
             elif parse.distill_mode == 'fulleigen':
                 tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
                 teacher_idx2 = iterative_eigen(100,tea_label_list,tea_out_list)
             else:
                 teacher_idx2 = get_loss_list(teacher, data_loader)
+#             print(len(teacher_idx2))
+#             teacher_idx = teacher_idx2
             teacher_idx = list(set(teacher_idx) & set(teacher_idx2))
             print('second_distillation')
             if parse.third_load_name !=None:
@@ -162,7 +164,7 @@ def main(parse, config: ConfigParser):
                     params.requires_grad = False
                 if parse.distill_mode == 'eigen':
                     tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
-                    teacher_idx3 = iterative_eigen(1,tea_label_list,tea_out_list)
+                    teacher_idx3 = iterative_eigen(1,tea_label_list,tea_out_list, teacher_idx)
                 elif parse.distill_mode == 'fulleigen':
                     tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
                     teacher_idx3 = iterative_eigen(100,tea_label_list,tea_out_list)

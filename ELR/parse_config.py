@@ -71,9 +71,18 @@ class ConfigParser:
         loss_fn = self.config['train_loss']['type']
         sym_setting = 'sym' if not self.config['trainer']['asym'] else 'asym'
         percent = str(int(self.config['trainer']['percent']*100))
-            
-        self._save_dir = save_dir / 'models' / dataset_name / model_type / lr_scheduler / loss_fn / sym_setting / percent
-        self._log_dir = save_dir / 'log' / dataset_name / model_type / lr_scheduler / loss_fn / sym_setting / percent
+        
+        
+        if args.distillation:
+            distill_mode = args.distill_mode
+            seed = args.dataseed
+            self._save_dir = save_dir / 'models' / dataset_name / model_type / lr_scheduler / loss_fn / sym_setting / percent / distill_mode / str(int(seed))
+            self._log_dir = save_dir / 'log' / dataset_name / model_type / lr_scheduler / loss_fn / sym_setting / percent / distill_mode / str(int(seed))
+        else:
+            self._save_dir = save_dir / 'models' / dataset_name / model_type / lr_scheduler / loss_fn / sym_setting / percent
+            self._log_dir = save_dir / 'log' / dataset_name / model_type / lr_scheduler / loss_fn / sym_setting / percent
+        
+        
 
         self.save_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir.mkdir(parents=True, exist_ok=True)

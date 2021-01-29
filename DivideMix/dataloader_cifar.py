@@ -68,7 +68,6 @@ class cifar_dataset(Dataset):
             train_data = train_data.transpose((0, 2, 3, 1))
             self.train_label = train_label
             
-            noise_count = 0
             if os.path.exists(noise_file):
                 noise_label = json.load(open(noise_file,"r"))
             else:    #inject noise   
@@ -91,14 +90,9 @@ class cifar_dataset(Dataset):
                             noise_label.append(noiselabel)
                     else:    
                         noise_label.append(train_label[i]) 
-                print(noise_count)
                 print("save noisy labels to %s ..."%noise_file)        
                 json.dump(noise_label,open(noise_file,"w"))       
-            for i in range(50000):
-                if noise_label[i] != train_label[i]:
-                    noise_count += 1
-            print("noise_count : " + str(noise_count))
-            
+
             if self.mode == 'all':
                 self.train_data = train_data
                 self.noise_label = noise_label
@@ -111,8 +105,7 @@ class cifar_dataset(Dataset):
                     if self.truncate_mode == 'initial':
                         pred_idx = pred_idx.tolist()
                         teacher_idx = teacher_idx.tolist()
-                        tmp_set = set(pred_idx) - set(teacher_idx)
-                        pred_idx = list(set(pred_idx) - tmp_set)
+                        pred_idx = list(set(pred_idx) & set(teacher_idx))
                         pred_idx = torch.tensor(pred_idx)
                     
                     self.probability = [probability[i] for i in pred_idx]   
@@ -121,18 +114,19 @@ class cifar_dataset(Dataset):
                     auc_meter = AUCMeter()
                     auc_meter.reset()
                     auc_meter.add(probability,clean)        
-                    auc,_,_ = auc_meter.value()               
+                    auc,_,_ = auc_meter.value()      
                     log.write('Numer of labeled samples:%d   AUC:%.3f\n'%(pred.sum(),auc))
                     log.flush()      
                     
                 elif self.mode == "unlabeled":
                     pred_idx = (1-pred).nonzero()[0]
                     if self.truncate_mode == 'initial':
+                        whole_idx = list(range(50000))
                         pred_idx = pred_idx.tolist()
                         teacher_idx = teacher_idx.tolist()
-                        tmp_set = set(pred_idx) - set(teacher_idx)
-                        pred_idx = list(set(pred_idx) - tmp_set)
-                        pred_idx = torch.tensor(pred_idx)
+                        tmp_set = set(whole_idx) - set(teacher_idx)
+                        tmp_set = tmp_set | set(pred_idx)
+                        pred_idx = torch.tensor(list(tmp_set))
                     
                 elif self.mode == "labeled_svd":
                     if self.refinement:

@@ -33,8 +33,7 @@ parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to
 parser.add_argument('--dataset', default='cifar10', type=str)
 # For testing winning tickets
 parser.add_argument('--distill', default=None, type=str, help='initial or dynamic')
-parser.add_argument('--initial_net1', default=None, type=str, help='teacher net1 for initial exp.')
-parser.add_argument('--initial_net2', default=None, type=str, help='teacher net2 for initial exp.')
+parser.add_argument('--teacher_model', default=None, type=str, help='teacher model path for initial distill')
 parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')
 
 args = parser.parse_args()
@@ -298,7 +297,7 @@ if args.distill == 'initial':
     
     model = ResNet34(num_classes=args.num_class)
     teacher1 = model.cuda()
-    teacher1.load_state_dict(torch.load('pretrained/multistep_asym_40_elr.pth')['state_dict'])
+    teacher1.load_state_dict(torch.load(args.teacher_model)['state_dict'])
     
     
     teacher_idx1 = get_teacher_idx(teacher1, data_loader).tolist()
@@ -382,7 +381,11 @@ for epoch in range(args.num_epochs+1):
             prob2,all_loss[1]=eval_train(net2,all_loss[1])          
 
             pred1 = (prob1 > args.p_threshold)      
-            pred2 = (prob2 > args.p_threshold)      
+            pred2 = (prob2 > args.p_threshold)
+            
+            if args.distill == 'initial' and not args.refinement:
+                prob1 = torch.ones(50000,)
+                prob2 = torch.ones(50000,)
 
             print('Train Net1')
             labeled_trainloader, unlabeled_trainloader = loader.run('train',pred2,prob2) # co-divide

@@ -131,7 +131,8 @@ def main(parse, config: ConfigParser):
             tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
             teacher_idx = iterative_eigen(100,tea_label_list,tea_out_list)
         else:
-            teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3)
+#             teacher_idx = get_loss_list(teacher, data_loader)
+            teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3, c_clusters=2)
         
 #         print('||||||original||||||')
 #         isNoisy_ratio(data_loader)
@@ -153,20 +154,20 @@ def main(parse, config: ConfigParser):
     else:
         teacher = None
         
-    print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+#     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
     
-    print (len(teacher_idx))
+#     print (len(teacher_idx))
     
-    num_examp = len(data_loader.train_dataset)
-    real = torch.Tensor([True for _ in range(num_examp)])
-    pred = torch.Tensor([False for _ in range(num_examp)])
-    real[torch.Tensor(data_loader.train_dataset.noise_indx).long()] = False
-    pred[teacher_idx] = True
+#     num_examp = len(data_loader.train_dataset)
+#     real = torch.Tensor([True for _ in range(num_examp)])
+#     pred = torch.Tensor([False for _ in range(num_examp)])
+#     real[torch.Tensor(data_loader.train_dataset.noise_indx).long()] = False
+#     pred[teacher_idx] = True
     
-    true_positive = torch.Tensor([pred[i].long() & real[i].long() for i in range(len(real))])
-    print (torch.sum(true_positive) / torch.sum(pred))
+#     true_positive = torch.Tensor([pred[i].long() & real[i].long() for i in range(len(real))])
+#     print (torch.sum(true_positive) / torch.sum(pred))
     
-    print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+#     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
 
     # get function handles of loss and metrics
     logger.info(config.config)

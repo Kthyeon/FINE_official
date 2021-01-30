@@ -126,7 +126,7 @@ def main(parse, config: ConfigParser):
             params.requires_grad = False
         if parse.distill_mode == 'eigen':
             tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
-            teacher_idx = iterative_eigen(1,tea_label_list,tea_out_list)
+            teacher_idx = iterative_eigen(1, tea_label_list,tea_out_list)
         elif parse.distill_mode == 'fulleigen':
             tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
             teacher_idx = iterative_eigen(100,tea_label_list,tea_out_list)
@@ -147,7 +147,7 @@ def main(parse, config: ConfigParser):
             num_workers=config['data_loader']['args']['num_workers'],
             pin_memory=config['data_loader']['args']['pin_memory'],
 #             teacher_idx = teacher_idx
-        )
+            )
 #         print('||||||truncated||||||')
 #         isNoisy_ratio(data_loader)
         

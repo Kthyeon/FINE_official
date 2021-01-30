@@ -30,7 +30,7 @@ def get_loss_list(model, data_loader):
     
     return output
 
-def get_loss_list_2d(model, data_loader, n_clusters=2):
+def get_loss_list_2d(model, data_loader, n_clusters=2, c_clusters=1):
     loss_list = np.empty((0, 2))
     model.cuda()
     
@@ -44,7 +44,7 @@ def get_loss_list_2d(model, data_loader, n_clusters=2):
             
             prob = torch.softmax(pred, dim=-1)
             
-            top2_log_pred, top2_ind = torch.topk(torch.log(prob), k=2, dim=-1)
+            top2_log_pred, top2_ind = torch.topk(torch.log(prob), k=n_clusters, dim=-1)
             is_pred_wrong = (top2_ind[:, 0] != label).bool()
             is_pred_correct = (top2_ind[:, 0] == label).bool()
             
@@ -60,11 +60,11 @@ def get_loss_list_2d(model, data_loader, n_clusters=2):
     for itr in range(n_clusters):
         mean_losses.append(np.mean(loss_list[kmeans.labels_==itr][:, 0]))
     
-    _, clean_label = torch.topk(-torch.tensor(mean_losses), k=1)
+    _, clean_labels = torch.topk(-torch.tensor(mean_losses), k=c_clusters)
     
     output=[]
     for idx, value in enumerate(kmeans.labels_):
-        if value==clean_label:
+        if value in clean_labels:
             output.append(idx)
     
     return output

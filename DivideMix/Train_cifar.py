@@ -33,7 +33,7 @@ parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to
 parser.add_argument('--dataset', default='cifar10', type=str)
 # For testing winning tickets
 parser.add_argument('--distill', default=None, type=str, help='initial or dynamic')
-parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen','fulleigen'], help='mode for distillation kmeans or eigen.')parser.add_argument('--teacher_model', default=None, type=str, help='teacher model path for initial distill')
+parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen','fulleigen'], help='mode for distillation kmeans or eigen.')
 parser.add_argument('--initial_net1', default=None, type=str, help='teacher net1 for initial exp.')
 parser.add_argument('--initial_net2', default=None, type=str, help='teacher net2 for initial exp.')
 parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')

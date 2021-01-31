@@ -33,7 +33,7 @@ parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to
 parser.add_argument('--dataset', default='cifar10', type=str)
 # For testing winning tickets
 parser.add_argument('--distill', default=None, type=str, help='initial or dynamic')
-parser.add_argument('--teacher_model', default=None, type=str, help='teacher model path for initial distill')
+parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen','fulleigen'], help='mode for distillation kmeans or eigen.')parser.add_argument('--teacher_model', default=None, type=str, help='teacher model path for initial distill')
 parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')
 
 args = parser.parse_args()
@@ -230,8 +230,8 @@ def save_checkpoint(model1, model2, epoch):
         'state_dict': model2.state_dict()
     }
     
-    model1_name = 'model1_' + args.noise_mode + str(args.r) + str(args.seed) + '.pth'
-    model2_name = 'model2_' + args.noise_mode + str(args.r) + str(args.seed) + '.pth'
+    model1_name = 'model1_' + args.noise_mode + str(args.r) + str(args.seed) + '_' + args.distill_mode + '.pth'
+    model2_name = 'model2_' + args.noise_mode + str(args.r) + str(args.seed) + '_' + args.distill_mode + '.pth'
     
     if args.distill:
         model1_name = args.distill + '_' + model1_name
@@ -248,18 +248,22 @@ def save_checkpoint(model1, model2, epoch):
     print("\nSaving model1 checkpoint: " + model1_save_path)
     print("\nSaving model2 checkpoint: " + model2_save_path)
 
-def get_teacher_idx(model, loader):
+def get_teacher_idx(model, loader, mode='eigen'):
     model.eval()
     for params in model.parameters():
         params.requires_grad = False
+        
     # get teacher_idx
-    tea_label_list, tea_out_list = get_out_list(model, loader)
-    singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
+    if mode =='eigen':
+        tea_label_list, tea_out_list = get_out_list(model, loader)
+        singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
     
-    for key in v_ortho_dict.keys():
-        v_ortho_dict[key] = v_ortho_dict[key].cuda()
+        for key in v_ortho_dict.keys():
+            v_ortho_dict[key] = v_ortho_dict[key].cuda()
 
-    teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+        teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+    else: # get teacher _idx via kmeans
+        teacher_idx = get_loss_list(model, loader)
     
     #loader.print_statistics(teacher_idx)
     
@@ -272,8 +276,8 @@ def get_teacher_idx(model, loader):
     
 
 if args.distill:
-    stats_log_name = '%s_%s_%.1f_%s'%(args.distill,args.dataset,args.r,args.noise_mode)+'_stats.txt'
-    test_log_name = '%s_%s_%.1f_%s'%(args.distill,args.dataset,args.r,args.noise_mode)+'_acc.txt'
+    stats_log_name = '%s_%s_%.1f_%s_%s'%(args.distill,args.dataset,args.r,args.noise_mode,args.distill_mode)+'_stats.txt'
+    test_log_name = '%s_%s_%.1f_%s_%s'%(args.distill,args.dataset,args.r,args.noise_mode,args.distill_mode)+'_acc.txt'
     if args.refinement:
         stats_log_name = 'refinement_' + stats_log_name
         test_log_name = 'refinement_' + test_log_name
@@ -300,7 +304,7 @@ if args.distill == 'initial':
     teacher1.load_state_dict(torch.load(args.teacher_model)['state_dict'])
     
     
-    teacher_idx1 = get_teacher_idx(teacher1, data_loader).tolist()
+    teacher_idx1 = get_teacher_idx(teacher1, data_loader, mode=args.distill_mode ).tolist()
     
     teacher_idx = torch.tensor(teacher_idx1)
     loader.print_statistics(teacher_idx)
@@ -354,8 +358,8 @@ for epoch in range(args.num_epochs+1):
     root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
             all_loader = loader.run('warmup')
         
-            teacher_idx_1 = get_teacher_idx(net1, all_loader)
-            teacher_idx_2 = get_teacher_idx(net2, all_loader)
+            teacher_idx_1 = get_teacher_idx(net1, all_loader, mode=args.distill_mode)
+            teacher_idx_2 = get_teacher_idx(net2, all_loader, mode=args.distill_mode)
             
             pred1, prob1 = None, None
             pred2, prob2 = None, None

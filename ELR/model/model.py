@@ -17,7 +17,14 @@ def resnet34(num_classes=10):
     return ResNet(BasicBlock, [3,4,6,3], num_classes=num_classes)
 
 def resnet50(num_classes=10):
-    return ResNet(Bottleneck, [3,4,6,3], num_classes=num_classes)
+    import torchvision.models as models
+    model_ft = models.resnet50(pretrained=True)
+    num_ftrs = model_ft.fc.in_features
+    model_ft.fc = nn.Linear(num_ftrs, num_classes)
+    return model_ft
 
 def resnet101(num_classes=10):
     return ResNet(Bottleneck, [3,4,23,3], num_classes=num_classes)
+
+# def resnet50(num_classes=10):
+#     return ResNet(Bottleneck, [3,4,6,3], num_classes=num_classes)

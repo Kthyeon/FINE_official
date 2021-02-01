@@ -38,13 +38,13 @@ class Clothing(torch.utils.data.Dataset):
         self.val = val
         self.test = test
 
-        with open('%s/noisy_label_kv.txt'%self.root,'r') as f:
+        with open('%s/annotations/noisy_label_kv.txt'%self.root,'r') as f:
             lines = f.read().splitlines()
             for l in lines:
                 entry = l.split()           
                 img_path = '%s/'%self.root+entry[0][7:]
                 self.train_labels[img_path] = int(entry[1])                         
-        with open('%s/clean_label_kv.txt'%self.root,'r') as f:
+        with open('%s/annotations/clean_label_kv.txt'%self.root,'r') as f:
             lines = f.read().splitlines()
             for l in lines:
                 entry = l.split()           
@@ -53,7 +53,7 @@ class Clothing(torch.utils.data.Dataset):
 
         if train:          
             train_imgs=[]
-            with open('%s/noisy_train_key_list.txt'%self.root,'r') as f:
+            with open('%s/annotations/noisy_train_key_list.txt'%self.root,'r') as f:
                 lines = f.read().splitlines()
                 for i , l in enumerate(lines):
                     img_path = '%s/'%self.root+l[7:]
@@ -71,14 +71,14 @@ class Clothing(torch.utils.data.Dataset):
 
         elif test:
             self.test_imgs = []
-            with open('%s/clean_test_key_list.txt'%self.root,'r') as f:
+            with open('%s/annotations/clean_test_key_list.txt'%self.root,'r') as f:
                 lines = f.read().splitlines()
                 for l in lines:
                     img_path = '%s/'%self.root+l[7:]
                     self.test_imgs.append(img_path)            
         elif val:
             self.val_imgs = []
-            with open('%s/clean_val_key_list.txt'%self.root,'r') as f:
+            with open('%s/annotations/clean_val_key_list.txt'%self.root,'r') as f:
                 lines = f.read().splitlines()
                 for l in lines:
                     img_path = '%s/'%self.root+l[7:]

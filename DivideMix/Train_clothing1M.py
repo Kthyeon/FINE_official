@@ -6,13 +6,15 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 import torchvision
-import torchvision.models as models
+import custom_resnet as models
 import random
 import os
 import argparse
 import numpy as np
 import dataloader_clothing1M as dataloader
 from sklearn.mixture import GaussianMixture
+
+from svd_classifier import singular_label, get_out_list, get_singular_value_vector, get_loss_list
 
 parser = argparse.ArgumentParser(description='PyTorch Clothing1M Training')
 parser.add_argument('--batch_size', default=32, type=int, help='train batchsize') 
@@ -28,6 +30,11 @@ parser.add_argument('--seed', default=123)
 parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=14, type=int)
 parser.add_argument('--num_batches', default=1000, type=int)
+
+parser.add_argument('--distill', default=None, type=str, help='initial or dynamic')
+parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen','fulleigen'], help='mode for distillation kmeans or eigen.')
+parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')
+
 args = parser.parse_args()
 
 torch.cuda.set_device(args.gpuid)
@@ -214,7 +221,39 @@ def create_model():
     model = model.cuda()
     return model     
 
-log=open('./checkpoint/%s.txt'%args.id,'w')     
+def get_teacher_idx(model, loader, mode='eigen'):
+    model.eval()
+    for params in model.parameters():
+        params.requires_grad = False
+        
+    # get teacher_idx
+    if mode =='eigen':
+        tea_label_list, tea_out_list = get_out_list(model, loader)
+        singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
+    
+        for key in v_ortho_dict.keys():
+            v_ortho_dict[key] = v_ortho_dict[key].cuda()
+
+        teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+    else: # get teacher _idx via kmeans
+        teacher_idx = get_loss_list(model, loader)
+    
+    #loader.print_statistics(teacher_idx)
+    
+    for params in model.parameters():
+        params.requires_grad = False
+    model.eval()
+    
+    teacher_idx = torch.tensor(teacher_idx)
+    return teacher_idx
+
+if args.distill:
+    test_log_name = '%s_%s'%(args.distill,args.distill_mode)+'_acc.txt'
+    if args.refinement:
+        test_log_name = 'refinement_' + test_log_name
+    log=open('./checkpoint/' + test_log_name,'w')
+else:
+    log=open('./checkpoint/%s.txt'%args.id,'w')     
 log.flush()
 
 loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches)
@@ -249,15 +288,39 @@ for epoch in range(args.num_epochs+1):
         print('\nWarmup Net2')
         warmup(net2,optimizer2,train_loader)                  
     else:       
-        pred1 = (prob1 > args.p_threshold)  # divide dataset  
-        pred2 = (prob2 > args.p_threshold)      
+        if args.distill == 'dynamic':
+            loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches)
+            all_loader = loader.run('warmup')
+            
+            teacher_idx_1 = get_teacher_idx(net1, all_loader, mode=args.distill_mode)
+            teacher_idx_2 = get_teacher_idx(net2, all_loader, mode=args.distill_mode)
+            
+            if args.refinement:
+                pred1 = (prob1 > args.p_threshold)  # divide dataset  
+                pred2 = (prob2 > args.p_threshold)
+                
+            else:
+                pred1, prob1 = None, None
+                pred2, prob2 = None, None
+                
+            print('Train Net1 with dynamic distill')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd',pred2,prob2,paths=paths2, teacher_idx=teacher_idx2, refinement=args.refinement) # co-divide
+            train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader)
+            
+            print('Train Net2 with dynamic distill')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd',pred1,prob1,paths=paths1, teacher_idx=teacher_idx2, refinement=args.refinement) # co-divide
+            train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader)   
         
-        print('\n\nTrain Net1')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train',pred2,prob2,paths=paths2) # co-divide
-        train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader)              # train net1
-        print('\nTrain Net2')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train',pred1,prob1,paths=paths1) # co-divide
-        train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader)              # train net2
+        else:
+            pred1 = (prob1 > args.p_threshold)  # divide dataset  
+            pred2 = (prob2 > args.p_threshold)      
+
+            print('\n\nTrain Net1')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train',pred2,prob2,paths=paths2) # co-divide
+            train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader)              # train net1
+            print('\nTrain Net2')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train',pred1,prob1,paths=paths1) # co-divide
+            train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader)              # train net2
     
     val_loader = loader.run('val') # validation
     acc1 = val(net1,val_loader,1)

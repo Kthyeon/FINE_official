@@ -7,14 +7,16 @@ import json
 import torch
 
 class clothing_dataset(Dataset): 
-    def __init__(self, root, transform, mode, num_samples=0, pred=[], probability=[], paths=[], num_class=14): 
+    def __init__(self, root, transform, mode, num_samples=0, pred=[], probability=[], paths=[], num_class=14, teacher_idx=None, refinement=None): 
         
         self.root = root
         self.transform = transform
         self.mode = mode
         self.train_labels = {}
         self.test_labels = {}
-        self.val_labels = {}            
+        self.val_labels = {}   
+        
+        self.refinement = refinement
         
         with open('%s/annotations/noisy_label_kv.txt'%self.root,'r') as f:
             lines = f.read().splitlines()
@@ -56,8 +58,37 @@ class clothing_dataset(Dataset):
             pred_idx = (1-pred).nonzero()[0]  
             self.train_imgs = [train_imgs[i] for i in pred_idx]                
             self.probability = [probability[i] for i in pred_idx]            
-            print("%s data has a size of %d"%(self.mode,len(self.train_imgs)))                                    
-                         
+            print("%s data has a size of %d"%(self.mode,len(self.train_imgs)))
+            
+        elif self.mode == 'labeled_svd':
+            train_imgs = paths
+            if self.refinement:
+                pred_idx = pred.nonzero()[0]
+                pred_idx_set = set(pred_idx.tolist())
+                teacher_idx_set = set(teacher_idx.tolist())
+                pred_idx = torch.tensor(list(pred_idx_set & teacher_idx_set))
+            else:
+                pred_idx = teacher_idx
+                probability = torch.ones(1000000,)
+            self.train_imgs = [train_imgs[i] for i in pred_idx]                
+            self.probability = [probability[i] for i in pred_idx]            
+            print("%s data has a size of %d"%(self.mode,len(self.train_imgs)))
+        elif self.mode == "unlabeled_svd":  
+            train_imgs = paths 
+            if self.refinement:
+                clean_pred_idx = pred.nonzero()[0]
+                clean_pred_idx_set = set(clean_pred_idx.tolist())
+                teacher_idx_set = set(teacher_idx.tolist())
+                all_idx_set = set(range(1000000))
+                pred_idx = torch.tensor(list(all_idx_set - (clean_pred_idx_set & teacher_idx_set)))
+            else:
+                pred_idx = torch.arange(0, 1000000)
+                pred_idx_set = set(pred_idx.tolist()) - set(teacher_idx.tolist())
+                pred_idx = torch.tensor(list(pred_idx_set))    
+            self.train_imgs = [train_imgs[i] for i in pred_idx]                
+            self.probability = [probability[i] for i in pred_idx]            
+            print("%s data has a size of %d"%(self.mode,len(self.train_imgs)))       
+                
         elif mode=='test':
             self.test_imgs = []
             with open('%s/annotations/clean_test_key_list.txt'%self.root,'r') as f:
@@ -74,7 +105,7 @@ class clothing_dataset(Dataset):
                     self.val_imgs.append(img_path)
                     
     def __getitem__(self, index):  
-        if self.mode=='labeled':
+        if self.mode=='labeled' or self.mode == 'labeled_svd':
             img_path = self.train_imgs[index]
             target = self.train_labels[img_path] 
             prob = self.probability[index]
@@ -82,7 +113,7 @@ class clothing_dataset(Dataset):
             img1 = self.transform(image) 
             img2 = self.transform(image) 
             return img1, img2, target, prob              
-        elif self.mode=='unlabeled':
+        elif self.mode=='unlabeled' or self.mode == 'unlabeled_svd':
             img_path = self.train_imgs[index]
             image = Image.open(img_path).convert('RGB')    
             img1 = self.transform(image) 
@@ -135,7 +166,7 @@ class clothing_dataloader():
                 transforms.ToTensor(),
                 transforms.Normalize((0.6959, 0.6537, 0.6371),(0.3113, 0.3192, 0.3214)),
             ])        
-    def run(self,mode,pred=[],prob=[],paths=[]):        
+    def run(self,mode,pred=[],prob=[],paths=[], teacher_idx=None, refinement=None):        
         if mode=='warmup':
             warmup_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='all',num_samples=self.num_batches*self.batch_size*2)
             warmup_loader = DataLoader(
@@ -152,6 +183,20 @@ class clothing_dataloader():
                 shuffle=True,
                 num_workers=self.num_workers)           
             unlabeled_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='unlabeled',pred=pred, probability=prob,paths=paths)
+            unlabeled_loader = DataLoader(
+                dataset=unlabeled_dataset, 
+                batch_size=int(self.batch_size),
+                shuffle=True,
+                num_workers=self.num_workers)   
+            return labeled_loader,unlabeled_loader
+        elif mode=='train_svd':
+            labeled_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='labeled_svd',pred=pred, probability=prob,paths=paths, teacher_idx=teacher_idx, refinement=refinement)
+            labeled_loader = DataLoader(
+                dataset=labeled_dataset, 
+                batch_size=self.batch_size,
+                shuffle=True,
+                num_workers=self.num_workers)           
+            unlabeled_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='unlabeled_svd',pred=pred, probability=prob,paths=paths, teacher_idx=teacher_idx, refinement=refinement)
             unlabeled_loader = DataLoader(
                 dataset=unlabeled_dataset, 
                 batch_size=int(self.batch_size),

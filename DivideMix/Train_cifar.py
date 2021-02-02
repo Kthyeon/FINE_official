@@ -267,11 +267,11 @@ def get_teacher_idx(model, loader, mode='eigen'):
     else: # get teacher _idx via kmeans
         teacher_idx = get_loss_list(model, loader)
     
-    #loader.print_statistics(teacher_idx)
+#     loader.print_statistics(teacher_idx)
     
     for params in model.parameters():
-        params.requires_grad = False
-    model.eval()
+        params.requires_grad = True
+    model.train()
     
     teacher_idx = torch.tensor(teacher_idx)
     return teacher_idx

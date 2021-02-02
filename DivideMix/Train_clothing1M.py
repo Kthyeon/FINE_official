@@ -23,7 +23,7 @@ parser.add_argument('--p_threshold', default=0.5, type=float, help='clean probab
 parser.add_argument('--T', default=0.5, type=float, help='sharpening temperature')
 parser.add_argument('--num_epochs', default=80, type=int)
 parser.add_argument('--id', default='clothing1m')
-parser.add_argument('--data_path', default='../../Clothing1M/data', type=str, help='path to dataset')
+parser.add_argument('--data_path', default='clothing1m', type=str, help='path to dataset')
 parser.add_argument('--seed', default=123)
 parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=14, type=int)

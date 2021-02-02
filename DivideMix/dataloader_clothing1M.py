@@ -16,25 +16,25 @@ class clothing_dataset(Dataset):
         self.test_labels = {}
         self.val_labels = {}            
         
-        with open('%s/noisy_label_kv.txt'%self.root,'r') as f:
+        with open('%s/annotations/noisy_label_kv.txt'%self.root,'r') as f:
             lines = f.read().splitlines()
             for l in lines:
                 entry = l.split()           
-                img_path = '%s/'%self.root+entry[0][7:]
+                img_path = '%s/'%self.root+entry[0]
                 self.train_labels[img_path] = int(entry[1])                         
-        with open('%s/clean_label_kv.txt'%self.root,'r') as f:
+        with open('%s/annotations/clean_label_kv.txt'%self.root,'r') as f:
             lines = f.read().splitlines()
             for l in lines:
                 entry = l.split()           
-                img_path = '%s/'%self.root+entry[0][7:]
+                img_path = '%s/'%self.root+entry[0]
                 self.test_labels[img_path] = int(entry[1])   
 
         if mode == 'all':
             train_imgs=[]
-            with open('%s/noisy_train_key_list.txt'%self.root,'r') as f:
+            with open('%s/annotations/noisy_train_key_list.txt'%self.root,'r') as f:
                 lines = f.read().splitlines()
                 for l in lines:
-                    img_path = '%s/'%self.root+l[7:]
+                    img_path = '%s/'%self.root+l
                     train_imgs.append(img_path)                                
             random.shuffle(train_imgs)
             class_num = torch.zeros(num_class)
@@ -60,17 +60,17 @@ class clothing_dataset(Dataset):
                          
         elif mode=='test':
             self.test_imgs = []
-            with open('%s/clean_test_key_list.txt'%self.root,'r') as f:
+            with open('%s/annotations/clean_test_key_list.txt'%self.root,'r') as f:
                 lines = f.read().splitlines()
                 for l in lines:
-                    img_path = '%s/'%self.root+l[7:]
+                    img_path = '%s/'%self.root+l
                     self.test_imgs.append(img_path)            
         elif mode=='val':
             self.val_imgs = []
-            with open('%s/clean_val_key_list.txt'%self.root,'r') as f:
+            with open('%s/annotations/clean_val_key_list.txt'%self.root,'r') as f:
                 lines = f.read().splitlines()
                 for l in lines:
-                    img_path = '%s/'%self.root+l[7:]
+                    img_path = '%s/'%self.root+l
                     self.val_imgs.append(img_path)
                     
     def __getitem__(self, index):  

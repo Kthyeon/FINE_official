@@ -7,7 +7,7 @@ import json
 import torch
 
 class clothing_dataset(Dataset): 
-    def __init__(self, root, transform, mode, num_samples=0, pred=[], probability=[], paths=[], num_class=14, teacher_idx=None, refinement=None, train_imgs=None): 
+    def __init__(self, root, transform, mode, num_samples=0, pred=[], probability=[], paths=[], num_class=14, refinement=None, train_imgs=None, teacher_idx=None, truncate_mode=None): 
         
         self.root = root
         self.transform = transform
@@ -52,12 +52,22 @@ class clothing_dataset(Dataset):
         elif self.mode == "labeled":   
             train_imgs = paths 
             pred_idx = pred.nonzero()[0]
+            if truncate_mode=='initial':
+                pred_idx = list(set(pred_idx.tolist()) & set(teacher_idx.tolist()))
+                pred_idx = torch.tensor(pred_idx)
             self.train_imgs = [train_imgs[i] for i in pred_idx]                
             self.probability = [probability[i] for i in pred_idx]            
             print("%s data has a size of %d"%(self.mode,len(self.train_imgs)))
         elif self.mode == "unlabeled":  
             train_imgs = paths 
-            pred_idx = (1-pred).nonzero()[0]  
+            pred_idx = (1-pred).nonzero()[0]
+            if truncate_mode == 'initial':
+                whole_idx = list(range(len(paths)))
+                pred_idx = pred_idx.tolist()
+                teacher_idx = teacher_idx.tolist()
+                tmp_set = set(whole_idx) - set(teacher_idx)
+                tmp_set = tmp_set | set(pred_idx)
+                pred_idx = torch.tensor(list(tmp_set))
             self.train_imgs = [train_imgs[i] for i in pred_idx]                
             self.probability = [probability[i] for i in pred_idx]            
             print("%s data has a size of %d"%(self.mode,len(self.train_imgs)))
@@ -149,11 +159,13 @@ class clothing_dataset(Dataset):
             return len(self.train_imgs)
         
 class clothing_dataloader():  
-    def __init__(self, root, batch_size, num_batches, num_workers):    
+    def __init__(self, root, batch_size, num_batches, num_workers, _teacher_idx=None, _truncate_mode=None):    
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.num_batches = num_batches
         self.root = root
+        self.teacher_idx = _teacher_idx
+        self.truncate_mode = _truncate_mode
                    
         self.transform_train = transforms.Compose([
                 transforms.Resize(256),
@@ -178,13 +190,13 @@ class clothing_dataloader():
                 num_workers=self.num_workers)  
             return warmup_loader
         elif mode=='train':
-            labeled_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='labeled',pred=pred, probability=prob,paths=paths)
+            labeled_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='labeled',pred=pred, probability=prob,paths=paths,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)
             labeled_loader = DataLoader(
                 dataset=labeled_dataset, 
                 batch_size=self.batch_size,
                 shuffle=True,
                 num_workers=self.num_workers)           
-            unlabeled_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='unlabeled',pred=pred, probability=prob,paths=paths)
+            unlabeled_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='unlabeled',pred=pred, probability=prob,paths=paths,teacher_idx=self.teacher_idx,truncate_mode=self.truncate_mode)
             unlabeled_loader = DataLoader(
                 dataset=unlabeled_dataset, 
                 batch_size=int(self.batch_size),

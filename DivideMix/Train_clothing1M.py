@@ -25,7 +25,7 @@ parser.add_argument('--p_threshold', default=0.5, type=float, help='clean probab
 parser.add_argument('--T', default=0.5, type=float, help='sharpening temperature')
 parser.add_argument('--num_epochs', default=80, type=int)
 parser.add_argument('--id', default='clothing1m')
-parser.add_argument('--data_path', default='/home/osilab15/ssd2/clothing1m', type=str, help='path to dataset')
+parser.add_argument('--data_path', default='clothing1m', type=str, help='path to dataset')
 parser.add_argument('--seed', default=123)
 parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=14, type=int)
@@ -34,6 +34,7 @@ parser.add_argument('--num_batches', default=1000, type=int)
 parser.add_argument('--distill', default=None, type=str, help='initial or dynamic')
 parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen','fulleigen'], help='mode for distillation kmeans or eigen.')
 parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')
+parser.add_argument('--teacher_model', default=None, type=str)
 
 args = parser.parse_args()
 
@@ -256,7 +257,21 @@ else:
     log=open('./checkpoint/%s.txt'%args.id,'w')     
 log.flush()
 
-loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches)
+if args.distill == 'initial':
+    loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches)
+    data_loader = loader.run('warmup')
+    
+    model = create_model()
+    model.load_state_dict(torch.load(args.teacher_model)['state_dict'])
+    
+    tmp_teacher_idx = get_teacher_idx(model, data_loader, mode=args.distill_mode)
+    teacher_idx = torch.tensor(tmp_teacher_idx)
+
+else:
+    teacher_idx = None
+    
+
+loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches, _teacher_idx=teacher_idx, _truncate_mode=args.distill)
 
 print('| Building net')
 net1 = create_model()

@@ -159,13 +159,12 @@ class clothing_dataset(Dataset):
             return len(self.train_imgs)
         
 class clothing_dataloader():  
-    def __init__(self, root, batch_size, num_batches, num_workers, _teacher_idx=None, _truncate_mode=None):    
+    def __init__(self, root, batch_size, num_batches, num_workers):    
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.num_batches = num_batches
         self.root = root
-        self.teacher_idx = _teacher_idx
-        self.truncate_mode = _truncate_mode
+        
                    
         self.transform_train = transforms.Compose([
                 transforms.Resize(256),
@@ -179,7 +178,12 @@ class clothing_dataloader():
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize((0.6959, 0.6537, 0.6371),(0.3113, 0.3192, 0.3214)),
-            ])        
+            ])
+    
+    def set_initial_exp(self, teacher_idx=None, _truncate_mode=None):
+        self.teacher_idx = _teacher_idx
+        self.truncate_mode = _truncate_mode
+    
     def run(self,mode,pred=[],prob=[],paths=[], teacher_idx=None, refinement=None, train_imgs=None):        
         if mode=='warmup':
             warmup_dataset = clothing_dataset(self.root,transform=self.transform_train, mode='all',num_samples=self.num_batches*self.batch_size*2)

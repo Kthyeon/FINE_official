@@ -266,12 +266,13 @@ if args.distill == 'initial':
     
     tmp_teacher_idx = get_teacher_idx(model, data_loader, mode=args.distill_mode)
     teacher_idx = torch.tensor(tmp_teacher_idx)
+    
+    loader.set_initial_exp(_teacher_idx=teacher_idx, _truncate_mode=args.distill)
 
 else:
     teacher_idx = None
-    
+    loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches)
 
-loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches, _teacher_idx=teacher_idx, _truncate_mode=args.distill)
 
 print('| Building net')
 net1 = create_model()
@@ -304,7 +305,6 @@ for epoch in range(args.num_epochs+1):
         warmup(net2,optimizer2,train_loader)                  
     else:       
         if args.distill == 'dynamic':
-            loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches)
             all_loader = loader.run('warmup')
                         
             teacher_idx_1 = get_teacher_idx(net1, all_loader, mode=args.distill_mode)

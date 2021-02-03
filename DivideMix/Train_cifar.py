@@ -236,8 +236,8 @@ def save_checkpoint(model1, model2, epoch):
     model2_name = 'model2_' + args.noise_mode + str(args.r) + str(args.seed) + '_' + args.distill_mode + '.pth'
     
     if args.distill:
-        model1_name = args.distill + '_' + model1_name
-        model2_name = args.distill + '_' + model2_name
+        model1_name = str(args.p_threshold) + args.distill + '_' + model1_name
+        model2_name = str(args.p_threshold) + args.distill + '_' + model2_name
         if args.refinement:
             model1_name = 'refinement_' + model1_name
             model2_name = 'refinement_' + model2_name
@@ -278,8 +278,8 @@ def get_teacher_idx(model, loader, mode='eigen'):
     
 
 if args.distill:
-    stats_log_name = '%s_%s_%.1f_%s_%s'%(args.distill,args.dataset,args.r,args.noise_mode,args.distill_mode)+'_stats.txt'
-    test_log_name = '%s_%s_%.1f_%s_%s'%(args.distill,args.dataset,args.r,args.noise_mode,args.distill_mode)+'_acc.txt'
+    stats_log_name = str(args.p_threshold) + '%s_%s_%.1f_%s_%s'%(args.distill,args.dataset,args.r,args.noise_mode,args.distill_mode)+'_stats.txt'
+    test_log_name = str(args.p_threshold) + '%s_%s_%.1f_%s_%s'%(args.distill,args.dataset,args.r,args.noise_mode,args.distill_mode)+'_acc.txt'
     if args.refinement:
         stats_log_name = 'refinement_' + stats_log_name
         test_log_name = 'refinement_' + test_log_name

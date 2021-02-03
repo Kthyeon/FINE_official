@@ -279,8 +279,8 @@ if args.distill:
     stats_log_name = '%s_%s_%.1f_%s_%s'%(args.distill,args.dataset,args.r,args.noise_mode,args.distill_mode)+'_stats.txt'
     test_log_name = '%s_%s_%.1f_%s_%s'%(args.distill,args.dataset,args.r,args.noise_mode,args.distill_mode)+'_acc.txt'
     if args.refinement:
-        stats_log_name = 'refinement_' + stats_log_name
-        test_log_name = 'refinement_' + test_log_name
+        stats_log_name = 'refinement_' + str(args.p_threshold) + stats_log_name
+        test_log_name = 'refinement_' + str(args.p_threshold) + test_log_name
     stats_log=open('./checkpoint/' + stats_log_name,'w') 
     test_log=open('./checkpoint/' + test_log_name,'w')
 else:

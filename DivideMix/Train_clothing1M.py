@@ -25,7 +25,7 @@ parser.add_argument('--p_threshold', default=0.5, type=float, help='clean probab
 parser.add_argument('--T', default=0.5, type=float, help='sharpening temperature')
 parser.add_argument('--num_epochs', default=80, type=int)
 parser.add_argument('--id', default='clothing1m')
-parser.add_argument('--data_path', default='clothing1m', type=str, help='path to dataset')
+parser.add_argument('--data_path', default='/home/osilab15/ssd2/clothing1m', type=str, help='path to dataset')
 parser.add_argument('--seed', default=123)
 parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=14, type=int)
@@ -241,8 +241,8 @@ def get_teacher_idx(model, loader, mode='eigen'):
     #loader.print_statistics(teacher_idx)
     
     for params in model.parameters():
-        params.requires_grad = False
-    model.eval()
+        params.requires_grad = True
+    model.train()
     
     teacher_idx = torch.tensor(teacher_idx)
     return teacher_idx
@@ -291,7 +291,7 @@ for epoch in range(args.num_epochs+1):
         if args.distill == 'dynamic':
             loader = dataloader.clothing_dataloader(root=args.data_path,batch_size=args.batch_size,num_workers=5,num_batches=args.num_batches)
             all_loader = loader.run('warmup')
-            
+                        
             teacher_idx_1 = get_teacher_idx(net1, all_loader, mode=args.distill_mode)
             teacher_idx_2 = get_teacher_idx(net2, all_loader, mode=args.distill_mode)
             
@@ -304,11 +304,11 @@ for epoch in range(args.num_epochs+1):
                 pred2, prob2 = None, None
                 
             print('Train Net1 with dynamic distill')
-            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd',pred2,prob2,paths=paths2, teacher_idx=teacher_idx2, refinement=args.refinement) # co-divide
+            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd',pred2,prob2,paths=paths2, teacher_idx=teacher_idx_2, refinement=args.refinement) # co-divide
             train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader)
             
             print('Train Net2 with dynamic distill')
-            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd',pred1,prob1,paths=paths1, teacher_idx=teacher_idx2, refinement=args.refinement) # co-divide
+            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd',pred1,prob1,paths=paths1, teacher_idx=teacher_idx_1, refinement=args.refinement) # co-divide
             train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader)   
         
         else:

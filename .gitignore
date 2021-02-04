@@ -4,6 +4,10 @@ ELR/wandb
 .gitignore
 DivideMix/cifar-10/
 DivideMix/cifar-100/
+DivideMix/checkpoint/
+DivideMix/clothing1m/
+DivideMix/pretrained/
+ELR/checkpoint/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

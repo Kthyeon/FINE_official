@@ -8,7 +8,7 @@ class CCELoss(nn.Module):
     def __init__(self):
         super(CCELoss, self).__init__()
         
-    def forward(self, output, target, index, mode):
+    def forward(self, output, target, index, mode=None):
         return F.cross_entropy(output, target)
     
 class CCE_GTLoss(nn.Module):

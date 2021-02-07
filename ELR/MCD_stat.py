@@ -28,7 +28,7 @@ from tqdm import tqdm
 from torch.autograd import Variable
 from parse_config import ConfigParser
 from collections import OrderedDict
-from MCD_utils import *
+from utils.MCD_utils import *
 
 def str2bool(v):
     if isinstance(v, bool):

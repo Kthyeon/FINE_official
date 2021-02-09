@@ -181,8 +181,9 @@ def main(parse, config: ConfigParser):
             total_label_gt = torch.cat((total_label_gt, label_gt), 0)
             
     model.eval()
-    temp_x = torch.rand(2,3,32,32).cuda()
-    temp_x = Variable(temp_x, volatile=True)
+    with torch.no_grad():
+        temp_x = torch.rand(2,3,32,32).cuda()
+#     temp_x = Variable(temp_x, volatile=True)
     temp_list = model.feature_list(temp_x)[1]
     num_output = len(temp_list) # Number of layers that extracts feature
     total_final_feature = [0]*num_output #Extracted Features
@@ -190,8 +191,9 @@ def main(parse, config: ConfigParser):
     batch_size = 100
 
     for data_index in range(int(np.floor(total_data.size(0)/batch_size))):
-        data = total_data[total : total + batch_size]
-        data = Variable(data, volatile=True)
+        with torch.no_grad():
+            data = total_data[total : total + batch_size]
+#         data = Variable(data, volatile=True)
 
         _, out_features = model.feature_list(data)
         for i in range(num_output):

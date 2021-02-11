@@ -15,19 +15,17 @@ Run the followings:
     bash scripts/refinement_dynamic_cifar10
     
 ### Training options
-'''
---refinement
-'''
+
+    --refinement
+
 if not uses this option, it means that it sets 'clean probability' as one for all clean subset.
 
-'''
---distill dynamic
-'''
+    --distill dynamic
+
 use this to reproduce our paper. If not, DivideMix baseline training.
 
-'''
---distill_mode eigen or kmeans
-'''
+    --distill_mode eigen or kmeans
+
 set which noisy detect algorithms to use, which proposed in our paper.
 
 

@@ -2,7 +2,6 @@
 This is an non-official PyTorch implementation of ELR method proposed in [Early-Learning Regularization Prevents Memorization of Noisy Labels]().
 This also include PyTorch implementation of SCE and GCE method.
 
-
 ## Usage
 ### Robust loss functions
 Train the network on the Symmmetric Noise CIFAR-10 dataset (noise rate = 0.8):
@@ -24,17 +23,24 @@ The config files can be modified to adjust hyperparameters and optimization sett
 
 
 ## arguments
+Train the network on the Symmetric Noise CIFAR-10 dataset (noise rate = 0.8). Fix lr_scheduler argument as coteach
+You can choose four arguments for loss_fn (coteach, coteach+, coteachdistill, coteach+distill)
 ```
-python train.py --no_wandb
-```
-not uses wandb, just run on your local(server)
-
-```
-python train.py --dataset cifar10 --loss_fn sce --lr_scheduler cosine
+python train_coteaching.py --arch=rn18 --loss_fn=coteach --lr_scheduler=coteach --num_gradual=60 --asym=False --percent=0.8 --no_wandb
 ```
 or
 ```
-python train.py --config hyperparams/~~/~~~.json
+python train.py --device 0 --config hyperparams/coteach/config_cifar10_coteach_rn18.json --asym=False --percent=0.8 --no_wandb
+```
+not uses wandb, just run on your local(server)
+
+Train the networ with the CLK or SAME with coteachdistill or coteach+distill (noise rate = 0.8)
+```
+python train_coteaching.py --distillation --reinit --distill_mode kmeans --arch=rn18 --asym=False --dataset=cifar100 --loss_fn=coteach+distill --lr_scheduler=coteach --num_gradual=140 --percent=0.8 
+```
+or
+```
+python train_coteaching.py --distillation --reinit --distill_mode eigen --arch=rn18 --asym=False --dataset=cifar100 --loss_fn=coteachdistill --lr_scheduler=coteach --num_gradual=60 --percent=0.8 
 ```
 if dataset, loss_fn, lr_scheduler are all given, don't have to give config file as an argument.
 if config file is given, dataset, loss_fn, lr_scheduler arguments are useless.

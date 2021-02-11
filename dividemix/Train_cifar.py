@@ -32,10 +32,8 @@ parser.add_argument('--num_class', default=10, type=int)
 parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to dataset')
 parser.add_argument('--dataset', default='cifar10', type=str)
 # For testing winning tickets
-parser.add_argument('--distill', default=None, type=str, help='initial or dynamic')
-parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen','fulleigen'], help='mode for distillation kmeans or eigen.')
-parser.add_argument('--initial_net1', default=None, type=str, help='teacher net1 for initial exp.')
-parser.add_argument('--initial_net2', default=None, type=str, help='teacher net2 for initial exp.')
+parser.add_argument('--distill', default=None, type=str, help='use "dynamic" for robust training')
+parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen'], help='mode for distillation kmeans or eigen.')
 parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')
 
 args = parser.parse_args()
@@ -266,9 +264,7 @@ def get_teacher_idx(model, loader, mode='eigen'):
         teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
     else: # get teacher _idx via kmeans
         teacher_idx = get_loss_list(model, loader)
-    
-#     loader.print_statistics(teacher_idx)
-    
+        
     for params in model.parameters():
         params.requires_grad = True
     model.train()
@@ -295,35 +291,8 @@ if args.dataset=='cifar10':
 elif args.dataset=='cifar100':
     warm_up = 30
     
-if args.distill == 'initial':
-    loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
-    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
-    
-    data_loader = loader.run('warmup')
-    
-    teacher1 = create_model()
-    teacher2 = create_model()
-    teacher1.load_state_dict(torch.load('pretrained/baseline_asym_40_cifar10model1_123.pth')['state_dict'])
-    teacher2.load_state_dict(torch.load('pretrained/baseline_asym_40_cifar10model2_123.pth')['state_dict'])
-    
-    
-    teacher_idx1 = get_teacher_idx(teacher1, data_loader, mode=args.distill_mode).tolist()
-    teacher_idx2 = get_teacher_idx(teacher2, data_loader, mode=args.distill_mode).tolist()
-    
-    teacher_idx = []
-    for i in range(50000):
-        if i in teacher_idx1 and i in teacher_idx2:
-            teacher_idx.append(i)
-    
-    teacher_idx = torch.tensor(teacher_idx)
-    loader.print_statistics(teacher_idx)
-    print(len(teacher_idx))
-    
-else:
-    teacher_idx = None
-
 loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
-    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode),_teacher_idx=teacher_idx,_truncate_mode=args.distill)
+    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
 
 print('| Building net')
 net1 = create_model()

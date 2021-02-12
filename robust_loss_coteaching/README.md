@@ -4,17 +4,23 @@ This also include PyTorch implementation of SCE and GCE method.
 
 ## Usage
 ### Robust loss functions
-Train the network on the Symmmetric Noise CIFAR-10 dataset (noise rate = 0.8):
+Train the proxy network on the Symmmetric Noise CIFAR-10 dataset, ResNet18, ELR Loss (noise rate = 0.8):
 
 ```
-python train.py -c ./hyperparams/cosine/config_cifar10_elr.json --percent 0.8
-python train.py -c ./hyperparams/multistep/config_cifar10_elr.json --percent 0.8
+python train.py -c ./hyperparams/multistep/config_cifar10_elr_rn18.json --percent=0.8 --asym=False
 ```
 
-Train the network on the Asymmmetric Noise CIFAR-100 dataset (noise rate = 0.4):
+Train the proxy network on the Asymmmetric Noise CIFAR-100 dataset, ResNet34, GCE Loss (noise rate = 0.4):
 
 ```
-python train.py -c ./hyperparams/cosine/config_cifar100.json --percent 0.4 --asym 1
+python train.py -c ./hyperparams/cosine/config_cifar100_gce_rn34.json --percent=0.4 --asym=True
+```
+
+If you want to train the network with SAME CIFAR-10 dataset, GCELoss, ResNet34(noise rate = 0.8, Symmetric Noise),
+
+```
+train.py -c ./hyperparams/multistep/config_cifar10_gce_rn34.json -d 0 --percent 0.8 --distillation --distill_mode=eigen 
+--load_name=multistep_sym_80_gce.pth --second_load_name=kmeans_multistep_sym_80_gce_123.pth --reinit
 ```
 
 The config files can be modified to adjust hyperparameters and optimization settings. 
@@ -44,7 +50,8 @@ if config file is given, dataset, loss_fn, lr_scheduler arguments are useless.
 ### Robust loss functions
 
 ```
-usage : python train.py [-c] [-d] [--distillation] [--distill_mode] [--dataset] [--percent] [--asym] [--loss_fn] [--lr_scheduler] [--percent] [--no_wandb]
+usage : python train.py [-c] [-d] [--distillation] [--distill_mode] [--dataset] [--percent] [--asym] [--loss_fn] [--lr_scheduler] 
+                        [--percent] [--no_wandb] [--reinit] [--load_name] [--mode]
 
     arguments : 
         -c, --config : config file path
@@ -56,16 +63,19 @@ usage : python train.py [-c] [-d] [--distillation] [--distill_mode] [--dataset] 
         --dataset : using dataset
         --percent : noise rate for synthetic noisy dataset
         --asym : symmetric noise if False else asymmetric noise
-        --loss_fn : loss function for training model (CE, GCE, SCE, ELR, ...)
+        --loss_fn : loss function for training model (cce, gce, sce, elr)
         --lr_scheduler : multistep scheduler or cosine annealing scheduler (multistep, cosine)
         --no_wandb : whether or not using wandb (if you do not use wandb, state --no_wandb)
+        --reinit : whether or not re-initialization network parameters
+        --load_name : checkpoint directory for proxy network
+        --mode : traning with same loss as proxy network if same, training with ce loss if ce
 ```
 
 ### Co-teaching families
 
 ```
-usage : python train.py [-c] [-d] [--distillation] [--distill_mode] [--dataset] [--percent] [--asym] [--loss_fn] [--lr_scheduler] [--percent] [--arch] [--num_gradual] 
-        [--no_wandb]
+usage : python train_coteaching.py [-c] [-d] [--distillation] [--distill_mode] [--dataset] [--percent] [--asym] [--loss_fn] [--lr_scheduler] [--percent] [--arch] 
+                                    [--num_gradual] [--no_wandb] [--reinit] [--load_name]
 
     arguments : 
         -c, --config : config file path
@@ -77,9 +87,11 @@ usage : python train.py [-c] [-d] [--distillation] [--distill_mode] [--dataset] 
         --dataset : using dataset (cifar10, cifar100)
         --percent : noise rate for synthetic noisy dataset
         --asym : symmetric noise if False else asymmetric noise
-        --loss_fn : loss function for training model (CE, GCE, SCE, ELR, ...)
-        --lr_scheduler : multistep scheduler or cosine annealing scheduler
+        --loss_fn : loss function for training model (coteach, coteach+, coteachdistill, coteach+distill)
+        --lr_scheduler : scheduler for learning rate (coteach)
         --arch : architecture for student nework
         --num_gradual : $E_{k}$ for co-teaching+ (warm-up epochs for filtering the noisy instances)
         --no_wandb : whether or not using wandb (if you do not use wandb, state --no_wandb)
+        --reinit : whether or not re-initialization network parameters
+        --load_name : checkpoint directory for proxy network
 ```

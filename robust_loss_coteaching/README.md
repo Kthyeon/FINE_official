@@ -20,7 +20,7 @@ If you want to train the network with SAME CIFAR-10 dataset, GCELoss, ResNet34(n
 
 ```
 train.py -c ./hyperparams/multistep/config_cifar10_gce_rn34.json -d 0 --percent 0.8 --distillation --distill_mode=eigen 
---load_name=multistep_sym_80_gce.pth --second_load_name=kmeans_multistep_sym_80_gce_123.pth --reinit
+--load_name=multistep_sym_80_gce.pth --reinit
 ```
 
 The config files can be modified to adjust hyperparameters and optimization settings. 

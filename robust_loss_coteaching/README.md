@@ -1,6 +1,6 @@
-# ELR and Co-teaching With CLK or SAME
-This is an non-official PyTorch implementation of ELR method proposed in [Early-Learning Regularization Prevents Memorization of Noisy Labels]().
-This also include PyTorch implementation of SCE and GCE method.
+# ELR and Co-teaching With CLK and SAME
+This is a PyTorch implementation for the robust loss functions and Co-teaching families.
+This also include the TFT framework regarding CLK and SAME.
 
 ## Usage
 ### Robust loss functions
@@ -22,7 +22,8 @@ If you want to train the network with SAME CIFAR-10 dataset, GCELoss, ResNet34(n
 train.py -c ./hyperparams/multistep/config_cifar10_gce_rn34.json -d 0 --percent 0.8 --distillation --distill_mode=eigen 
 --load_name=multistep_sym_80_gce.pth --reinit
 ```
-
+To load the checkpoint for `--load_name`, you should manually make the `checkpoint` folder and put the `xx.pth` file into the `checkpoint` folder.
+(`xx.pth` will be saved in the `saved` directory and its log is in the `logger`.)
 The config files can be modified to adjust hyperparameters and optimization settings. 
 
 ### Co-teaching families
@@ -42,7 +43,8 @@ or
 ```
 python train_coteaching.py --distillation --reinit --distill_mode eigen --arch=rn18 --asym=False --dataset=cifar100 --loss_fn=coteachdistill --lr_scheduler=coteach --num_gradual=60 --percent=0.8 
 ```
-
+To load the checkpoint for `--load_name`, you should manually make the `checkpoint` folder and put the `xx.pth` file into the `checkpoint` folder.
+(`xx.pth` will be saved in the `saved` directory and its log is in the `logger`.)
 ## arguments
 if dataset, loss_fn, lr_scheduler are all given, don't have to give config file as an argument.
 if config file is given, dataset, loss_fn, lr_scheduler arguments are useless.

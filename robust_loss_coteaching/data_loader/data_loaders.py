@@ -5,8 +5,46 @@ from base import BaseDataLoader
 from data_loader.cifar10 import get_cifar10
 from data_loader.cifar100 import get_cifar100
 from data_loader.clothing1m import get_clothing
+from data_loader.svhn import get_svhn
 from parse_config import ConfigParser
 from PIL import Image
+
+class SVHNDataLoader(BaseDataLoader):
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0, 
+                 training=True, num_workers=4, pin_memory=True, config=None, teacher_idx=None):
+        
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.num_batches = num_batches
+        self.training = training
+        
+        transform_train = transforms.Compose([
+            transforms.RandomCrop(32, padding=2),
+            transforms.ColorJitter(
+            brightness=63.0 / 255.0, saturation=[0.5, 1.5], contrast=[0.2, 1.8]),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4376821, 0.4437697, 0.47280442), 
+                                 (0.19803012, 0.20101562, 0.19703614))
+        ])
+        
+        transform_val = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4376821, 0.4437697, 0.47280442), 
+                                 (0.19803012, 0.20101562, 0.19703614))
+        ])
+        
+        self.data_dir = data_dir
+        
+        if config == None:
+            config = ConfigParser.get_instance()
+        cfg_trainer = config['trainer']
+        self.train_dataset, self.val_dataset = get_svhn(config['data_loader']['args']['data_dir'], cfg_trainer,
+                                                       train=training, transform_train=transform_train, 
+                                                       transform_val=transform_val, noise_file=None, teacher_idx=teacher_idx)
+        
+        super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers,
+                         pin_memory, val_dataset=self.val_dataset)
+        
 
 class Clothing1MDataLoader(BaseDataLoader):
     def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0, training=True, num_workers=4, pin_memory=True, config=None):

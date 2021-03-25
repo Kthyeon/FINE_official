@@ -157,6 +157,37 @@ def singular_label(v_ortho_dict, model_represents, label):
         
     return sing_lbl, sin_score_lbl
 
+def kmean_singular_label(v_ortho_dict, model_represents, label):
+    
+    model_represents = torch.from_numpy(model_represents).cuda()
+    sing_lbl = torch.zeros(model_represents.shape[0])
+    sin_score_lbl = torch.zeros(model_represents.shape[0])
+    
+    for i, data in enumerate(model_represents):
+        sin_score_lbl[i] = torch.dot(v_ortho_dict[label[i]][0], data).abs() - torch.dot(v_ortho_dict[label[i]][1], data).abs()
+        
+    kmeans = cluster.KMeans(n_clusters=2, random_state=0).fit(sin_score_lbl.reshape(-1, 1))
+    
+    if torch.mean(sin_score_lbl[kmeans.labels_==0]) < torch.mean(sin_score_lbl[kmeans.labels_==1]):
+        kmeans.labels_ = 1 - kmeans.labels_
+    
+    output = []
+    for idx, value in enumerate(kmeans.labels_):
+        if value == 0:
+            output.append(idx)
+    
+    return output
+
+def kmean_eigen_out(label_list, out_list, teacher_idx=None):
+    singular_dict, v_ortho_dict = get_singular_value_vector(label_list, out_list)
+    
+    for key in v_ortho_dict.keys():
+        v_ortho_dict[key] = v_ortho_dict[key].cuda()
+    
+    output = kmean_singular_label(v_ortho_dict, out_list, label_list)
+    
+    return output
+
 def isNoisy_ratio(data_loader):
     isNoisy_list = np.empty((0,))
     with tqdm(data_loader) as progress:

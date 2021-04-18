@@ -188,6 +188,24 @@ def kmean_eigen_out(label_list, out_list, teacher_idx=None):
     
     return output
 
+# def get_anchor(label_list, out_list, teacher_idx=None):
+    
+#     singular_dict, v_ortho_dict = get_singular_value_vector(label_list, out_list)
+    
+#     for key in v_ortho_dict.keys():
+#         v_ortho_dict[key] = v_ortho_dict[key].cuda()
+    
+#     model_represents = torch.from_numpy(out_list).cuda()
+# #     sing_lbl = torch.zeros(model_represents.shape[0])
+#     sin_score_lbl = [[] for _ in range(np.unique(label_list))]
+    
+#     for i, data in enumerate(model_represents):
+#         sin_score_lbl[label[i]].append(torch.dot(v_ortho_dict[label[i]][0], data).abs())
+    
+#     # classwise topk
+#     for index in np.unique(label_list):
+#          = sin_score_lbl[label_list==index]
+
 def isNoisy_ratio(data_loader):
     isNoisy_list = np.empty((0,))
     with tqdm(data_loader) as progress:
@@ -197,6 +215,6 @@ def isNoisy_ratio(data_loader):
 
             isNoisy_list = np.concatenate((isNoisy_list, isNoisy.cpu()))
 
-    
+    print ('#############################')
     print('purity in this dataset: {}'.format(isNoisy_list.sum() / isNoisy_list.shape))
     

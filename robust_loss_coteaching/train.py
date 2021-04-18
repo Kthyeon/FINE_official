@@ -11,7 +11,7 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer
+from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer, AnchoringTrainer
 from collections import OrderedDict
 from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio, kmean_eigen_out
 
@@ -302,19 +302,19 @@ def main(parse, config: ConfigParser):
                                      threshold = parse.threshold
                                     )
     else:
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
-                                     config=config,
-                                     data_loader=data_loader,
-                                     parse=parse,
-                                     teacher=teacher,
-                                     valid_data_loader=valid_data_loader,
-                                     test_data_loader=test_data_loader,
-                                     lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss,
-                                     mode = parse.mode,
-                                     entropy = parse.entropy,
-                                     threshold = parse.threshold
-                                    )
+        trainer = AnchoringTrainer(model, train_loss, metrics, optimizer,
+                                   config=config,
+                                   data_loader=data_loader,
+                                   parse=parse,
+                                   teacher=teacher,
+                                   valid_data_loader=valid_data_loader,
+                                   test_data_loader=test_data_loader,
+                                   lr_scheduler=lr_scheduler,
+                                   val_criterion=val_loss,
+                                   mode = parse.mode,
+                                   entropy = parse.entropy,
+                                   threshold = parse.threshold
+                                  )
 
     trainer.train()
     
@@ -359,6 +359,10 @@ if __name__ == '__main__':
         CustomArgs(['--percent', '--percent'], type=float, target=('trainer', 'percent')),
         CustomArgs(['--asym', '--asym'], type=str2bool, target=('trainer', 'asym')),
     ]
+    
+    import os
+    os.chdir(os.path.join(os.getcwd(), 'robust_loss_coteaching'))
+    
     config = ConfigParser.get_instance(args, options)
     parse = args.parse_args()
     

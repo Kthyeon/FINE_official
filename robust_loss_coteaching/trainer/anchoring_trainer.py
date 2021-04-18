@@ -1,3 +1,11 @@
+import os
+os.chdir('../')
+# print (os.getcwd())
+
+from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector
+from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out
+import data_loader.data_loaders as module_data
+
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -10,9 +18,7 @@ from sklearn.mixture import GaussianMixture
 import pdb
 import numpy as np
 
-
-
-class DefaultTrainer(BaseTrainer):
+class AnchoringTrainer(BaseTrainer):
     """
     DefaultTrainer class
 
@@ -32,6 +38,7 @@ class DefaultTrainer(BaseTrainer):
             # iteration-based training
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
+        self.train_data_loader = data_loader
         self.valid_data_loader = valid_data_loader
         
         if teacher != None:
@@ -52,6 +59,27 @@ class DefaultTrainer(BaseTrainer):
         self.entropy = entropy
         if self.entropy:
             self.entro_loss = Entropy(threshold)
+            
+    def update_dataloader(self):
+        
+        with torch.no_grad():
+            label_list, out_list = get_out_list(self.model, self.data_loader)
+            teacher_idx = kmean_eigen_out(label_list, out_list)
+            
+        data_loader = getattr(module_data, self.config['data_loader']['type'])(
+            self.config['data_loader']['args']['data_dir'],
+            batch_size=self.config['data_loader']['args']['batch_size'],
+            shuffle=self.config['data_loader']['args']['shuffle'],
+            validation_split=0.0,
+            num_batches=self.config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=self.config['data_loader']['args']['num_workers'],
+            pin_memory=self.config['data_loader']['args']['pin_memory'],
+            teacher_idx=teacher_idx)
+        
+        isNoisy_ratio(self.data_loader)
+        isNoisy_ratio(data_loader)
+        return data_loader
         
 
     def _eval_metrics(self, output, label):
@@ -76,6 +104,8 @@ class DefaultTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
+        if epoch % 10 == 0 and epoch > 20:
+            self.train_data_loader = self.update_dataloader()
         
         self.model.train()
 
@@ -83,7 +113,7 @@ class DefaultTrainer(BaseTrainer):
         total_metrics = np.zeros(len(self.metrics))
         total_metrics_gt = np.zeros(len(self.metrics))
 
-        with tqdm(self.data_loader) as progress:
+        with tqdm(self.train_data_loader) as progress:
             for batch_idx, (data, label, indexs, gt) in enumerate(progress):
                 progress.set_description_str(f'Train epoch {epoch}')
                 
@@ -135,7 +165,7 @@ class DefaultTrainer(BaseTrainer):
             'loss': total_loss / self.len_epoch,
             'metrics': (total_metrics / self.len_epoch).tolist(),
             'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
-            'learning rate': self.lr_scheduler.get_lr()
+            'learning rate': self.lr_scheduler.get_last_lr()
         }
 
 
@@ -281,7 +311,7 @@ class DefaultTrainer(BaseTrainer):
             'loss': total_loss / self.len_epoch,
             'noise detection rate' : 0.0,
             'metrics': (total_metrics / self.len_epoch).tolist(),
-            'learning rate': self.lr_scheduler.get_lr()
+            'learning rate': self.lr_scheduler.get_last_lr()
         }
 
         if self.do_validation:

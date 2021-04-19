@@ -3,8 +3,10 @@ os.chdir('../')
 # print (os.getcwd())
 
 from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector
-from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out
+from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out, get_anchor
+from trainer.svd_classifier2 import same_topk_index
 import data_loader.data_loaders as module_data
+from loss import CCELoss
 
 import numpy as np
 import torch
@@ -60,13 +62,24 @@ class AnchoringTrainer(BaseTrainer):
         if self.entropy:
             self.entro_loss = Entropy(threshold)
             
-    def update_dataloader(self):
+    def update_dataloader(self, epoch):
+        
+        data_loader = getattr(module_data, self.config['data_loader']['type'])(
+            self.config['data_loader']['args']['data_dir'],
+            batch_size=self.config['data_loader']['args']['batch_size'],
+            shuffle=False,
+            validation_split=0.0,
+            num_batches=self.config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=self.config['data_loader']['args']['num_workers'],
+            pin_memory=self.config['data_loader']['args']['pin_memory']
+        )
         
         with torch.no_grad():
-            label_list, out_list = get_out_list(self.model, self.data_loader)
-            teacher_idx = kmean_eigen_out(label_list, out_list)
+            label_list, out_list = get_out_list(self.model, data_loader)
+            teacher_idx = same_topk_index(label_list, out_list, np.clip(epoch * 0.02, 0., 0.6))
             
-        data_loader = getattr(module_data, self.config['data_loader']['type'])(
+        data_loader2 = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
             batch_size=self.config['data_loader']['args']['batch_size'],
             shuffle=self.config['data_loader']['args']['shuffle'],
@@ -77,9 +90,9 @@ class AnchoringTrainer(BaseTrainer):
             pin_memory=self.config['data_loader']['args']['pin_memory'],
             teacher_idx=teacher_idx)
         
-        isNoisy_ratio(self.data_loader)
         isNoisy_ratio(data_loader)
-        return data_loader
+        isNoisy_ratio(data_loader2)
+        return data_loader2
         
 
     def _eval_metrics(self, output, label):
@@ -104,8 +117,12 @@ class AnchoringTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 10 == 0 and epoch > 20:
-            self.train_data_loader = self.update_dataloader()
+        if epoch % 10 == 0 or epoch % 10 == 5:
+            self.train_data_loader = self.update_dataloader(epoch)
+            self.len_epoch = len(self.train_data_loader)
+            
+#         if epoch > 30:
+#             self.train_criterion = CCELoss()
         
         self.model.train()
 

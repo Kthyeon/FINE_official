@@ -178,6 +178,27 @@ def kmean_singular_label(v_ortho_dict, model_represents, label):
     
     return output
 
+def kmean_singular_label2(v_ortho_dict, model_represents, label):
+    
+    model_represents = torch.from_numpy(model_represents).cuda()
+    sing_lbl = torch.zeros(model_represents.shape[0])
+    sin_score_lbl = torch.zeros(model_represents.shape[0])
+    
+    for i, data in enumerate(model_represents):
+        sin_score_lbl[i] = torch.dot(v_ortho_dict[label[i]][0], data).abs()
+        
+    kmeans = cluster.KMeans(n_clusters=2, random_state=0).fit(sin_score_lbl.reshape(-1, 1))
+    
+    if torch.mean(sin_score_lbl[kmeans.labels_==0]) < torch.mean(sin_score_lbl[kmeans.labels_==1]):
+        kmeans.labels_ = 1 - kmeans.labels_
+    
+    output = []
+    for idx, value in enumerate(kmeans.labels_):
+        if value == 0:
+            output.append(idx)
+    
+    return output
+
 def kmean_eigen_out(label_list, out_list, teacher_idx=None):
     singular_dict, v_ortho_dict = get_singular_value_vector(label_list, out_list)
     
@@ -188,33 +209,41 @@ def kmean_eigen_out(label_list, out_list, teacher_idx=None):
     
     return output
 
-# def get_anchor(label_list, out_list, teacher_idx=None):
+def get_anchor(label_list, out_list, teacher_idx=None):
     
-#     singular_dict, v_ortho_dict = get_singular_value_vector(label_list, out_list)
+    label_list = torch.from_numpy(label_list).long().numpy()
+    singular_dict, v_ortho_dict = get_singular_value_vector(label_list, out_list)
     
-#     for key in v_ortho_dict.keys():
-#         v_ortho_dict[key] = v_ortho_dict[key].cuda()
+    for key in v_ortho_dict.keys():
+        v_ortho_dict[key] = v_ortho_dict[key].cuda()
     
-#     model_represents = torch.from_numpy(out_list).cuda()
-# #     sing_lbl = torch.zeros(model_represents.shape[0])
-#     sin_score_lbl = [[] for _ in range(np.unique(label_list))]
+    model_represents = torch.from_numpy(out_list).cuda()
+    sin_score_lbl = [[] for _ in range(len(np.unique(label_list)))]
     
-#     for i, data in enumerate(model_represents):
-#         sin_score_lbl[label[i]].append(torch.dot(v_ortho_dict[label[i]][0], data).abs())
+    for i, data in enumerate(model_represents):
+        sin_score_lbl[label_list[i]].append(torch.dot(v_ortho_dict[label_list[i]][0], data).abs())
     
-#     # classwise topk
-#     for index in np.unique(label_list):
-#          = sin_score_lbl[label_list==index]
+    # classwise topk
+    v_ortho_dict_ = {}
+    for index in np.unique(label_list):
+        cls_score_lbl = sin_score_lbl[index]
+        topk_v, topk_i = torch.topk(torch.tensor(cls_score_lbl), k=50)
+        
+        u, s, v = np.linalg.svd(model_represents[label_list==index][topk_i].cpu().numpy())
+        v_ortho_dict_[index] = torch.from_numpy(v[0]).unsqueeze(0).cuda()
+        
+    output = kmean_singular_label2(v_ortho_dict_, model_represents.cpu().numpy(), label_list)
+    return output
+        
 
 def isNoisy_ratio(data_loader):
     isNoisy_list = np.empty((0,))
     with tqdm(data_loader) as progress:
-        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
-            data = data.cuda()
+        for _, (_, label, index, label_gt) in enumerate(progress):
             isNoisy = label == label_gt
-
             isNoisy_list = np.concatenate((isNoisy_list, isNoisy.cpu()))
 
     print ('#############################')
+    print (isNoisy_list.sum(), isNoisy_list.shape)
     print('purity in this dataset: {}'.format(isNoisy_list.sum() / isNoisy_list.shape))
     

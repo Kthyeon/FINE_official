@@ -83,8 +83,6 @@ def main(parse, config: ConfigParser):
     torch.backends.cudnn.deterministic = True
     np.random.seed(config['seed'])
     
-    
-    
     data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],
@@ -232,7 +230,8 @@ def main(parse, config: ConfigParser):
     lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
     if config['train_loss']['type'] == 'ELRLoss':
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+        trainer = AnchoringTrainer(model, train_loss, metrics, optimizer,
+#         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,

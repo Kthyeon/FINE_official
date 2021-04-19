@@ -36,10 +36,15 @@ def get_cifar10(root, cfg_trainer, train=True,
         else:
             train_dataset.symmetric_noise()
             val_dataset.symmetric_noise()
-        if teacher_idx:
-            print(len(teacher_idx))    
+            
+        print ('##############')
+        print (train_dataset.train_labels[:10])
+        print (train_dataset.train_labels_gt[:10])
+              
+        if teacher_idx is not None:
+            print(len(teacher_idx))
             train_dataset.truncate(teacher_idx)
-        
+            
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
     else:
         fix_seed()
@@ -86,8 +91,6 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
         self.prediction = np.zeros((len(self.train_data), self.num_classes, self.num_classes), dtype=np.float32)
         self.noise_indx = []
                 
-
-        
     def symmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
         fix_seed()
@@ -126,10 +129,8 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
     def truncate(self, teacher_idx):
         self.train_data = self.train_data[teacher_idx]
         self.train_labels = self.train_labels[teacher_idx]
-        self.train_labels_gt = self.train_labels_gt[teacher_idx]           
-    
-    
-
+        self.train_labels_gt = self.train_labels_gt[teacher_idx]       
+        
     def __getitem__(self, index):
         """
         Args:
@@ -152,12 +153,10 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        return img,target, index, target_gt
+        return img, target, index, target_gt
 
     def __len__(self):
         return len(self.train_data)
-
-
 
 class CIFAR10_val(torchvision.datasets.CIFAR10):
 

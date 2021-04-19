@@ -209,6 +209,18 @@ def kmean_eigen_out(label_list, out_list, teacher_idx=None):
     
     return output
 
+def topk_eigen_kmean(label_list, out_list, teacher_idx=None):
+    singular_dict, v_ortho_dict = get_singular_value_vector(label_list, out_list)
+    
+    for key in v_ortho_dict.keys():
+        v_ortho_dict[key] = v_ortho_dict[key].cuda()
+    
+    output = kmean_singular_label2(v_ortho_dict, out_list, label_list)
+    
+    return output
+
+
+
 def get_anchor(label_list, out_list, teacher_idx=None):
     
     label_list = torch.from_numpy(label_list).long().numpy()

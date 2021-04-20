@@ -56,6 +56,8 @@ class AnchoringTrainer(BaseTrainer):
         self.train_loss_list: List[float] = []
         self.val_loss_list: List[float] = []
         self.test_loss_list: List[float] = []
+        self.purity = (data_loader.train_dataset.train_labels == \
+                       data_loader.train_dataset.train_labels_gt).sum() / len(data_loader.train_dataset)
         #Visdom visualization
         
         self.entropy = entropy
@@ -77,7 +79,7 @@ class AnchoringTrainer(BaseTrainer):
         
         with torch.no_grad():
             label_list, out_list = get_out_list(self.model, data_loader)
-            teacher_idx = same_topk_index(label_list, out_list, np.clip(epoch * 0.02, 0., 0.6))
+            teacher_idx = same_topk_index(label_list, out_list, np.clip((epoch-1) * 0.01, 0., 0.72))
             
         data_loader2 = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
@@ -117,9 +119,11 @@ class AnchoringTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 10 == 0 or epoch % 10 == 5:
+        if epoch % 10 == 1 and epoch > 10:
             self.train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.train_data_loader)
+            self.purity = (self.train_data_loader.train_dataset.train_labels == \
+                           self.train_data_loader.train_dataset.train_labels_gt).sum() / len(self.train_data_loader.train_dataset)
             
 #         if epoch > 30:
 #             self.train_criterion = CCELoss()
@@ -182,7 +186,8 @@ class AnchoringTrainer(BaseTrainer):
             'loss': total_loss / self.len_epoch,
             'metrics': (total_metrics / self.len_epoch).tolist(),
             'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
-            'learning rate': self.lr_scheduler.get_last_lr()
+            'learning rate': self.lr_scheduler.get_last_lr(),
+            'purity': self.purity
         }
 
 

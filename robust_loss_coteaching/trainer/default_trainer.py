@@ -47,7 +47,9 @@ class DefaultTrainer(BaseTrainer):
         self.train_loss_list: List[float] = []
         self.val_loss_list: List[float] = []
         self.test_loss_list: List[float] = []
-        #Visdom visualization
+        self.purity = (data_loader.train_dataset.train_labels == \
+                   data_loader.train_dataset.train_labels_gt).sum() / len(data_loader.train_dataset)
+    #Visdom visualization
         
         self.entropy = entropy
         if self.entropy:
@@ -135,7 +137,9 @@ class DefaultTrainer(BaseTrainer):
             'loss': total_loss / self.len_epoch,
             'metrics': (total_metrics / self.len_epoch).tolist(),
             'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
-            'learning rate': self.lr_scheduler.get_lr()
+            'learning rate': self.lr_scheduler.get_lr(),
+            'purity:': '{} = {}/{}'.format(self.purity, (self.data_loader.train_dataset.train_labels == \
+                   self.data_loader.train_dataset.train_labels_gt).sum(), len(self.data_loader.train_dataset))
         }
 
 

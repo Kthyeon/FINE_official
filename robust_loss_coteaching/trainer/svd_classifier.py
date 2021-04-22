@@ -258,4 +258,64 @@ def isNoisy_ratio(data_loader):
     print ('#############################')
     print (isNoisy_list.sum(), isNoisy_list.shape)
     print('purity in this dataset: {}'.format(isNoisy_list.sum() / isNoisy_list.shape))
+
     
+def extract_teacherIdx(teacher, data_loader, parse):
+    teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
+    teacher = teacher.cuda()
+    if not parse.reinit:
+        model.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
+    for params in teacher.parameters():
+        params.requires_grad = False
+    if parse.distill_mode == 'eigen':
+        tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+        teacher_idx = iterative_eigen(1,tea_label_list,tea_out_list)
+    elif parse.distill_mode == 'fulleigen':
+        tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+        teacher_idx = iterative_eigen(100,tea_label_list,tea_out_list)
+    elif parse.distill_mode == 'kmean_eigen':
+        tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+        teacher_idx = kmean_eigen_out(tea_label_list, tea_out_list)
+    elif parse.distill_mode == 'topk_eigen_kmean':
+        tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+        teacher_idx = topk_eigen_kmean(tea_label_list, tea_out_list)
+    else:
+        teacher_idx = get_loss_list(teacher, data_loader)
+    print('||||||original||||||')
+    isNoisy_ratio(data_loader)
+    if parse.second_load_name !=None:
+        teacher.load_state_dict(torch.load('./checkpoint/' + parse.second_load_name)['state_dict'])
+        teacher = teacher.cuda()
+        if not parse.reinit:
+            model.load_state_dict(torch.load('./checkpoint/' + parse.second_load_name)['state_dict'])
+        for params in teacher.parameters():
+            params.requires_grad = False
+        if parse.distill_mode == 'eigen':
+            tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+            teacher_idx2 = iterative_eigen(1,tea_label_list,tea_out_list,teacher_idx)
+        elif parse.distill_mode == 'fulleigen':
+            tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+            teacher_idx2 = iterative_eigen(100,tea_label_list,tea_out_list)
+        else:
+            teacher_idx2 = get_loss_list(teacher, data_loader)
+        teacher_idx = list(set(teacher_idx) & set(teacher_idx2))
+        print('second_distillation')
+        if parse.third_load_name !=None:
+            teacher.load_state_dict(torch.load('./checkpoint/' + parse.third_load_name)['state_dict'])
+            teacher = teacher.cuda()
+            if not parse.reinit:
+                model.load_state_dict(torch.load('./checkpoint/' + parse.third_load_name)['state_dict'])
+            for params in teacher.parameters():
+                params.requires_grad = False
+            if parse.distill_mode == 'eigen':
+                tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+                teacher_idx3 = iterative_eigen(1,tea_label_list,tea_out_list, teacher_idx)
+            elif parse.distill_mode == 'fulleigen':
+                tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
+                teacher_idx3 = iterative_eigen(100,tea_label_list,tea_out_list)
+            else:
+                teacher_idx3 = get_loss_list(teacher, data_loader)
+            teacher_idx = list(set(teacher_idx) & set(teacher_idx3))
+            print('third_ distillation')
+
+    return teacher_idx

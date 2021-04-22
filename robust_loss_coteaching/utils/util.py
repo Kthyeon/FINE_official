@@ -5,6 +5,9 @@ from itertools import repeat
 from collections import OrderedDict
 import numpy as np
 
+import random
+import torch
+
 def ensure_dir(dirname):
     dirname = Path(dirname)
     if not dirname.is_dir():
@@ -72,4 +75,35 @@ def cosine_rampup(current, rampup_length):
     current = np.clip(current, 0.0, rampup_length)
     return float(-.5 * (np.cos(np.pi * current / rampup_length) - 1))
 
+def fix_seed(seed):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(seed)
+
+def wandbRunlist(config, parse):
+    dataset_name = config['name'].split('_')[0]
+    lr_scheduler_name = config['lr_scheduler']['type']
+    loss_fn_name = config['train_loss']['type']
+    
+    wandb_run_name_list = []
+    
+    if parse.distillation:
+        if parse.distill_mode == 'eigen':
+            wandb_run_name_list.append('distil')
+        elif parse.distill_mode == 'fulleigen':
+            wandb_run_name_list.append('fulldistill')
+        else:
+            wandb_run_name_list.append('kmeans')
+    else:
+        wandb_run_name_list.append('baseline')
+    wandb_run_name_list.append(dataset_name)
+    wandb_run_name_list.append(lr_scheduler_name)
+    wandb_run_name_list.append(loss_fn_name)
+    wandb_run_name_list.append(str(config['trainer']['asym']))
+    wandb_run_name_list.append(str(config['trainer']['percent']))
+    wandb_run_name = '_'.join(wandb_run_name_list)
+    
+    return wandb_run_name_list
 

@@ -11,7 +11,7 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer, AnchoringTrainer
+from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer, DynamicTrainer
 from collections import OrderedDict
 from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio, kmean_eigen_out, topk_eigen_kmean
 
@@ -233,7 +233,7 @@ def main(parse, config: ConfigParser):
     lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
     if config['train_loss']['type'] == 'ELRLoss':
-#         trainer = AnchoringTrainer(model, train_loss, metrics, optimizer,
+#         trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
@@ -304,7 +304,8 @@ def main(parse, config: ConfigParser):
                                      threshold = parse.threshold
                                     )
     else:
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+        trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
+#         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                    config=config,
                                    data_loader=data_loader,
                                    parse=parse,

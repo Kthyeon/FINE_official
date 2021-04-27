@@ -39,7 +39,8 @@ def get_cifar100(root, cfg_trainer, train=True,
             if len(val_dataset) > 0:
                 val_dataset.symmetric_noise()
         
-        if teacher_idx:
+        if teacher_idx is not None:
+            print(len(teacher_idx))
             train_dataset.truncate(teacher_idx)
         
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000

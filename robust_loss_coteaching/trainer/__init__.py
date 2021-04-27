@@ -3,4 +3,4 @@ from .truncated_trainer import *
 from .npcl_trainer import *
 from .gt_trainer import *
 from .coteaching_trainer import *
-from .anchoring_trainer import *
+from .dynamic_trainer import *

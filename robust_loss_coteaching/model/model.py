@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from base import BaseModel
 from .ResNet_Zoo import ResNet, BasicBlock, Bottleneck
 from .PreActResNet_Zoo import PreActResNet, PreActBlock
+from .resnet_cifar import resnet32
 
 def preactresnet18(num_classes=10):
     return PreActResNet(PreActBlock, [2,2,2,2], num_classes=num_classes)

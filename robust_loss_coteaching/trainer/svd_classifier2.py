@@ -31,16 +31,40 @@ def same_topk(label_list, scores, p):
         
     return torch.tensor(output).long()
 
-def same_topk_index(label_list, out_list, p):
+def same_kmeans(label_list, scores, p=None):
     
-    singular_dict, v_ortho_dict = get_singular_value_vector(label_list, out_list)
+    output = []
+    for idx in range(len(np.unique(label_list))):
+        indexs = torch.tensor(range(len(scores)))[label_list==idx]
+        kmeans = cluster.KMeans(n_clusters=2, random_state=0).fit(scores[indexs].reshape(-1, 1))
+        
+        if torch.mean(scores[indexs][kmeans.labels_==0]) < torch.mean(scores[indexs][kmeans.labels_==1]):
+            kmeans.labels_ = 1 - kmeans.labels_
+        output += indexs[kmeans.labels_ == 0].numpy().tolist()
+        
+    return torch.tensor(output).long()
+        
+
+def same_topk_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list, p=None):
+    
+    singular_dict, v_ortho_dict = get_singular_value_vector(prev_label_list, prev_out_list)
     for key in v_ortho_dict.keys():
         v_ortho_dict[key] = v_ortho_dict[key].cuda()
         
-    scores = same_score(v_ortho_dict, out_list, label_list)
-    output = same_topk(label_list, scores, p)
+    scores = same_score(v_ortho_dict, orig_out_list, orig_label_list)
+    output = same_topk(orig_label_list, scores, p)
     return output.numpy()
 
+def same_kmeans_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list, p=None):
+    
+    singular_dict, v_ortho_dict = get_singular_value_vector(prev_label_list, prev_out_list)
+    for key in v_ortho_dict.keys():
+        v_ortho_dict[key] = v_ortho_dict[key].cuda()
+        
+    scores = same_score(v_ortho_dict, orig_out_list, orig_label_list)
+    output = same_kmeans(orig_label_list, scores, p)
+    return output.numpy()
+    
 def compute_noisy_ratio(data_loader):
     isNoisy_list = np.empty((0,))
     

@@ -7,10 +7,8 @@ import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-# from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer, DynamicTrainer
-# from collections import OrderedDict
-# from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio, kmean_eigen_out, topk_eigen_kmean
-from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer, AnchoringTrainer
+from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer, DynamicTrainer
+from collections import OrderedDict
 from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio, kmean_eigen_out, topk_eigen_kmean, extract_teacherIdx
 from utils.util import *
 from utils.args import *

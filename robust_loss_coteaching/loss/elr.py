@@ -3,9 +3,7 @@ import torch
 from parse_config import ConfigParser
 import torch.nn as nn
 
-def CrossEntropyLoss(output, target):
-    return F.cross_entropy(output, target)
-
+__all__=['ELRLoss']
 
 class ELRLoss(nn.Module):
     def __init__(self, num_examp, num_classes=10, beta=0.3):

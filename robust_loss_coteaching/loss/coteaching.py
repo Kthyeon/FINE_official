@@ -5,6 +5,9 @@ from torch.autograd import Variable
 import numpy as np
 import math
 
+
+__all__=['CoteachingLoss', 'CoteachingPlusLoss', 'CoteachingDistillLoss']
+
 class EntropyLoss(nn.Module):
     def __init__(self):
         super(EntropyLoss, self).__init__()

@@ -2,6 +2,8 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
+__all__=['Entropy']
+
 class Entropy(nn.Module):
     def __init__(self, threshold = 0.1):
         super().__init__()

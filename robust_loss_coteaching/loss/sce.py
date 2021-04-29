@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import math
 import torch.nn as nn
 
+__all__=['SCELoss', 'SCE_GTLoss']
+
 class SCELoss(torch.nn.Module):
     def __init__(self, alpha, beta, num_classes=10):
         super(SCELoss, self).__init__()

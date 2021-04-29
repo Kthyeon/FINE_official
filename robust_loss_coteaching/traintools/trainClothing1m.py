@@ -13,7 +13,7 @@ import model.ImageNet_ResNet_Zoo as module_arch
 # import torchvision.models as module_arch
 # import model.model as module_arch
 from utils.parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer, NPCLTrainer, GroundTruthTrainer
+from trainer import DefaultTrainer, TruncatedTrainer, GroundTruthTrainer
 from collections import OrderedDict
 from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio
 

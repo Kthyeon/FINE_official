@@ -7,31 +7,91 @@ from collections import OrderedDict
 def parse_args():
 
     args = argparse.ArgumentParser(description='PyTorch Template')
-    args.add_argument('-c', '--config', default=None, type=str,
-                      help='config file path (default: None)')
-    args.add_argument('-r', '--resume', default=None, type=str,
-                      help='path to latest checkpoint (default: None)')
-    args.add_argument('-d', '--device', default='1', type=str,
-                      help='indices of GPUs to enable (default: all)')
-    args.add_argument('--distillation', help='whether to distill knowledge', action='store_true')
-    args.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen','fulleigen', 'kmean_eigen', 'topk_eigen_kmean'], help='mode for distillation kmeans or eigen.')
-    args.add_argument('--mode', type=str, default='ce', choices=['ce', 'same'], help = 'distill_type. same means the same loss of teacher recipe')
-    args.add_argument('--entropy', help='whether to use entropy loss', action='store_true')
-    args.add_argument('--threshold', type=float, default=0.1, help='threshold for the use of entropy loss.')
-    args.add_argument('--wd', type=float, default=None, help = 'weight_decay')
-    args.add_argument('--load_name', type=str, default=None, help = 'teacher checkpoint for distillation')
-    args.add_argument('--second_load_name', type=str, default=None, help = '2nd teacher checkpoint for distillation')
-    args.add_argument('--third_load_name', type=str, default=None, help = '3rd teacher checkpoint for distillation')
-    args.add_argument('--reinit', help='if false, reuse teacher checkpoint', action='store_true')
     
-    args.add_argument('--no_wandb', action='store_false', help='if false, not to use wandb')
+    args.add_argument('-c', '--config', 
+                      default=None, 
+                      type=str,
+                      help='config file path (default: None)')
+    args.add_argument('-r', 
+                      '--resume', 
+                      default=None, 
+                      type=str,
+                      help='path to latest checkpoint (default: None)')
+    args.add_argument('-d', 
+                      '--device', 
+                      default='1', 
+                      type=str,
+                      help='indices of GPUs to enable (default: all)')
+    args.add_argument('--distillation', 
+                      help='whether to distill knowledge', 
+                      action='store_true')
+    args.add_argument('--distill_mode', 
+                      type=str, 
+                      default='eigen', 
+                      choices=['kmeans','eigen','fulleigen', 'kmean_eigen', 'topk_eigen_kmean'], 
+                      help='mode for distillation kmeans or eigen.')
+    args.add_argument('--mode', 
+                      type=str, 
+                      default='ce', 
+                      choices=['ce', 'same'], 
+                      help = 'distill_type. same means the same loss of teacher recipe')
+    args.add_argument('--entropy', 
+                      help='whether to use entropy loss', 
+                      action='store_true')
+    args.add_argument('--threshold', 
+                      type=float, 
+                      default=0.1, 
+                      help='threshold for the use of entropy loss.')
+    args.add_argument('--wd', 
+                      type=float, 
+                      default=None, 
+                      help = 'weight_decay')
+    args.add_argument('--load_name', 
+                      type=str, 
+                      default=None, 
+                      help = 'teacher checkpoint for distillation')
+    args.add_argument('--second_load_name', 
+                      type=str, 
+                      default=None, 
+                      help = '2nd teacher checkpoint for distillation')
+    args.add_argument('--third_load_name', 
+                      type=str, 
+                      default=None, 
+                      help = '3rd teacher checkpoint for distillation')
+    args.add_argument('--reinit', 
+                      help='if false, reuse teacher checkpoint', 
+                      action='store_true')
+    
+    args.add_argument('--no_wandb', 
+                      action='store_false', 
+                      help='if false, not to use wandb')
+    
+    
     # dataset, lr_scheduler, loss_fn are only used to decide config file; they have no effect when config file is given
-    args.add_argument('--dataset', type=str, default=None, help='dataset name') 
-    args.add_argument('--lr_scheduler', type=str, default=None, help='type of lr_scheduler name')
-    args.add_argument('--loss_fn', type=str, default=None, help='loss_fn type name')
-    args.add_argument('--arch', type=str, default=None, help='type of model name')
-    args.add_argument('--dataseed', type=int, default=123, help='seed for save name')
-    args.add_argument('--traintools', type=str, default='robustloss', choices=['robustloss', 'robustlossgt', 'coteaching', 'trainingclothing1m'])
+    args.add_argument('--dataset', 
+                      type=str, 
+                      default=None, 
+                      help='dataset name') 
+    args.add_argument('--lr_scheduler', 
+                      type=str, 
+                      default=None, 
+                      help='type of lr_scheduler name')
+    args.add_argument('--loss_fn', 
+                      type=str, 
+                      default=None, 
+                      help='loss_fn type name')
+    args.add_argument('--arch', 
+                      type=str, 
+                      default=None, 
+                      help='type of model name')
+    args.add_argument('--dataseed', 
+                      type=int, 
+                      default=123, 
+                      help='seed for save name')
+    args.add_argument('--traintools', 
+                      type=str, 
+                      default='robustloss', 
+                      choices=['robustloss', 'robustlossgt', 'coteaching', 'trainingclothing1m'])
 
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')

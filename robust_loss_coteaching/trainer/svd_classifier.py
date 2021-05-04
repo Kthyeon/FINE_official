@@ -4,25 +4,25 @@ from tqdm import tqdm
 from sklearn import cluster
 
 
-# def same_score(v_ortho_dict, model_represents, label):
-#     model_represents = torch.from_numpy(model_represents).cuda()
-#     scores = torch.zeros(model_represents.shape[0])
+def same_score(v_ortho_dict, features, labels):
+    features = torch.from_numpy(features).cuda()
+    scores = torch.zeros(features.shape[0])
     
-#     for i, data in enumerate(model_represents):
-#         scores[i] = torch.dot(v_ortho_dict[label[i]][0], data/torch.norm(data)).abs()
-#     return scores
+    for indx, feat in enumerate(features):
+        scores[indx] = torch.dot(v_ortho_dict[labels[indx]][0], feat).abs()
+    return scores
 
-# def same_topk(label_list, scores, p):
+def same_topk(label_list, scores, p):
     
-#     output = []
-#     for idx in range(len(np.unique(label_list))):
-#         num_inst = int(p * np.sum(label_list==idx))
-#         indexs = torch.tensor(range(50000))[label_list==idx]
-#         tmp_sort, tmp_idx = torch.sort(scores[label_list==idx], descending=False)
-#         # 못 들어간 애가 필요한거니까 이렇게!
-#         output += indexs[tmp_idx[num_inst:]].numpy().tolist()
+    output = []
+    for idx in range(len(np.unique(label_list))):
+        num_inst = int(p * np.sum(label_list==idx))
+        indexs = torch.tensor(range(len(label_list)))[label_list==idx]
+        tmp_sort, tmp_idx = torch.sort(scores[label_list==idx], descending=False)
+        # 못 들어간 애가 필요한거니까 이렇게!
+        output += indexs[tmp_idx[num_inst:]].numpy().tolist()
         
-#     return torch.tensor(output).long()
+    return torch.tensor(output).long()
 
 def same_kmeans(label_list, scores, p=None):
     

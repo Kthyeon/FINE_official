@@ -6,7 +6,6 @@ from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_v
 from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out, get_anchor
 from trainer.svd_classifier import same_topk_index, same_kmeans_index
 import data_loader.data_loaders as module_data
-from loss import CCELoss
 
 import numpy as np
 import torch

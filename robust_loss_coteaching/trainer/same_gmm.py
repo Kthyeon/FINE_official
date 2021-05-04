@@ -16,8 +16,8 @@ def same_score(v_ortho_dict, features, labels):
     scores = torch.zeros(features.shape[0])
     
     for indx, feat in enumerate(features):
-        scores[i] = torch.doat(v_ortho_dict[label[i]][0], feat).abs()
-    return scroes
+        scores[i] = torch.dot(v_ortho_dict[labels[i]][0], feat).abs()
+    return scores
 
 def same_mixture_model(label_list, scores, p):
     

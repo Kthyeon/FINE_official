@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .ResNet_Zoo import _resnet, BasicBlock, Bottleneck
 from .PreActResNet_Zoo import PreActResNet, PreActBlock
+from .InceptionResNetV2 import *
 from torchvision.models.utils import load_state_dict_from_url
 
 def preactresnet18(num_classes=10):

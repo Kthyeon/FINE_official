@@ -9,8 +9,16 @@ import torch
 import torch.nn.functional as F
 import random
 
+def fix_seed(seed=777):
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(seed)
+
 def get_clothing1m(root, cfg_trainer, num_samples=0, train=True,
-                transform_train=None, transform_val=None):
+                transform_train=None, transform_val=None, teacher_idx=None):
 
     if train:
         train_dataset = Clothing1M_Dataset(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train)
@@ -21,6 +29,10 @@ def get_clothing1m(root, cfg_trainer, num_samples=0, train=True,
         train_dataset = []
         val_dataset = Clothing1M_Dataset(root, cfg_trainer, test= (not train), transform=transform_val)
         print(f"Test: {len(val_dataset)}")
+        
+    if teacher_idx is not None and train is True:
+        print (len(teacher_idx))
+        train_dataset.truncate(teacher_idx)
 
     return train_dataset, val_dataset
 
@@ -67,7 +79,11 @@ class Clothing1M_Dataset(torch.utils.data.Dataset):
                 if class_num[label]<(num_samples/14) and len(self.train_imgs)<num_samples:
                     self.train_imgs.append((id_raw,impath))
                     class_num[label]+=1
-            random.shuffle(self.train_imgs)  
+            random.shuffle(self.train_imgs)
+            self.train_imgs = np.array(self.train_imgs)
+#             print ('#####################')
+#             print (self.train_labels[self.train_imgs[0][1]])
+#             print (self.train_imgs)
 
         elif test:
             self.test_imgs = []
@@ -83,8 +99,6 @@ class Clothing1M_Dataset(torch.utils.data.Dataset):
                 for l in lines:
                     img_path = '%s/'%self.root+l[7:]
                     self.val_imgs.append(img_path)
-
-        
 
     def __getitem__(self, index):
         if self.train:
@@ -106,8 +120,6 @@ class Clothing1M_Dataset(torch.utils.data.Dataset):
         else:
             return img0, target, id_raw, target
 
-
-
     def __len__(self):
         if self.test:
             return len(self.test_imgs)
@@ -115,7 +127,6 @@ class Clothing1M_Dataset(torch.utils.data.Dataset):
             return len(self.val_imgs)
         else:
             return len(self.train_imgs) 
-
 
     def flist_reader(self, flist):
         imlist = []
@@ -126,3 +137,6 @@ class Clothing1M_Dataset(torch.utils.data.Dataset):
                 imlabel = float(row[1].replace('\n',''))
                 imlist.append((impath, int(imlabel)))
         return imlist
+    
+    def truncate(self, teacher_idx):
+        self.train_imgs = self.train_imgs[teacher_idx]

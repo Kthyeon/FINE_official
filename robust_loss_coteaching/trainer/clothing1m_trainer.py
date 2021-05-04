@@ -10,6 +10,11 @@ from sklearn.mixture import GaussianMixture
 import pdb
 import numpy as np
 
+from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector
+from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out, get_anchor
+from trainer.svd_classifier import same_topk_index, same_kmeans_index
+import data_loader.data_loaders as module_data
+
 class Clothing1MTrainer(BaseTrainer):
     """
     DefaultTrainer class
@@ -45,6 +50,7 @@ class Clothing1MTrainer(BaseTrainer):
         self.train_loss_list: List[float] = []
         self.val_loss_list: List[float] = []
         self.test_loss_list: List[float] = []
+        self.teacher_idx = None
             
         # Visdom visualization
         
@@ -52,7 +58,6 @@ class Clothing1MTrainer(BaseTrainer):
         if self.entropy:
             self.entro_loss = Entropy(threshold)
         
-
     def _eval_metrics(self, output, label):
         acc_metrics = np.zeros(len(self.metrics))
         for i, metric in enumerate(self.metrics):
@@ -60,6 +65,52 @@ class Clothing1MTrainer(BaseTrainer):
             self.writer.add_scalar('{}'.format(metric.__name__), acc_metrics[i])
         return acc_metrics
 
+    def update_dataloader(self, epoch):
+        
+        prev_data_loader = getattr(module_data, self.config['data_loader']['type'])(
+            self.config['data_loader']['args']['data_dir'],
+            batch_size=self.config['data_loader']['args']['batch_size'],
+            shuffle=False,
+            validation_split=0.0,
+            num_batches=self.config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=self.config['data_loader']['args']['num_workers'],
+            pin_memory=self.config['data_loader']['args']['pin_memory'],
+            teacher_idx=self.teacher_idx
+        )
+        
+        orig_data_loader = getattr(module_data, self.config['data_loader']['type'])(
+            self.config['data_loader']['args']['data_dir'],
+            batch_size=self.config['data_loader']['args']['batch_size'],
+            shuffle=False,
+            validation_split=0.0,
+            num_batches=self.config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=self.config['data_loader']['args']['num_workers'],
+            pin_memory=self.config['data_loader']['args']['pin_memory']
+        )
+        
+        with torch.no_grad():
+            prev_label_list, prev_out_list = get_out_list(self.model, prev_data_loader)
+            orig_label_list, orig_out_list = get_out_list(self.model, orig_data_loader)
+            self.teacher_idx = same_topk_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list, 0.3)
+            
+        curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(
+            self.config['data_loader']['args']['data_dir'],
+            batch_size=self.config['data_loader']['args']['batch_size'],
+            shuffle=self.config['data_loader']['args']['shuffle'],
+            validation_split=0.0,
+            num_batches=self.config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=self.config['data_loader']['args']['num_workers'],
+            pin_memory=self.config['data_loader']['args']['pin_memory'],
+            teacher_idx=self.teacher_idx)
+        
+        isNoisy_ratio(orig_data_loader)
+        isNoisy_ratio(curr_data_loader)
+        return curr_data_loader
+    
+    
     def _train_epoch(self, epoch):
         """
 
@@ -77,7 +128,11 @@ class Clothing1MTrainer(BaseTrainer):
         """
         
         self.model.train()
-
+        
+        if epoch > 1:
+            self.train_data_loader = self.update_dataloader(epoch)
+            self.len_epoch = len(self.train_data_loader)
+        
         total_loss = 0
         total_metrics = np.zeros(len(self.metrics))
         total_metrics_gt = np.zeros(len(self.metrics))
@@ -103,7 +158,7 @@ class Clothing1MTrainer(BaseTrainer):
                         loss = self.train_criterion(output, label, indexs, mode=self.mode)
                     else:
                         sing_lbl = None
-                        loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
+                        loss = self.train_criterion(output, label, indexs)
 #                 pdb.set_trace()
                 self.optimizer.zero_grad()
                 if self.entropy:
@@ -134,9 +189,7 @@ class Clothing1MTrainer(BaseTrainer):
             'loss': total_loss / self.len_epoch,
             'metrics': (total_metrics / self.len_epoch).tolist(),
             'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
-            'learning rate': self.lr_scheduler.get_lr(),
-            'purity:': '{} = {}/{}'.format(self.purity, (self.data_loader.train_dataset.train_labels == \
-                   self.data_loader.train_dataset.train_labels_gt).sum(), len(self.data_loader.train_dataset))
+            'learning rate': self.lr_scheduler.get_lr()
         }
 
 

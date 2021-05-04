@@ -8,7 +8,7 @@ def main(parse, config: ConfigParser):
         robustlosstrain(parse, config)
     elif parse.traintools == 'robustlossgt':
         gtrobustlosstrain(parse, config)
-    elif parse.traintools == 'trainclothing1m':
+    elif parse.traintools == 'trainingclothing1m':
         trainClothing1m(parse, config)
     elif parse.traintools == 'coteaching':
         coteachingtrain(parse, config)

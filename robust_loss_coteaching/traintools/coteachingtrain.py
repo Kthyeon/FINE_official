@@ -13,7 +13,8 @@ import model.model as module_arch
 from utils.parse_config import ConfigParser
 from trainer import CoteachingTrainer
 from collections import OrderedDict
-from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, get_loss_list_2d, isNoisy_ratio
+from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio
+# from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, get_loss_list_2d, isNoisy_ratio
 
 import random
 import numpy as np

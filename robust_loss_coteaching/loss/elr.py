@@ -1,9 +1,9 @@
 import torch.nn.functional as F
 import torch
-from parse_config import ConfigParser
+from utils.parse_config import ConfigParser
 import torch.nn as nn
 
-__all__=['ELRLoss']
+__all__ = ['ELRLoss']
 
 class ELRLoss(nn.Module):
     def __init__(self, num_examp, num_classes=10, beta=0.3):

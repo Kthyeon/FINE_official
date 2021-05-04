@@ -9,7 +9,7 @@ import mlflow.pytorch
 import data_loader.data_loaders as module_data
 import loss as module_loss
 import model.metric as module_metric
-import model.ImageNet_ResNet_Zoo as module_arch
+import model.model as module_arch
 # import torchvision.models as module_arch
 # import model.model as module_arch
 from utils.parse_config import ConfigParser

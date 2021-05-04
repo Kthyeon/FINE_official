@@ -1,12 +1,10 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from .ResNet_Zoo import _resnet
+from .ResNet_Zoo import _resnet, BasicBlock, Bottleneck
 from .PreActResNet_Zoo import PreActResNet, PreActBlock
 
 def preactresnet18(num_classes=10):
     return PreActResNet(PreActBlock, [2,2,2,2], num_classes=num_classes)
-
-
 
 def resnet18(pretrained=False, progress=True, **kwargs):
     r"""ResNet-18 model from

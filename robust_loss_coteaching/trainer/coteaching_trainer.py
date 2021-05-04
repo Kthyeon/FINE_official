@@ -5,7 +5,7 @@ from tqdm import tqdm
 from typing import List
 from torchvision.utils import make_grid
 from base import BaseTrainer
-from utils import inf_loop
+from utils.util import inf_loop
 import sys
 from sklearn.mixture import GaussianMixture
 import pdb

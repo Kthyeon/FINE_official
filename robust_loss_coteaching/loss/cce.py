@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import math
 import torch.nn as nn
 
-__all__['CCELoss', 'CCE_GTLoss']
+__all__ = ['CCELoss', 'CCE_GTLoss']
 
 class CCELoss(nn.Module):
     def __init__(self):

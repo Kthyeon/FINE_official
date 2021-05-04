@@ -1,7 +1,7 @@
 import argparse
 import collections
 import os
-from parse_config import ConfigParser
+from .parse_config import ConfigParser
 from collections import OrderedDict
 
 def parse_args():

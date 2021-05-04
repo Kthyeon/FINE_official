@@ -6,7 +6,7 @@ from data_loader.cifar10 import get_cifar10
 from data_loader.cifar100 import get_cifar100
 from data_loader.clothing1m import get_clothing
 from data_loader.svhn import get_svhn
-from parse_config import ConfigParser
+from utils.parse_config import ConfigParser
 from PIL import Image
 
 class SVHNDataLoader(BaseDataLoader):

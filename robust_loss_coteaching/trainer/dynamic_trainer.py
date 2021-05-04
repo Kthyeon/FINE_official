@@ -4,7 +4,7 @@ os.chdir('../')
 
 from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector
 from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out, get_anchor
-from trainer.svd_classifier2 import same_topk_index, same_kmeans_index
+from trainer.svd_classifier import same_topk_index, same_kmeans_index
 import data_loader.data_loaders as module_data
 from loss import CCELoss
 
@@ -14,7 +14,7 @@ from tqdm import tqdm
 from typing import List
 from torchvision.utils import make_grid
 from base import BaseTrainer
-from utils import inf_loop
+from utils.util import inf_loop
 import sys
 from sklearn.mixture import GaussianMixture
 import pdb
@@ -277,10 +277,12 @@ class DynamicTrainer(BaseTrainer):
             with tqdm(self.test_data_loader) as progress:
                 for batch_idx, (data, label,indexs,_) in enumerate(progress):
                     progress.set_description_str(f'Test epoch {epoch}')
-                    data, label = data.to(self.device), label.to(self.device)
+                    data, label = data.to(self.device), label.long().to(self.device)
                     _, output = self.model(data)
                     
-                    loss = self.val_criterion(output, label)
+                    print ('#########################')
+                    print (output.shape, label.shape)
+                    loss = self.val_criterion()(output, label)
 
                     self.writer.set_step((epoch - 1) * len(self.test_data_loader) + batch_idx, 'test')
                     self.writer.add_scalar('loss', loss.item())

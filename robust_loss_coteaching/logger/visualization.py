@@ -1,5 +1,5 @@
 import importlib
-from utils import Timer
+from utils.util import Timer
 
 
 class MLFlow:

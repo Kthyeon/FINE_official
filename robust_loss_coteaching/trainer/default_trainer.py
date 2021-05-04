@@ -4,7 +4,7 @@ from tqdm import tqdm
 from typing import List
 from torchvision.utils import make_grid
 from base import BaseTrainer
-from utils import inf_loop
+from utils.util import inf_loop
 import sys
 from sklearn.mixture import GaussianMixture
 import pdb
@@ -217,7 +217,7 @@ class DefaultTrainer(BaseTrainer):
                     data, label = data.to(self.device), label.to(self.device)
                     _, output = self.model(data)
                     
-                    loss = self.val_criterion(output, label)
+                    loss = self.val_criterion()(output, label)
 
                     self.writer.set_step((epoch - 1) * len(self.test_data_loader) + batch_idx, 'test')
                     self.writer.add_scalar('loss', loss.item())

@@ -1,7 +1,9 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .ResNet_Zoo import _resnet, BasicBlock, Bottleneck
 from .PreActResNet_Zoo import PreActResNet, PreActBlock
+from torchvision.models.utils import load_state_dict_from_url
 
 def preactresnet18(num_classes=10):
     return PreActResNet(PreActBlock, [2,2,2,2], num_classes=num_classes)
@@ -45,7 +47,8 @@ def resnet50(pretrained=False, progress=True, num_classes=10, **kwargs):
                    **kwargs)
     
     if pretrained:
-        state_dict = torch.load('./model/pretrained/resnet50-19c8e357.pth')
+        state_dict = load_state_dict_from_url('https://download.pytorch.org/models/resnet50-19c8e357.pth',
+                                              progress=progress)
         model.load_state_dict(state_dict)
         
     num_ftrs = model.fc.in_features

@@ -9,22 +9,22 @@ import torch
 import torch.nn.functional as F
 import random
 
-def get_clothing(root, cfg_trainer, num_samples=0, train=True,
+def get_clothing1m(root, cfg_trainer, num_samples=0, train=True,
                 transform_train=None, transform_val=None):
 
     if train:
-        train_dataset = Clothing(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train)
-        val_dataset = Clothing(root, cfg_trainer, val=train, transform=transform_val)
+        train_dataset = Clothing1M_Dataset(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train)
+        val_dataset = Clothing1M_Dataset(root, cfg_trainer, val=train, transform=transform_val)
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")
 
     else:
         train_dataset = []
-        val_dataset = Clothing(root, cfg_trainer, test= (not train), transform=transform_val)
+        val_dataset = Clothing1M_Dataset(root, cfg_trainer, test= (not train), transform=transform_val)
         print(f"Test: {len(val_dataset)}")
 
     return train_dataset, val_dataset
 
-class Clothing(torch.utils.data.Dataset):
+class Clothing1M_Dataset(torch.utils.data.Dataset):
 
     def __init__(self, root, cfg_trainer, num_samples=0, train=False, val=False, test=False, transform=None, num_class = 14):
         self.cfg_trainer = cfg_trainer

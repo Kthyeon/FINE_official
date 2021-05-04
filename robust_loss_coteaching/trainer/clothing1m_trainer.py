@@ -10,9 +10,7 @@ from sklearn.mixture import GaussianMixture
 import pdb
 import numpy as np
 
-
-
-class DefaultTrainer(BaseTrainer):
+class Clothing1MTrainer(BaseTrainer):
     """
     DefaultTrainer class
 
@@ -47,10 +45,9 @@ class DefaultTrainer(BaseTrainer):
         self.train_loss_list: List[float] = []
         self.val_loss_list: List[float] = []
         self.test_loss_list: List[float] = []
-        self.purity = (data_loader.train_dataset.train_labels == \
-                       data_loader.train_dataset.train_labels_gt).sum() / len(data_loader.train_dataset)
-    
+            
         # Visdom visualization
+        
         self.entropy = entropy
         if self.entropy:
             self.entro_loss = Entropy(threshold)

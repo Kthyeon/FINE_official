@@ -4,7 +4,7 @@ from torchvision import datasets, transforms
 from base import BaseDataLoader
 from data_loader.cifar10 import get_cifar10
 from data_loader.cifar100 import get_cifar100
-from data_loader.clothing1m import get_clothing
+from data_loader.clothing1m import get_clothing1m
 from data_loader.svhn import get_svhn
 from utils.parse_config import ConfigParser
 from PIL import Image
@@ -72,7 +72,7 @@ class Clothing1MDataLoader(BaseDataLoader):
         if config == None:
             config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
-        self.train_dataset, self.val_dataset = get_clothing(config['data_loader']['args']['data_dir'], cfg_trainer, num_samples=self.num_batches*self.batch_size, train=training,
+        self.train_dataset, self.val_dataset = get_clothing1m(config['data_loader']['args']['data_dir'], cfg_trainer, num_samples=self.num_batches*self.batch_size, train=training,
                 transform_train=self.transform_train, transform_val=self.transform_val)
 
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,

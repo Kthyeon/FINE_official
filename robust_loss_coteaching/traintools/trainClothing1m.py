@@ -13,7 +13,7 @@ import model.model as module_arch
 # import torchvision.models as module_arch
 # import model.model as module_arch
 from utils.parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer, GroundTruthTrainer
+from trainer import Clothing1MTrainer
 from collections import OrderedDict
 from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio
 
@@ -212,7 +212,7 @@ def trainClothing1m(parse, config: ConfigParser):
     lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
     if config['train_loss']['type'] == 'ELRLoss':
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+        trainer = Clothing1MTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,
@@ -226,7 +226,7 @@ def trainClothing1m(parse, config: ConfigParser):
                                      threshold = parse.threshold
                                 )
     elif config['train_loss']['type'] == 'SCELoss':
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+        trainer = Clothing1MTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,
@@ -241,7 +241,7 @@ def trainClothing1m(parse, config: ConfigParser):
                                 )
     elif config['train_loss']['type'] == 'GCELoss':
         if config['train_loss']['args']['truncated'] == False:
-            trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+            trainer = Clothing1MTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,
@@ -255,7 +255,7 @@ def trainClothing1m(parse, config: ConfigParser):
                                      threshold = parse.threshold
                                     )
         elif config['train_loss']['args']['truncated'] == True:
-            trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
+            trainer= Clothing1MTrainer(model, train_loss, metrics, optimizer,
                                       config=config,
                                       data_loader=data_loader,
                                       parse=parse,
@@ -268,21 +268,8 @@ def trainClothing1m(parse, config: ConfigParser):
                                       entropy = parse.entropy,
                                       threshold = parse.threshold
                                      )
-    elif config['train_loss']['type'] == 'GTLoss':
-        trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
-                                     config=config,
-                                     data_loader=data_loader,
-                                     teacher=teacher,
-                                     valid_data_loader=valid_data_loader,
-                                     test_data_loader=test_data_loader,
-                                     lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss,
-                                     mode = parse.mode,
-                                     entropy = parse.entropy,
-                                     threshold = parse.threshold
-                                    )
     else:
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+        trainer = Clothing1MTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,

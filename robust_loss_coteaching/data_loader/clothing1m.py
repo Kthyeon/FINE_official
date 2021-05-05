@@ -40,7 +40,7 @@ def get_clothing1m(root, cfg_trainer, num_samples=0, train=True,
 
 class Clothing1M_Dataset(torch.utils.data.Dataset):
 
-    def __init__(self, root, cfg_trainer, num_samples=0, train=False, val=False, test=False, transform=None, num_class = 14):
+    def __init__(self, root, cfg_trainer, num_samples=0, train=False, val=False, test=False, transform=None, num_class=14):
         
         fix_seed()
         self.cfg_trainer = cfg_trainer

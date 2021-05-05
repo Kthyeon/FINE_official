@@ -98,7 +98,8 @@ class Clothing1MDataLoader(BaseDataLoader):
         if config == None:
             config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
-        self.train_dataset, self.val_dataset = get_clothing1m(config['data_loader']['args']['data_dir'], cfg_trainer, num_samples=self.num_batches*self.batch_size, train=training,
+#         self.train_dataset, self.val_dataset = get_clothing1m(config['data_loader']['args']['data_dir'], cfg_trainer, num_samples=self.num_batches*self.batch_size, train=training,
+        self.train_dataset, self.val_dataset = get_clothing1m(config['data_loader']['args']['data_dir'], cfg_trainer, num_samples=260000, train=training,
                 transform_train=self.transform_train, transform_val=self.transform_val, teacher_idx=teacher_idx)
 
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,

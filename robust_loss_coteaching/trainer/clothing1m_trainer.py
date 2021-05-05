@@ -23,7 +23,7 @@ class Clothing1MTrainer(BaseTrainer):
         Inherited from BaseTrainer.
     """
     def __init__(self, model, train_criterion, metrics, optimizer, config, data_loader, parse,
-                 valid_data_loader=None, test_data_loader=None, teacher = None, lr_scheduler=None, len_epoch=None, val_criterion=None, mode=None, entropy=False, threshold = 0.1):
+                 valid_data_loader=None, test_data_loader=None, teacher=None, lr_scheduler=None, len_epoch=None, val_criterion=None, mode=None, entropy=False, threshold = 0.1):
         super().__init__(model, train_criterion, metrics, optimizer, config, val_criterion, parse)
         self.config = config
         self.data_loader = data_loader
@@ -35,6 +35,7 @@ class Clothing1MTrainer(BaseTrainer):
             # iteration-based training
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
+        self.train_data_loader = data_loader
         self.valid_data_loader = valid_data_loader
         
         if teacher != None:
@@ -67,17 +68,19 @@ class Clothing1MTrainer(BaseTrainer):
 
     def update_dataloader(self, epoch):
         
-        prev_data_loader = getattr(module_data, self.config['data_loader']['type'])(
-            self.config['data_loader']['args']['data_dir'],
-            batch_size=self.config['data_loader']['args']['batch_size'],
-            shuffle=False,
-            validation_split=0.0,
-            num_batches=self.config['data_loader']['args']['num_batches'],
-            training=True,
-            num_workers=self.config['data_loader']['args']['num_workers'],
-            pin_memory=self.config['data_loader']['args']['pin_memory'],
-            teacher_idx=self.teacher_idx
-        )
+        
+        print ("##### START TRUNCATE #####")
+#         prev_data_loader = getattr(module_data, self.config['data_loader']['type'])(
+#             self.config['data_loader']['args']['data_dir'],
+#             batch_size=self.config['data_loader']['args']['batch_size'],
+#             shuffle=False,
+#             validation_split=0.0,
+#             num_batches=self.config['data_loader']['args']['num_batches'],
+#             training=True,
+#             num_workers=self.config['data_loader']['args']['num_workers'],
+#             pin_memory=self.config['data_loader']['args']['pin_memory'],
+#             teacher_idx=self.teacher_idx
+#         )
         
         orig_data_loader = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
@@ -91,8 +94,16 @@ class Clothing1MTrainer(BaseTrainer):
         )
         
         with torch.no_grad():
-            prev_label_list, prev_out_list = get_out_list(self.model, prev_data_loader)
+#             prev_label_list, prev_out_list = get_out_list(self.model, prev_data_loader)
+#             orig_label_list, orig_out_list = get_out_list(self.model, orig_data_loader)
+            
+            # 어차피 무슨 데이터인지 알면,
+            # 굳이 prev, orig 두번 돌 필요 없이 orig만 해서 indexing 해도 될 것 같은데?
             orig_label_list, orig_out_list = get_out_list(self.model, orig_data_loader)
+            if self.teacher_idx is None:
+                prev_label_list, prev_out_list = orig_label_list, orig_out_list
+            else:
+                prev_label_list, prev_out_list = orig_label_list[self.teacher_idx], orig_out_list[self.teacher_idx]
             self.teacher_idx = same_topk_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list, 0.3)
             
         curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(
@@ -105,9 +116,7 @@ class Clothing1MTrainer(BaseTrainer):
             num_workers=self.config['data_loader']['args']['num_workers'],
             pin_memory=self.config['data_loader']['args']['pin_memory'],
             teacher_idx=self.teacher_idx)
-        
-        isNoisy_ratio(orig_data_loader)
-        isNoisy_ratio(curr_data_loader)
+
         return curr_data_loader
     
     
@@ -132,12 +141,13 @@ class Clothing1MTrainer(BaseTrainer):
         if epoch > 1:
             self.train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.train_data_loader)
+            print ('############# Epoch:{} ############'.format(epoch))
         
         total_loss = 0
         total_metrics = np.zeros(len(self.metrics))
         total_metrics_gt = np.zeros(len(self.metrics))
 
-        with tqdm(self.data_loader) as progress:
+        with tqdm(self.train_data_loader) as progress:
             for batch_idx, (data, label, indexs, gt) in enumerate(progress):
                 progress.set_description_str(f'Train epoch {epoch}')
                 
@@ -180,6 +190,9 @@ class Clothing1MTrainer(BaseTrainer):
                         loss.item()))
                     self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
+#                 if True:
+#                     break
+                    
                 if batch_idx == self.len_epoch:
                     break
         # if hasattr(self.data_loader, 'run'):

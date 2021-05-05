@@ -81,9 +81,6 @@ class Clothing1M_Dataset(torch.utils.data.Dataset):
                     class_num[label]+=1
             random.shuffle(self.train_imgs)
             self.train_imgs = np.array(self.train_imgs)
-#             print ('#####################')
-#             print (self.train_labels[self.train_imgs[0][1]])
-#             print (self.train_imgs)
 
         elif test:
             self.test_imgs = []

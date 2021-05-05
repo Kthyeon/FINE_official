@@ -147,9 +147,10 @@ def get_out_list(model, data_loader):
     model.eval()
     model.cuda()
     with tqdm(data_loader) as progress:
-        for batch_idx, (data, label, index, label_gt) in enumerate(progress):
+        for batch_idx, (data, label, index, _) in enumerate(progress):
             data = data.cuda()
-            label, label_gt = label.long().cuda(), label_gt.long().cuda()
+#             label, label_gt = label.long().cuda(), label_gt.long().cuda()
+            label = label.long()
             output, _ = model(data)
 
             label_list = np.concatenate((label_list, label.cpu()))

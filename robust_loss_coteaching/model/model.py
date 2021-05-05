@@ -9,7 +9,7 @@ from torchvision.models.utils import load_state_dict_from_url
 def preactresnet18(num_classes=10):
     return PreActResNet(PreActBlock, [2,2,2,2], num_classes=num_classes)
 
-def resnet18(pretrained=False, progress=True, **kwargs):
+def resnet18(pretrained=False, progress=True, num_classes=10, **kwargs):
     r"""ResNet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -19,6 +19,16 @@ def resnet18(pretrained=False, progress=True, **kwargs):
     """
     return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
                    **kwargs)
+    
+    if pretrained:
+        state_dict = load_state_dict_from_url('https://download.pytorch.org/models/resnet18-5c106cde.pth',
+                                              progress=progress)
+        model.load_state_dict(state_dict)
+        
+    num_ftrs = model.fc.in_features
+    model.fc = nn.Linear(num_ftrs, num_classes)
+        
+    return model
 
 
 

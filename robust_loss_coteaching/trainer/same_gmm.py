@@ -3,7 +3,7 @@
 
 import numpy as np
 import math
-import sklearn.mixture import GaussianMixture as GMM
+from sklearn.mixture import GaussianMixture as GMM
 import scipy.stats as stats
 import torch
 
@@ -16,25 +16,44 @@ def same_score(v_ortho_dict, features, labels):
     scores = torch.zeros(features.shape[0])
     
     for indx, feat in enumerate(features):
-        scores[i] = torch.dot(v_ortho_dict[labels[i]][0], feat).abs()
+        scores[indx] = torch.dot(v_ortho_dict[labels[indx]][0], feat).abs()
     return scores
 
-def same_mixture_model(label_list, scores, p):
+def same_mixture_model(label_list, scores):
     
     output = []
     for idx in range(len(np.unique(label_list))):
         indexs= torch.tensor(range(len(scores)))[label_list==idx]
-        feats = scores[label_list==idx].cpu().to_numpy()
+        feats = scores[label_list==idx].cpu().numpy()
         feats_ = np.ravel(feats).astype(np.float).reshape(-1, 1)
-        g = GMM(n_components=2, covariance_type='full', tol=1e-6, max_iter=10000)
+        g = GMM(n_components=2, covariance_type='full', tol=1e-6, max_iter=1000)
         
-        g.fit(f)
-        weights, mean, covars = g.weights_. g.means_, g.covariances_
+        g.fit(feats_)
+        weights, means, covars = g.weights_, g.means_, g.covariances_
         
-        # boundary?
-        bound = 
-        output += indexs[feats < bound].numpy().tolist()
-    
+        # boundary? QDA!
+        a = (1/2) * ((1/covars[0]) - (1/covars[1]))
+        b = -(means[0]/covars[0]) + (means[1]/covars[1])
+        c = (1/2) * ((np.square(means[0])/covars[0]) - (np.square(means[1])/covars[1]))
+        c -= np.log((weights[0])/np.sqrt(2*np.pi*covars[0]))
+        c += np.log((weights[1])/np.sqrt(2*np.pi*covars[1]))
+        d = b**2 - 4*a*c
+        
+        if d > 0:
+            bound = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
+            if bound > min(means) and bound < max(means):
+                output += indexs[feats > bound].numpy().tolist()
+            else:
+                bound = (-b - np.sqrt(b**2 - 4*a*c)) / (2*a)
+                output += indexs[feats > bound].numpy().tolist()
+        else:
+            clean = 0 if means[0] > means[1] else 1
+            
+            f = feats_.copy().ravel()
+            f.sort()
+            bound = f[int(-len(f)*weights[clean])]
+            output += indexs[feats > bound].numpy().tolist()
+        
     return torch.tensor(output).long()
 
 def same_mixture_index(orig_label, orig_out, prev_label, prev_out):

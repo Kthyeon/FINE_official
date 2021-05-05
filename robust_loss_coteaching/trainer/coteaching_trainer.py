@@ -56,7 +56,6 @@ class CoteachingTrainer(BaseTrainer):
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
         
-
         self.test_data_loader = test_data_loader
         self.do_validation = self.valid_data_loader is not None
         self.do_test = self.test_data_loader is not None
@@ -159,16 +158,9 @@ class CoteachingTrainer(BaseTrainer):
                 total_metrics_2 += self._eval_metrics(output_2, label)
                 total_metrics_gt_2 += self._eval_metrics(output_2, gt)
 
-#                 if batch_idx % self.log_step == 0:
-#                     progress.set_postfix_str(' {} Loss: {:.6f}'.format(
-#                         self._progress(batch_idx),
-#                         loss.item()))
-#                     self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
-
                 if batch_idx == self.len_epoch:
                     break
-        # if hasattr(self.data_loader, 'run'):
-        #     self.data_loader.run()
+
 
         log = {
             'loss_1': total_loss_1 / self.len_epoch,

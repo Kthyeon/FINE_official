@@ -210,7 +210,7 @@ def trainClothing1m(parse, config: ConfigParser):
     lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
     if config['train_loss']['type'] == 'ELRLoss':
-        trainer = Clothing1MTrainer(model, train_loss, metrics, optimizer,
+        trainer = RealDatasetTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,
@@ -224,7 +224,7 @@ def trainClothing1m(parse, config: ConfigParser):
                                      threshold = parse.threshold
                                 )
     elif config['train_loss']['type'] == 'SCELoss':
-        trainer = Clothing1MTrainer(model, train_loss, metrics, optimizer,
+        trainer = RealDatasetTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,
@@ -239,7 +239,7 @@ def trainClothing1m(parse, config: ConfigParser):
                                 )
     elif config['train_loss']['type'] == 'GCELoss':
         if config['train_loss']['args']['truncated'] == False:
-            trainer = Clothing1MTrainer(model, train_loss, metrics, optimizer,
+            trainer = RealDatasetTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,
@@ -253,7 +253,7 @@ def trainClothing1m(parse, config: ConfigParser):
                                      threshold = parse.threshold
                                     )
         elif config['train_loss']['args']['truncated'] == True:
-            trainer= Clothing1MTrainer(model, train_loss, metrics, optimizer,
+            trainer= RealDatasetTrainer(model, train_loss, metrics, optimizer,
                                       config=config,
                                       data_loader=data_loader,
                                       parse=parse,
@@ -267,7 +267,7 @@ def trainClothing1m(parse, config: ConfigParser):
                                       threshold = parse.threshold
                                      )
     else:
-        trainer = Clothing1MTrainer(model, train_loss, metrics, optimizer,
+        trainer = RealDatasetTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,

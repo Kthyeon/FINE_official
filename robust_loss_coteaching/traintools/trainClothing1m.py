@@ -13,7 +13,7 @@ import model.model as module_arch
 # import torchvision.models as module_arch
 # import model.model as module_arch
 from utils.parse_config import ConfigParser
-from trainer import Clothing1MTrainer
+from trainer import RealDatasetTrainer
 from collections import OrderedDict
 from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio
 
@@ -63,8 +63,6 @@ def trainClothing1m(parse, config: ConfigParser):
     torch.cuda.manual_seed_all(config['seed'])
     torch.backends.cudnn.deterministic = True
     np.random.seed(config['seed'])
-    
-    
     
     data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],

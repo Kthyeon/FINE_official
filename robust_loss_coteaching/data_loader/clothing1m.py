@@ -21,11 +21,13 @@ def get_clothing1m(root, cfg_trainer, num_samples=0, train=True,
                 transform_train=None, transform_val=None, teacher_idx=None):
 
     if train:
+        fix_seed()
         train_dataset = Clothing1M_Dataset(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train)
         val_dataset = Clothing1M_Dataset(root, cfg_trainer, val=train, transform=transform_val)
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")
 
     else:
+        fix_seed()
         train_dataset = []
         val_dataset = Clothing1M_Dataset(root, cfg_trainer, test= (not train), transform=transform_val)
         print(f"Test: {len(val_dataset)}")
@@ -39,6 +41,8 @@ def get_clothing1m(root, cfg_trainer, num_samples=0, train=True,
 class Clothing1M_Dataset(torch.utils.data.Dataset):
 
     def __init__(self, root, cfg_trainer, num_samples=0, train=False, val=False, test=False, transform=None, num_class = 14):
+        
+        fix_seed()
         self.cfg_trainer = cfg_trainer
         self.root = root
         self.transform = transform

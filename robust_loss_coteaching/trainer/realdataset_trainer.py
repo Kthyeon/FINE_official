@@ -15,7 +15,7 @@ from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out
 from trainer.svd_classifier import same_topk_index, same_kmeans_index
 import data_loader.data_loaders as module_data
 
-class Clothing1MTrainer(BaseTrainer):
+class RealDatasetTrainer(BaseTrainer):
     """
     DefaultTrainer class
 

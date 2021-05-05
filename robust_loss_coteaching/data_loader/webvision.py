@@ -7,17 +7,27 @@ import torch
 import torch.nn.functional as F
 import random
 
+def fix_seed(seed=777):
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    np.random.seed(seed)
+
 def get_webvision(root, cfg_trainer, num_samples=0, train=True,
                 transform_train=None, transform_val=None, num_class = 50):
 
     if train:
+        fix_seed()
         train_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train, num_class = num_class)
         val_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, val=train, transform=transform_val, num_class = num_class)
         print(f"Train: {len(train_dataset)} WebVision Val: {len(val_dataset)}")
 
     else:
         train_dataset = []
-        val_dataset = ImagenetVal(root, transform=transform_val, num_class = num_class)
+#         val_dataset = ImagenetVal(root, transform=transform_val, num_class = num_class)
+        val_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, val=train, transform=transform_val, num_class = num_class)
         print(f"Imagnet Val: {len(val_dataset)}")
 
     return train_dataset, val_dataset
@@ -55,6 +65,8 @@ class ImagenetVal(torch.utils.data.Dataset):
 class Webvision(torch.utils.data.Dataset):
 
     def __init__(self, root, cfg_trainer, num_samples=0, train=False, val=False, test=False, transform=None, num_class = 50):
+        
+        fix_seed()
         self.cfg_trainer = cfg_trainer
         self.root = root
         self.transform = transform
@@ -90,7 +102,7 @@ class Webvision(torch.utils.data.Dataset):
                     self.test_labels[img]=target      
         else:
             with open(self.root+'info/train_filelist_google.txt') as f:
-                lines=f.readlines()    
+                lines=f.readlines()
             train_imgs = []
             self.train_labels = {}
             for line in lines:

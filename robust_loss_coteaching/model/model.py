@@ -6,6 +6,9 @@ from .PreActResNet_Zoo import PreActResNet, PreActBlock
 from .InceptionResNetV2 import *
 from torchvision.models.utils import load_state_dict_from_url
 
+def inceptionresnetv2(num_classes=50):
+    return InceptionResNetV2(num_classes=num_classes)
+
 def preactresnet18(num_classes=10):
     return PreActResNet(PreActBlock, [2,2,2,2], num_classes=num_classes)
 

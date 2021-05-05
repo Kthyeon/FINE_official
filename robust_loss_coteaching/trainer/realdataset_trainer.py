@@ -190,9 +190,6 @@ class RealDatasetTrainer(BaseTrainer):
                         loss.item()))
                     self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
-#                 if True:
-#                     break
-                    
                 if batch_idx == self.len_epoch:
                     break
         # if hasattr(self.data_loader, 'run'):
@@ -232,7 +229,7 @@ class RealDatasetTrainer(BaseTrainer):
             The validation metrics in log must have the key 'val_metrics'.
         """
         self.model.eval()
-
+        
         total_val_loss = 0
         total_val_metrics = np.zeros(len(self.metrics))
         with torch.no_grad():
@@ -269,13 +266,14 @@ class RealDatasetTrainer(BaseTrainer):
             The Test metrics in log must have the key 'val_metrics'.
         """
         self.model.eval()
+        
         total_test_loss = 0
         total_test_metrics = np.zeros(len(self.metrics))
         results = np.zeros((len(self.test_data_loader.dataset), self.config['num_classes']), dtype=np.float32)
         tar_ = np.zeros((len(self.test_data_loader.dataset),), dtype=np.float32)
         with torch.no_grad():
             with tqdm(self.test_data_loader) as progress:
-                for batch_idx, (data, label,indexs,_) in enumerate(progress):
+                for batch_idx, (data, label, indexs, _) in enumerate(progress):
                     progress.set_description_str(f'Test epoch {epoch}')
                     data, label = data.to(self.device), label.to(self.device)
                     _, output = self.model(data)

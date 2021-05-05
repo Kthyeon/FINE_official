@@ -13,9 +13,9 @@
         "type": "WebvisionDataLoader",
         "args": {
             "data_dir": "/home/ftpuser/hdd/webvision/",
-            "batch_size": 32,
+            "batch_size": 64,
             "shuffle": true,
-            "num_batches": 2000,
+            "num_batches": 100,
             "validation_split": 0,
             "num_workers": 8,
             "pin_memory": true
@@ -24,7 +24,7 @@
     "optimizer": {
         "type": "SGD",
         "args": {
-            "lr": 0.02,
+            "lr": 0.04,
             "momentum": 0.9,
             "weight_decay": 5e-4
         }

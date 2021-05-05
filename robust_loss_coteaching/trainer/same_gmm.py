@@ -32,10 +32,20 @@ def same_mixture_model(label_list, scores, p):
         weights, mean, covars = g.weights_. g.means_, g.covariances_
         
         # boundary?
-        bound = 0.
+        bound = 
         output += indexs[feats < bound].numpy().tolist()
     
     return torch.tensor(output).long()
+
+def same_mixture_index(orig_label, orig_out, prev_label, prev_out):
+    singular_dict, v_ortho_dict = get_singular_value_vector(prev_label, prev_out)
+    for key in v_ortho_dict.keys():
+        v_ortho_dict[key] = v_ortho_dict[key].cuda()
+        
+    scores = same_score(v_ortho_dict, orig_out, orig_label)
+    output = same_mixture_model(orig_label, scores)
+    return output.numpy()
+    
 
 # def same_topk(label_list, scores, p):
     

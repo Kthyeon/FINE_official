@@ -6,6 +6,7 @@ import torchvision
 import torch
 import torch.nn.functional as F
 import random
+import numpy as np
 
 def fix_seed(seed=777):
     np.random.seed(seed)
@@ -16,19 +17,23 @@ def fix_seed(seed=777):
     np.random.seed(seed)
 
 def get_webvision(root, cfg_trainer, num_samples=0, train=True,
-                transform_train=None, transform_val=None, num_class = 50):
+                transform_train=None, transform_val=None, num_class=50, teacher_idx=None):
 
     if train:
         fix_seed()
-        train_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train, num_class = num_class)
-        val_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, val=train, transform=transform_val, num_class = num_class)
+        train_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train, num_class=num_class)
+        val_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, val=train, transform=transform_val, num_class=num_class)
         print(f"Train: {len(train_dataset)} WebVision Val: {len(val_dataset)}")
 
     else:
         train_dataset = []
 #         val_dataset = ImagenetVal(root, transform=transform_val, num_class = num_class)
-        val_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, val=train, transform=transform_val, num_class = num_class)
+        val_dataset = Webvision(root, cfg_trainer, num_samples=num_samples, test=(not train), transform=transform_val, num_class=num_class)
         print(f"Imagnet Val: {len(val_dataset)}")
+        
+    if teacher_idx is not None:
+        print (len(teacher_idx))
+        train_dataset.truncate(teacher_idx)
 
     return train_dataset, val_dataset
 
@@ -97,9 +102,9 @@ class Webvision(torch.utils.data.Dataset):
             for line in lines:
                 img, target = line.split()
                 target = int(target)
-                if target<num_class:
+                if target<num_class and target is not None:
                     self.test_imgs.append(img)
-                    self.test_labels[img]=target      
+                    self.test_labels[img]=target   
         else:
             with open(self.root+'info/train_filelist_google.txt') as f:
                 lines=f.readlines()
@@ -112,7 +117,9 @@ class Webvision(torch.utils.data.Dataset):
                     train_imgs.append(img)
                     self.train_labels[img]=target 
 
-            self.train_imgs = train_imgs
+            self.train_imgs = np.array(train_imgs)
+            print ('########################')
+            print (len(self.train_imgs))
             
     def __getitem__(self, index):
         
@@ -143,3 +150,6 @@ class Webvision(torch.utils.data.Dataset):
             return len(self.val_imgs)
         else:
             return len(self.train_imgs) 
+        
+    def truncate(self, teacher_idx):
+        self.train_imgs = self.train_imgs[teacher_idx]

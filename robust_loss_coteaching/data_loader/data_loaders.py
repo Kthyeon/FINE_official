@@ -106,7 +106,7 @@ class Clothing1MDataLoader(BaseDataLoader):
         
         
 class WebvisionDataLoader(BaseDataLoader):
-    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0, training=True, num_workers=4, pin_memory=True, num_class = 50):
+    def __init__(self, data_dir, batch_size, shuffle=True, validation_split=0.0, num_batches=0, training=True, num_workers=4, pin_memory=True, num_class=50, teacher_idx=None):
 
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -135,7 +135,7 @@ class WebvisionDataLoader(BaseDataLoader):
         config = ConfigParser.get_instance()
         cfg_trainer = config['trainer']
         self.train_dataset, self.val_dataset = get_webvision(config['data_loader']['args']['data_dir'], cfg_trainer, num_samples=self.num_batches*self.batch_size, train=training,
-                transform_train=self.transform_train, transform_val=self.transform_val, num_class = num_class)
+                transform_train=self.transform_train, transform_val=self.transform_val, num_class=num_class, teacher_idx=teacher_idx)
 
         super().__init__(self.train_dataset, batch_size, shuffle, validation_split, num_workers, pin_memory,
                          val_dataset = self.val_dataset)

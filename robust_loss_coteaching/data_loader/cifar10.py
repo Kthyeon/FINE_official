@@ -22,13 +22,13 @@ def fix_seed(seed=888):
 
 def get_cifar10(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
-                download=True, noise_file = '', teacher_idx=None):
+                download=True, noise_file = '', teacher_idx=None, seed=888):
     base_dataset = torchvision.datasets.CIFAR10(root, train=train, download=download)
     if train:
-        fix_seed()
-        train_idxs, val_idxs = train_val_split(base_dataset.targets)
+        fix_seed(seed)
+        train_idxs, val_idxs = train_val_split(base_dataset.targets, seed)
 
-        train_dataset = CIFAR10_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
+        train_dataset = CIFAR10_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train, seed=seed)
         val_dataset = CIFAR10_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
         if cfg_trainer['asym']:
             train_dataset.asymmetric_noise()
@@ -47,7 +47,7 @@ def get_cifar10(root, cfg_trainer, train=True,
             
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
     else:
-        fix_seed()
+        fix_seed(seed)
         train_dataset = []
         val_dataset = CIFAR10_val(root, cfg_trainer, None, train=train, transform=transform_val)
         print(f"Test: {len(val_dataset)}")
@@ -57,8 +57,8 @@ def get_cifar10(root, cfg_trainer, train=True,
     else:
         return train_dataset, val_dataset
 
-def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
-    fix_seed()
+def train_val_split(base_dataset: torchvision.datasets.CIFAR10, seed):
+    fix_seed(seed)
     num_classes = 10
     base_dataset = np.array(base_dataset)
     train_n = int(len(base_dataset) * 1.0 / num_classes)
@@ -78,11 +78,11 @@ def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
 class CIFAR10_train(torchvision.datasets.CIFAR10):
     def __init__(self, root, cfg_trainer, indexs, train=True,
                  transform=None, target_transform=None,
-                 download=False):
+                 download=False, seed=888):
         super(CIFAR10_train, self).__init__(root, train=train,
                                             transform=transform, target_transform=target_transform,
                                             download=download)
-        fix_seed()
+        fix_seed(seed)
         self.num_classes = 10
         self.cfg_trainer = cfg_trainer
         self.train_data = self.data[indexs] # self.train_data[indexs]
@@ -90,10 +90,11 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
         self.indexs = indexs
         self.prediction = np.zeros((len(self.train_data), self.num_classes, self.num_classes), dtype=np.float32)
         self.noise_indx = []
+        self.seed = seed
                 
     def symmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
-        fix_seed()
+        fix_seed(self.seed)
         indices = np.random.permutation(len(self.train_data))
         for i, idx in enumerate(indices):
             if i < self.cfg_trainer['percent'] * len(self.train_data):
@@ -102,7 +103,7 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
 
     def asymmetric_noise(self):
         self.train_labels_gt = copy.deepcopy(self.train_labels)
-        fix_seed()
+        fix_seed(self.seed)
 
         for i in range(self.num_classes):
             indices = np.where(self.train_labels == i)[0]

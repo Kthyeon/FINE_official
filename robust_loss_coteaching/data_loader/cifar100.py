@@ -22,11 +22,11 @@ def fix_seed(seed=888):
 
 def get_cifar100(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
-                download=True, noise_file = '', teacher_idx = None):
+                download=True, noise_file = '', teacher_idx=None, seed=888):
     base_dataset = torchvision.datasets.CIFAR100(root, train=train, download=download)
     if train:
-        fix_seed()
-        train_idxs, val_idxs = train_val_split(base_dataset.targets)
+        fix_seed(seed)
+        train_idxs, val_idxs = train_val_split(base_dataset.targets, seed)
         
         train_dataset = CIFAR100_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train)
         val_dataset = CIFAR100_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
@@ -45,7 +45,7 @@ def get_cifar100(root, cfg_trainer, train=True,
         
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")  # Train: 45000 Val: 5000
     else:
-        fix_seed()
+        fix_seed(seed)
         train_dataset = []
         val_dataset = CIFAR100_val(root, cfg_trainer, None, train=train, transform=transform_val)
         print(f"Test: {len(val_dataset)}")
@@ -59,8 +59,8 @@ def get_cifar100(root, cfg_trainer, train=True,
 
 
 
-def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
-    fix_seed()
+def train_val_split(base_dataset: torchvision.datasets.CIFAR10, seed=888):
+    fix_seed(seed)
     num_classes = 100
     base_dataset = np.array(base_dataset)
     train_n = int(len(base_dataset) * 1.0 / num_classes)
@@ -80,11 +80,11 @@ def train_val_split(base_dataset: torchvision.datasets.CIFAR10):
 class CIFAR100_train(torchvision.datasets.CIFAR100):
     def __init__(self, root, cfg_trainer, indexs, train=True,
                  transform=None, target_transform=None,
-                 download=False):
+                 download=False, seed=888):
         super(CIFAR100_train, self).__init__(root, train=train,
                                             transform=transform, target_transform=target_transform,
                                             download=download)
-        fix_seed()
+        fix_seed(seed)
         self.num_classes = 100
         self.cfg_trainer = cfg_trainer
         self.train_data = self.data[indexs]
@@ -92,13 +92,14 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
         self.indexs = indexs
         self.prediction = np.zeros((len(self.train_data), self.num_classes, self.num_classes), dtype=np.float32)
         self.noise_indx = []
+        self.seed = seed
         #self.all_refs_encoded = torch.zeros(self.num_classes,self.num_ref,1024, dtype=np.float32)
 
         self.count = 0
 
     def symmetric_noise(self):
         self.train_labels_gt = self.train_labels.copy()
-        fix_seed()
+        fix_seed(self.seed)
         indices = np.random.permutation(len(self.train_data))
         for i, idx in enumerate(indices):
             if i < self.cfg_trainer['percent'] * len(self.train_data):
@@ -109,7 +110,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
         """ Flip classes according to transition probability matrix T.
         It expects a number between 0 and the number of classes - 1.
         """
-        fix_seed()
+        fix_seed(self.seed)
         assert P.shape[0] == P.shape[1]
         assert np.max(y) < P.shape[0]
 
@@ -166,7 +167,7 @@ class CIFAR100_train(torchvision.datasets.CIFAR100):
         n = self.cfg_trainer['percent']
         nb_superclasses = 20
         nb_subclasses = 5
-        fix_seed()
+        fix_seed(self.seed)
         if n > 0.0:
             for i in np.arange(nb_superclasses):
                 init, end = i * nb_subclasses, (i+1) * nb_subclasses

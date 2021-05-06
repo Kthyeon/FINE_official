@@ -71,7 +71,8 @@ def coteachingtrain(parse, config: ConfigParser):
         num_batches=config['data_loader']['args']['num_batches'],
         training=True,
         num_workers=config['data_loader']['args']['num_workers'],
-        pin_memory=config['data_loader']['args']['pin_memory']
+        pin_memory=config['data_loader']['args']['pin_memory'],
+        seed=parse.dataseed # parse.seed
     )
 
 
@@ -117,6 +118,7 @@ def coteachingtrain(parse, config: ConfigParser):
             training=True,
             num_workers=config['data_loader']['args']['num_workers'],
             pin_memory=config['data_loader']['args']['pin_memory'],
+            seed=parse.dataseed
             )
         
     else:

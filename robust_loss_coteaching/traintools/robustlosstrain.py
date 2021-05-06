@@ -201,9 +201,22 @@ def robustlosstrain(parse, config: ConfigParser):
                                      entropy = parse.entropy,
                                      threshold = parse.threshold
                                     )
+    elif config['train_loss']['type'] == 'CCELoss':
+        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                   config=config,
+                                   data_loader=data_loader,
+                                   parse=parse,
+                                   teacher=teacher,
+                                   valid_data_loader=valid_data_loader,
+                                   test_data_loader=test_data_loader,
+                                   lr_scheduler=lr_scheduler,
+                                   val_criterion=val_loss,
+                                   mode = parse.mode,
+                                   entropy = parse.entropy,
+                                   threshold = parse.threshold
+                                  )
     else:
         trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
-#         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                    config=config,
                                    data_loader=data_loader,
                                    parse=parse,

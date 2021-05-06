@@ -101,7 +101,11 @@ class DynamicTrainer(BaseTrainer):
     
 #             self.teacher_idx = same_kmeans_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list)
 #             self.teacher_idx = same_topk_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list, np.clip((epoch-1) * 0.01, 0., 0.5)) # np.clip((epoch-1) * 0.01, 0., 0.8)
-            self.teacher_idx = same_mixture_index(orig_label, orig_out, prev_label, prev_out)
+            if epoch > 20:
+                self.teacher_idx = same_mixture_index(orig_label, orig_out, prev_label, prev_out)
+            else:
+                self.teacher_idx = same_topk_index(orig_label, orig_out, prev_label, prev_out, (epoch-1)*0.01)
+            
             
         curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
@@ -141,7 +145,7 @@ class DynamicTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 10 == 1 and epoch > 10:
+        if epoch % 5 == 1 and epoch > 10:
             self.train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.train_data_loader)
             self.purity = (self.train_data_loader.train_dataset.train_labels == \

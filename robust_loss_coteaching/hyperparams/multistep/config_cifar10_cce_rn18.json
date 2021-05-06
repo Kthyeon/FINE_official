@@ -14,7 +14,7 @@
         "type": "CIFAR10DataLoader",
         "args":{
             "data_dir": "./dir_to_data",
-            "batch_size": 128,
+            "batch_size": 256,
             "shuffle": true,
             "num_batches": 0,
             "validation_split": 0,
@@ -27,7 +27,7 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.02,
+            "lr": 0.04,
             "momentum": 0.9,
             "weight_decay": 1e-3
         }

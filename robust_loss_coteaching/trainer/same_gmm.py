@@ -42,16 +42,27 @@ def same_mixture_model(label_list, scores):
         if d > 0:
             bound = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
             if bound > min(means) and bound < max(means):
+                num_instance = len(indexs[feats > bound]) * 0.8
+                f = feats_.copy().ravel()
+                f.sort()
+                bound = f[len(f) - int(num_instance)]
+                
                 output += indexs[feats > bound].numpy().tolist()
             else:
                 bound = (-b - np.sqrt(b**2 - 4*a*c)) / (2*a)
+                num_instance = len(indexs[feats > bound]) * 0.8
+                f = feats_.copy().ravel()
+                f.sort()
+                bound = f[len(f) - int(num_instance)]
+                
                 output += indexs[feats > bound].numpy().tolist()
         else:
             clean = 0 if means[0] > means[1] else 1
             
             f = feats_.copy().ravel()
             f.sort()
-            bound = f[int(-len(f)*weights[clean])]
+            num_instance = len(f) * (weights[clean])
+            bound = f[-int(num_instance)]
             output += indexs[feats > bound].numpy().tolist()
         
     return torch.tensor(output).long()

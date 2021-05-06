@@ -22,7 +22,7 @@ import copy
 
 import wandb
 
-__all__=['coteachingtrain']
+__all__ = ['coteachingtrain']
 
 def coteachingtrain(parse, config: ConfigParser):
     dataset_name = config['name'].split('_')[0]
@@ -66,8 +66,7 @@ def coteachingtrain(parse, config: ConfigParser):
     data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size= config['data_loader']['args']['batch_size'],
-        shuffle=False if parse.distillation else config['data_loader']['args']['shuffle'] ,
-#         validation_split=config['data_loader']['args']['validation_split'],
+        shuffle=False if parse.distillation else config['data_loader']['args']['shuffle'],
         validation_split=0.0,
         num_batches=config['data_loader']['args']['num_batches'],
         training=True,
@@ -75,12 +74,8 @@ def coteachingtrain(parse, config: ConfigParser):
         pin_memory=config['data_loader']['args']['pin_memory']
     )
 
-    # valid_data_loader = data_loader.split_validation()
 
     valid_data_loader = None
-    
-    # test_data_loader = None
-
     test_data_loader = getattr(module_data, config['data_loader']['type'])(
         config['data_loader']['args']['data_dir'],
         batch_size=128,
@@ -89,7 +84,6 @@ def coteachingtrain(parse, config: ConfigParser):
         training=False,
         num_workers=2
     ).split_validation()
-
 
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch)
@@ -111,11 +105,8 @@ def coteachingtrain(parse, config: ConfigParser):
             tea_label_list, tea_out_list = get_out_list(teacher, data_loader)
             teacher_idx = iterative_eigen(100,tea_label_list,tea_out_list)
         else:
-#             teacher_idx = get_loss_list(teacher, data_loader)
             teacher_idx = get_loss_list_2d(teacher, data_loader, n_clusters=3, c_clusters=2)
-        
-#         print('||||||original||||||')
-#         isNoisy_ratio(data_loader)
+
         
         data_loader = getattr(module_data, config['data_loader']['type'])(
             config['data_loader']['args']['data_dir'],
@@ -126,28 +117,10 @@ def coteachingtrain(parse, config: ConfigParser):
             training=True,
             num_workers=config['data_loader']['args']['num_workers'],
             pin_memory=config['data_loader']['args']['pin_memory'],
-#             teacher_idx = teacher_idx
             )
-#         print('||||||truncated||||||')
-#         isNoisy_ratio(data_loader)
         
     else:
         teacher = None
-        
-#     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
-    
-#     print (len(teacher_idx))
-    
-#     num_examp = len(data_loader.train_dataset)
-#     real = torch.Tensor([True for _ in range(num_examp)])
-#     pred = torch.Tensor([False for _ in range(num_examp)])
-#     real[torch.Tensor(data_loader.train_dataset.noise_indx).long()] = False
-#     pred[teacher_idx] = True
-    
-#     true_positive = torch.Tensor([pred[i].long() & real[i].long() for i in range(len(real))])
-#     print (torch.sum(true_positive) / torch.sum(pred))
-    
-#     print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
 
     # get function handles of loss and metrics
     logger.info(config.config)
@@ -206,7 +179,8 @@ def coteachingtrain(parse, config: ConfigParser):
             lr_scheduler2 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer2)
             lr_scheduler = [lr_scheduler1, lr_scheduler2]
         
-        print (config['optimizer'])
+#         print ('$$$$$$$$$$$$$$$')
+#         print (config['optimizer'])
         
         trainer = CoteachingTrainer([model1, model2], train_loss, metrics, [optimizer1, optimizer2],
                                     config=config,

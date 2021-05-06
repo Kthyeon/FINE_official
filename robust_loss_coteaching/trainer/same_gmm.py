@@ -42,7 +42,7 @@ def same_mixture_model(label_list, scores):
         if d > 0:
             bound = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
             if bound > min(means) and bound < max(means):
-                num_instance = len(indexs[feats > bound]) * 0.8
+                num_instance = len(indexs[feats > bound]) * 0.9
                 f = feats_.copy().ravel()
                 f.sort()
                 bound = f[len(f) - int(num_instance)]
@@ -50,7 +50,7 @@ def same_mixture_model(label_list, scores):
                 output += indexs[feats > bound].numpy().tolist()
             else:
                 bound = (-b - np.sqrt(b**2 - 4*a*c)) / (2*a)
-                num_instance = len(indexs[feats > bound]) * 0.8
+                num_instance = len(indexs[feats > bound]) * 0.9
                 f = feats_.copy().ravel()
                 f.sort()
                 bound = f[len(f) - int(num_instance)]

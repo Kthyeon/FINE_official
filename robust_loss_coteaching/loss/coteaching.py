@@ -28,7 +28,7 @@ class CoteachingLoss(nn.Module):
         
         self.rate_schedule = self.generate_forget_rate(forget_rate, num_gradual, n_epoch)
         
-    def forward(self, logits_1, logits_2, targets, epoch, index=None, step=None):
+    def forward(self, logits_1, logits_2, targets, gt, epoch, index=None, step=None):
         
         # model 1
         loss_1 = F.cross_entropy(logits_1, targets, reduction='none')
@@ -56,7 +56,10 @@ class CoteachingLoss(nn.Module):
         loss_1_update = F.cross_entropy(logits_1[ind_2_update], targets[ind_2_update])
         loss_2_update = F.cross_entropy(logits_2[ind_1_update], targets[ind_1_update])
         
-        return loss_1_update, loss_2_update
+        clean1, total1 = (targets[ind_2_update] == gt[ind_2_update]).sum(), len(targets[ind_2_update] == gt[ind_2_update])
+        clean2, total2 = (targets[ind_1_update] == gt[ind_1_update]).sum(), len(targets[ind_1_update] == gt[ind_1_update])
+        
+        return loss_1_update, loss_2_update, clean1, clean2, total1, total2
         
         
     def generate_forget_rate(self, forget_rate, num_gradual, n_epoch):

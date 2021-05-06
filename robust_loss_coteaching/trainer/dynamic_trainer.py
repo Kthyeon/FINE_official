@@ -213,7 +213,8 @@ class DynamicTrainer(BaseTrainer):
             'metrics': (total_metrics / self.len_epoch).tolist(),
             'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
             'learning rate': self.lr_scheduler.get_last_lr(),
-            'purity': self.purity
+            'purity:': '{} = {}/{}'.format(self.purity, (self.train_data_loader.train_dataset.train_labels == \
+                   self.train_data_loader.train_dataset.train_labels_gt).sum(), len(self.train_data_loader.train_dataset))
         }
 
 

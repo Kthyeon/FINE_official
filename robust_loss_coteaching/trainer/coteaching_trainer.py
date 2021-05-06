@@ -118,6 +118,8 @@ class CoteachingTrainer(BaseTrainer):
         total_loss_1, total_loss_2 = 0, 0
         total_metrics_1, total_metrics_2 = np.zeros(len(self.metrics)), np.zeros(len(self.metrics))
         total_metrics_gt_1, total_metrics_gt_2 = np.zeros(len(self.metrics)), np.zeros(len(self.metrics))
+        total_instances_1, total_instances_2 = 0, 0
+        clean_instances_1, clean_instances_2 = 0, 0
 
         with tqdm(self.data_loader) as progress:
             for batch_idx, (data, label, indexs, gt) in enumerate(progress):
@@ -125,18 +127,14 @@ class CoteachingTrainer(BaseTrainer):
                 
                 data, label = data.to(self.device), label.long().to(self.device)
                 gt = gt.long().to(self.device)
-                
-#                 if self.teacher:
-#                     tea_represent, tea_logit = self.teacher(data)
-#                     tea_represent, tea_logit = tea_represent.to(self.device), tea_logit.to(self.device)
-#                     represent_out = self.represent(data).to(self.device)
                     
                 _, output_1 = self.model_1(data)
                 _, output_2 = self.model_2(data)
             
                 # TODO: pure ratio 볼지 안볼지 결정해서 보는 코드 추가할지 안할지 정하기
                 # 지금 당장 학습하는데는 필요하지 않기 때문에 넣지 않도록 하겠습니당
-                loss_1, loss_2 = self.train_criterion(output_1, output_2, label, epoch, indexs, epoch*batch_idx)
+                loss_1, loss_2, clean_1, clean_2, total_1, total_2 = \
+                self.train_criterion(output_1, output_2, label, gt, epoch, indexs, epoch*batch_idx)
                 
                 self.optimizer_1.zero_grad()
                 loss_1.backward()
@@ -157,11 +155,18 @@ class CoteachingTrainer(BaseTrainer):
                 total_loss_2 += loss_2.item()
                 total_metrics_2 += self._eval_metrics(output_2, label)
                 total_metrics_gt_2 += self._eval_metrics(output_2, gt)
+                
+                clean_instances_1 += clean_1
+                clean_instances_2 += clean_2
+                total_instances_1 += total_1
+                total_instances_2 += total_2
 
                 if batch_idx == self.len_epoch:
                     break
 
-
+        purity_1 = float(clean_instances_1)/float(total_instances_1)
+        purity_2 = float(clean_instances_2)/float(total_instances_2)
+        
         log = {
             'loss_1': total_loss_1 / self.len_epoch,
             'loss_2': total_loss_2 / self.len_epoch,
@@ -169,7 +174,11 @@ class CoteachingTrainer(BaseTrainer):
             'metrics_gt_1': (total_metrics_gt_1 / self.len_epoch).tolist(),
             'metrics_2': (total_metrics_2 / self.len_epoch).tolist(),
             'metrics_gt_2': (total_metrics_gt_2 / self.len_epoch).tolist(),
-            'learning rate': self.alpha_plan[epoch-1]
+            'learning rate': self.alpha_plan[epoch-1],
+            'purity_1': '{} = {}/{}'.format(purity_1,
+                                            clean_instances_1, total_instances_1),
+            'purity_2': '{} = {}/{}'.format(purity_2,
+                                            clean_instances_2, total_instances_2)
         }
 
 
@@ -222,8 +231,8 @@ class CoteachingTrainer(BaseTrainer):
                     _, output_1 = self.model_1(data)
                     _, output_2 = self.model_2(data)
                     
-                    loss_1 = self.val_criterion(output_1, label)
-                    loss_2 = self.val_criterion(output_2, label)
+                    loss_1 = self.val_criterion()(output_1, label)
+                    loss_2 = self.val_criterion()(output_2, label)
 
                     self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
                     self.writer.add_scalar('loss_1', loss.item())
@@ -269,8 +278,8 @@ class CoteachingTrainer(BaseTrainer):
                     
                     _, output_1 = self.model_1(data)
                     _, output_2 = self.model_2(data)
-                    loss_1 = self.val_criterion(output_1, label)
-                    loss_2 = self.val_criterion(output_2, label)    
+                    loss_1 = self.val_criterion()(output_1, label)
+                    loss_2 = self.val_criterion()(output_2, label)    
                     
                     self.writer.set_step((epoch - 1) * len(self.test_data_loader) + batch_idx, 'test')
 

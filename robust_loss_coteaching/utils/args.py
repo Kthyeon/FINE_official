@@ -61,6 +61,9 @@ def parse_args():
     args.add_argument('--reinit', 
                       help='if false, reuse teacher checkpoint', 
                       action='store_true')
+    args.add_argument('--dynamic', 
+                      help='if true, dynamic training', 
+                      action='store_true')
     
     args.add_argument('--no_wandb', 
                       action='store_false', 

@@ -39,32 +39,39 @@ def same_mixture_model(label_list, scores):
         c += np.log((weights[1])/np.sqrt(2*np.pi*covars[1]))
         d = b**2 - 4*a*c
         
-        if d > 0:
-            bound = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
-            if bound > min(means) and bound < max(means):
-                num_instance = len(indexs[feats > bound]) * 0.9
-                f = feats_.copy().ravel()
-                f.sort()
-                bound = f[len(f) - int(num_instance)]
+#         if d > 0:
+#             bound = (-b + np.sqrt(b**2 - 4*a*c)) / (2*a)
+#             if bound > min(means) and bound < max(means):
+#                 num_instance = len(indexs[feats > bound]) * 0.9
+#                 f = feats_.copy().ravel()
+#                 f.sort()
+#                 bound = f[-int(num_instance)]
                 
-                output += indexs[feats > bound].numpy().tolist()
-            else:
-                bound = (-b - np.sqrt(b**2 - 4*a*c)) / (2*a)
-                num_instance = len(indexs[feats > bound]) * 0.9
-                f = feats_.copy().ravel()
-                f.sort()
-                bound = f[len(f) - int(num_instance)]
+#                 output += indexs[feats > bound].numpy().tolist()
+#             else:
+#                 bound = (-b - np.sqrt(b**2 - 4*a*c)) / (2*a)
+#                 num_instance = len(indexs[feats > bound]) * 0.9
+#                 f = feats_.copy().ravel()
+#                 f.sort()
                 
-                output += indexs[feats > bound].numpy().tolist()
-        else:
-            clean = 0 if means[0] > means[1] else 1
+#                 print (len(f), num_instance)
+                
+#                 bound = f[-int(num_instance)]
+                
+#                 output += indexs[feats > bound].numpy().tolist()
             
-            f = feats_.copy().ravel()
-            f.sort()
-            num_instance = len(f) * (weights[clean])
-            bound = f[-int(num_instance)]
-            output += indexs[feats > bound].numpy().tolist()
+#         else:
+#             clean = 0 if means[0] > means[1] else 1
+            
+#             f = feats_.copy().ravel()
+#             f.sort()
+#             num_instance = len(f) * (weights[clean])
+#             bound = f[-int(num_instance)]
+#             output += indexs[feats > bound].numpy().tolist()
         
+        bound = estimate_purity(feats, means, covars, weights)
+        output += indexs[feats > bound].numpy().tolist()
+    
     return torch.tensor(output).long()
 
 def same_mixture_index(orig_label, orig_out, prev_label, prev_out):
@@ -75,6 +82,36 @@ def same_mixture_index(orig_label, orig_out, prev_label, prev_out):
     scores = same_score(v_ortho_dict, orig_out, orig_label)
     output = same_mixture_model(orig_label, scores)
     return output.numpy()
+
+def estimate_purity(f, means, covars, weights):
+    
+    best_f1 = 0
+    for x in np.linspace(f.min(), f.max(), 100):
+        x0 = (x - means[0]) / np.sqrt(covars[0])
+        x1 = (x - means[1]) / np.sqrt(covars[1])
+
+        cdf0 = 1 - stats.norm.cdf(x0)
+        cdf1 = 1 - stats.norm.cdf(x1)
+
+        if means[0] > means[1]:
+            pred_purity = (weights[0]*cdf0) / (weights[0]*cdf0 + weights[1]*cdf1)
+            c_instances = weights[0] * len(f)
+            print ('Clean: {}'.format(weights[0]))
+        else:
+            pred_purity = (weights[1]*cdf1) / (weights[1]*cdf1 + weights[0]*cdf0)
+            c_instances = weights[1] * len(f)
+            print ('Clean: {}'.format(weights[1]))
+            
+        precision = pred_purity
+        recall = pred_purity * len(f[f > x]) / c_instances
+        f1 = 2 * precision * recall / (precision + recall)
+        
+        if f1 > best_f1:
+            boundary = x
+            
+        
+        
+        return boundary
     
 
 # def same_topk(label_list, scores, p):

@@ -101,10 +101,11 @@ class DynamicTrainer(BaseTrainer):
     
 #             self.teacher_idx = same_kmeans_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list)
 #             self.teacher_idx = same_topk_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list, np.clip((epoch-1) * 0.01, 0., 0.5)) # np.clip((epoch-1) * 0.01, 0., 0.8)
-            if epoch > 20:
+            if epoch > 0:
                 self.teacher_idx = same_mixture_index(orig_label, orig_out, prev_label, prev_out)
+#                 self.teacher_idx = same_kmeans_index(orig_label, orig_out, prev_label, prev_out)
             else:
-                self.teacher_idx = same_topk_index(orig_label, orig_out, prev_label, prev_out, (epoch-1)*0.01)
+                self.teacher_idx = same_topk_index(orig_label, orig_out, prev_label, prev_out, np.clip((epoch-1) * 0.01, 0., 0.72))
             
             
         curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(

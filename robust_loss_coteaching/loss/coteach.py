@@ -76,7 +76,7 @@ class CoteachingPlusLoss(CoteachingLoss):
     def __init__(self, forget_rate, num_gradual, n_epoch):
         super(CoteachingPlusLoss, self).__init__(forget_rate, num_gradual, n_epoch)
     
-    def forward(self, logits, logits2, labels, epoch, ind, step):
+    def forward(self, logits, logits2, labels, gt, epoch, ind, step):
         
         ind = ind.cpu().numpy().transpose()
         
@@ -119,13 +119,15 @@ class CoteachingPlusLoss(CoteachingLoss):
             update_labels = labels[disagree_id]
             update_outputs = logits[disagree_id] 
             update_outputs2 = logits2[disagree_id]
+            update_gt = gt[disagree_id]
 
-            loss_1, loss_2 = super().forward(update_outputs, update_outputs2, update_labels, epoch)
+            loss_1, loss_2, clean1, clean2, total1, total2 = super().forward(update_outputs, update_outputs2, update_labels, update_gt, epoch)
             
         else:
             update_labels = labels
             update_outputs = logits
             update_outputs2 = logits2
+            update_gt = gt
 
             cross_entropy_1 = F.cross_entropy(update_outputs, update_labels, reduction='none')
             cross_entropy_2 = F.cross_entropy(update_outputs2, update_labels, reduction='none')
@@ -133,7 +135,10 @@ class CoteachingPlusLoss(CoteachingLoss):
             loss_1 = torch.sum(update_step*cross_entropy_1)/labels.size(0)
             loss_2 = torch.sum(update_step*cross_entropy_2)/labels.size(0)
             
-        return loss_1, loss_2
+            clean1, total1 = (update_labels == update_gt).sum(), len(update_labels == update_gt)
+            clean2, total2 = (update_labels == update_gt).sum(), len(update_labels == update_gt)
+            
+        return loss_1, loss_2, clean1, clean2, total1, total2
     
 # TODO: clean label 걸러진 애들 받아서
 # Coteaching에서 CE로 학습 안시키고 H 키우는 방향으로 학습하게 하는 것.

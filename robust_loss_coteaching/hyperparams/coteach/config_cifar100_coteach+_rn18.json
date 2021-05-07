@@ -1,17 +1,17 @@
 {
-    "name": "cifar10_preactresnet18_multistep",
+    "name": "cifar100_resnet18_multistep",
     "n_gpu": 1,
     "seed": 123,
 
     "arch": {
-        "type": "preactresnet18",
-        "args": {"num_classes":10}
+        "type": "resnet18",
+        "args": {"num_classes":100}
     },
 
-    "num_classes": 10,
+    "num_classes": 100,
 
     "data_loader": {
-        "type": "CIFAR10DataLoader",
+        "type": "CIFAR100DataLoader",
         "args":{
             "data_dir": "./dir_to_data",
             "batch_size": 128,

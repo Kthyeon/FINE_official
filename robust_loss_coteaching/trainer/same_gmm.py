@@ -86,7 +86,7 @@ def same_mixture_index(orig_label, orig_out, prev_label, prev_out):
 def estimate_purity(f, means, covars, weights):
     
     best_f1 = 0
-    for x in np.linspace(f.min(), f.max(), 100):
+    for x in np.linspace(min(means), max(means), 100):
         x0 = (x - means[0]) / np.sqrt(covars[0])
         x1 = (x - means[1]) / np.sqrt(covars[1])
 
@@ -96,22 +96,23 @@ def estimate_purity(f, means, covars, weights):
         if means[0] > means[1]:
             pred_purity = (weights[0]*cdf0) / (weights[0]*cdf0 + weights[1]*cdf1)
             c_instances = weights[0] * len(f)
-            print ('Clean: {}'.format(weights[0]))
+            c = weights[0]
         else:
             pred_purity = (weights[1]*cdf1) / (weights[1]*cdf1 + weights[0]*cdf0)
             c_instances = weights[1] * len(f)
-            print ('Clean: {}'.format(weights[1]))
+            c = weights[1]
+            
             
         precision = pred_purity
         recall = pred_purity * len(f[f > x]) / c_instances
         f1 = 2 * precision * recall / (precision + recall)
         
-        if f1 > best_f1:
+        if recall > 0.8 and precision > best_f1:
+            best_f1 = precision
             boundary = x
             
-        
-        
-        return boundary
+    print ('Clean: {}'.format(c))
+    return boundary
     
 
 # def same_topk(label_list, scores, p):

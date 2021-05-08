@@ -3,13 +3,14 @@ import numpy as np
 from tqdm import tqdm
 from sklearn import cluster
 
-
-def same_score(v_ortho_dict, features, labels):
+#bol_norm True -> Divide by norm of feature
+def same_score(v_ortho_dict, features, labels, bol_norm=False):
     features = torch.from_numpy(features).cuda()
     scores = torch.zeros(features.shape[0])
     
     for indx, feat in enumerate(features):
-        scores[indx] = torch.dot(v_ortho_dict[labels[indx]][0], feat).abs()
+        tmp_scores = torch.dot(v_ortho_dict[labels[indx]][0], feat).abs() 
+        scores[indx] = (tmp_scores / torch.norm(feat, p=2)) if bol_norm else tmp_scores
     return scores
 
 def same_topk(label_list, scores, p):
@@ -24,6 +25,7 @@ def same_topk(label_list, scores, p):
         
     return torch.tensor(output).long()
 
+#Classswise kmenas
 def same_kmeans(label_list, scores, p=None):
     
     output = []
@@ -37,6 +39,20 @@ def same_kmeans(label_list, scores, p=None):
         
     return torch.tensor(output).long()
         
+#Total Kmeans
+def same_kmeans_total(scores, p=None):
+    output = []
+    indexs = torch.tensor(range(len(scores)))
+    kmeans = cluster.KMeans(n_clusters=2, random_state=0).fit(scores.reshape(-1, 1))
+    
+    if torch.mean(scores[kmeans.labels_==0]) < torch.mean(scores[kmeans.labels_==1]):
+        kmeans.labels_ = 1 - kmeans.labels_
+    
+    for idx, value in enumerate(kmeans.labels_):
+        if value == 0:
+            output.append(idx)
+    
+    return torch.tensor(output).long(), None
 
 def same_topk_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list, p=None):
     
@@ -248,8 +264,6 @@ def topk_eigen_kmean(label_list, out_list, teacher_idx=None):
     output = kmean_singular_label2(v_ortho_dict, out_list, label_list)
     
     return output
-
-
 
 def get_anchor(label_list, out_list, teacher_idx=None):
     

@@ -14,24 +14,26 @@ def compute_noiseratio(dataloader):
     
     with tqdm(dataloader) as progress:
         for _, (_, label, _, label_gt) in enumerate(progress):
-            isNoisy = label != label_gt
+            isNoisy = label == label_gt
             isNoisy_list = np.concatenate((isNoisy_list, isNoisy.cpu()))
-
+    
+    # clean: 1, noisy 0
     return isNoisy_list
     
 def return_statistics(dataloader, clean_labels, datanum):
     
-    predict = np.ones(datanum)
-    for idx in clean_labels: predict[idx] = 0
+    predict = np.zeros(datanum)
+    for idx in clean_labels: predict[idx] = 1
         
     isNoisy_list = compute_noiseratio(dataloader)
     r_stats = []
     
-    tp = (isNoisy_list[predict==0]==0).sum()
-    tn = isNoisy_list[predict==1].sum()
-    fp = isNoisy_list.sum() - tn
-    fn = ((isNoisy_list.shape - isNoisy_list.sum()) - tp).item()
+    tp = (isNoisy_list[predict==1]==1).sum() # positive clean
+    tn = (isNoisy_list[predict==0]==0).sum() # negative noisy
+    fp = (isNoisy_list==0).sum() - tn
+    fn = (isNoisy_list==1).sum() - tp
     
+    print('Noisy: {}, Clean: {}'.format((isNoisy_list==0).sum(), (isNoisy_list==1).sum()))
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
     specificity = tn / (tn + fp)

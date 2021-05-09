@@ -42,6 +42,8 @@ def return_statistics(dataloader, clean_labels, datanum):
     r_stats.extend([sel_samples, round(precision, 4), round(recall, 4), round(specificity, 4), round(accuracy, 4), round(frac_clean, 4)])
     print('Selected samples: {} \nPrecision: {} \nRecall: {} \nSpecificity: {}\nAccuracy: {} \nFraction of clean samples/selected samples: {}'.format(r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4], r_stats[5]))
     
+    return r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4]
+    
     
 def get_features(model, dataloader):
     '''

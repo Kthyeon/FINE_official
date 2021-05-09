@@ -2,10 +2,6 @@ import os
 os.chdir('../')
 # print (os.getcwd())
 
-# from selection.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector
-# from selection.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out, get_anchor
-# from trainer.svd_classifier import same_topk_index, same_kmeans_index
-# from trainer.same_gmm import same_mixture_index
 from selection.svd_classifier import *
 from selection.gmm import *
 from selection.util import *
@@ -99,7 +95,7 @@ class DynamicTrainer(BaseTrainer):
             pin_memory=self.config['data_loader']['args']['pin_memory'],
             teacher_idx=self.teacher_idx)
         
-        return_statistics(curr_data_loader, self.teacher_idx, datanum)
+        self.selected, self.precision, self.recall, self.specificity, self.accuracy = return_statistics(curr_data_loader, self.teacher_idx, datanum)
         
         return curr_data_loader
         
@@ -127,10 +123,8 @@ class DynamicTrainer(BaseTrainer):
             The metrics in log must have the key 'metrics'.
         """
         if epoch % 5 == 1 and epoch > 10:
-            self.train_data_loader = self.update_dataloader(epoch)
-            self.len_epoch = len(self.train_data_loader)
-            self.purity = (self.train_data_loader.train_dataset.train_labels == \
-                           self.train_data_loader.train_dataset.train_labels_gt).sum() / len(self.train_data_loader.train_dataset)
+            self.dynamic_train_data_loader = self.update_dataloader(epoch)
+            self.len_epoch = len(self.dynamic_train_data_loader)
             
 #         if epoch > 30:
 #             self.train_criterion = CCELoss()
@@ -141,7 +135,7 @@ class DynamicTrainer(BaseTrainer):
         total_metrics = np.zeros(len(self.metrics))
         total_metrics_gt = np.zeros(len(self.metrics))
 
-        with tqdm(self.train_data_loader) as progress:
+        with tqdm(self.dynamic_train_data_loader) as progress:
             for batch_idx, (data, label, indexs, gt) in enumerate(progress):
                 progress.set_description_str(f'Train epoch {epoch}')
                 
@@ -194,8 +188,8 @@ class DynamicTrainer(BaseTrainer):
             'metrics': (total_metrics / self.len_epoch).tolist(),
             'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
             'learning rate': self.lr_scheduler.get_last_lr(),
-            'purity:': '{} = {}/{}'.format(self.purity, (self.train_data_loader.train_dataset.train_labels == \
-                   self.train_data_loader.train_dataset.train_labels_gt).sum(), len(self.train_data_loader.train_dataset))
+            'purity:': '{} = {}/{}'.format(self.purity, (self.dynamic_train_data_loader.train_dataset.train_labels == \
+                   self.dynamic_train_data_loader.train_dataset.train_labels_gt).sum(), len(self.dynamic_train_data_loader.train_dataset))
         }
 
 

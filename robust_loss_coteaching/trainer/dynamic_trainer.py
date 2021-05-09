@@ -2,12 +2,12 @@ import os
 os.chdir('../')
 # print (os.getcwd())
 
-from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector
-from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out, get_anchor
-from trainer.svd_classifier import same_topk_index, same_kmeans_index
-from trainer.same_gmm import same_mixture_index
+from selection.svd_classifier import *
+from selection.gmm import *
+from selection.util import *
 import data_loader.data_loaders as module_data
 
+import copy
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -41,13 +41,14 @@ class DynamicTrainer(BaseTrainer):
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
         self.train_data_loader = data_loader
+        self.dynamic_train_data_loader = copy.deepcopy(dataloader)
         self.valid_data_loader = valid_data_loader
         
         if teacher != None:
             self.teacher = teacher.to(self.device)
         else:
             self.teacher = teacher
-
+        
         self.test_data_loader = test_data_loader
         self.do_validation = self.valid_data_loader is not None
         self.do_test = self.test_data_loader is not None
@@ -62,50 +63,25 @@ class DynamicTrainer(BaseTrainer):
         #Visdom visualization
         
         self.entropy = entropy
-        if self.entropy:
-            self.entro_loss = Entropy(threshold)
+        if self.entropy: self.entro_loss = Entropy(threshold)
+            
             
     def update_dataloader(self, epoch):
         
-#         prev_data_loader = getattr(module_data, self.config['data_loader']['type'])(
-#             self.config['data_loader']['args']['data_dir'],
-#             batch_size=self.config['data_loader']['args']['batch_size'],
-#             shuffle=False,
-#             validation_split=0.0,
-#             num_batches=self.config['data_loader']['args']['num_batches'],
-#             training=True,
-#             num_workers=self.config['data_loader']['args']['num_workers'],
-#             pin_memory=self.config['data_loader']['args']['pin_memory'],
-#             teacher_idx=self.teacher_idx
-#         )
-        
-        orig_data_loader = getattr(module_data, self.config['data_loader']['type'])(
-            self.config['data_loader']['args']['data_dir'],
-            batch_size=self.config['data_loader']['args']['batch_size'],
-            shuffle=False,
-            validation_split=0.0,
-            num_batches=self.config['data_loader']['args']['num_batches'],
-            training=True,
-            num_workers=self.config['data_loader']['args']['num_workers'],
-            pin_memory=self.config['data_loader']['args']['pin_memory']
-        )
-        
         with torch.no_grad():
-#             prev_label_list, prev_out_list = get_out_list(self.model, prev_data_loader)
-            orig_label, orig_out = get_out_list(self.model, orig_data_loader)
+            current_features, current_labels = get_features(self.model, self.train_data_loader)
+            datanum = len(current_labels)
             if self.teacher_idx is not None:
-                prev_label, prev_out = orig_label[self.teacher_idx], orig_out[self.teacher_idx]
+                prev_features, prev_labels = current_features[self.teacher_idx], current_labels[self.teacher_idx]
             else:
-                prev_label, prev_out = orig_label, orig_out
+                prev_features, prev_labels = current_features, current_labels
                 
-    
-#             self.teacher_idx = same_kmeans_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list)
-#             self.teacher_idx = same_topk_index(orig_label_list, orig_out_list, prev_label_list, prev_out_list, np.clip((epoch-1) * 0.01, 0., 0.5)) # np.clip((epoch-1) * 0.01, 0., 0.8)
+
             if epoch > 60:
-                self.teacher_idx = same_mixture_index(orig_label, orig_out, prev_label, prev_out)
-#                 self.teacher_idx = same_kmeans_index(orig_label, orig_out, prev_label, prev_out)
+                self.teacher_idx = fine(current_features, current_labels, fit = parse.distill_mode, prev_features=None, prev_labels=None)
             else:
-                self.teacher_idx = same_topk_index(orig_label, orig_out, prev_label, prev_out, np.clip((epoch-1) * 0.01, 0., 0.72))
+                self.teacher_idx = range(datanum)
+#                 same_topk_index(orig_label, orig_out, prev_label, prev_out, np.clip((epoch-1) * 0.01, 0., 0.72))
             
             
         curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(
@@ -119,8 +95,8 @@ class DynamicTrainer(BaseTrainer):
             pin_memory=self.config['data_loader']['args']['pin_memory'],
             teacher_idx=self.teacher_idx)
         
-        isNoisy_ratio(orig_data_loader)
-        isNoisy_ratio(curr_data_loader)
+        self.selected, self.precision, self.recall, self.specificity, self.accuracy = return_statistics(curr_data_loader, self.teacher_idx, datanum)
+        
         return curr_data_loader
         
 
@@ -147,10 +123,8 @@ class DynamicTrainer(BaseTrainer):
             The metrics in log must have the key 'metrics'.
         """
         if epoch % 5 == 1 and epoch > 10:
-            self.train_data_loader = self.update_dataloader(epoch)
-            self.len_epoch = len(self.train_data_loader)
-            self.purity = (self.train_data_loader.train_dataset.train_labels == \
-                           self.train_data_loader.train_dataset.train_labels_gt).sum() / len(self.train_data_loader.train_dataset)
+            self.dynamic_train_data_loader = self.update_dataloader(epoch)
+            self.len_epoch = len(self.dynamic_train_data_loader)
             
 #         if epoch > 30:
 #             self.train_criterion = CCELoss()
@@ -161,7 +135,7 @@ class DynamicTrainer(BaseTrainer):
         total_metrics = np.zeros(len(self.metrics))
         total_metrics_gt = np.zeros(len(self.metrics))
 
-        with tqdm(self.train_data_loader) as progress:
+        with tqdm(self.dynamic_train_data_loader) as progress:
             for batch_idx, (data, label, indexs, gt) in enumerate(progress):
                 progress.set_description_str(f'Train epoch {epoch}')
                 
@@ -214,8 +188,8 @@ class DynamicTrainer(BaseTrainer):
             'metrics': (total_metrics / self.len_epoch).tolist(),
             'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
             'learning rate': self.lr_scheduler.get_last_lr(),
-            'purity:': '{} = {}/{}'.format(self.purity, (self.train_data_loader.train_dataset.train_labels == \
-                   self.train_data_loader.train_dataset.train_labels_gt).sum(), len(self.train_data_loader.train_dataset))
+            'purity:': '{} = {}/{}'.format(self.purity, (self.dynamic_train_data_loader.train_dataset.train_labels == \
+                   self.dynamic_train_data_loader.train_dataset.train_labels_gt).sum(), len(self.dynamic_train_data_loader.train_dataset))
         }
 
 

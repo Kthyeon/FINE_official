@@ -28,13 +28,13 @@ def parse_args():
     args.add_argument('--distill_mode', 
                       type=str, 
                       default='eigen', 
-                      choices=['kmeans','eigen','fulleigen', 'kmean_eigen', 'topk_eigen_kmean'], 
+                      choices=['kmeans','gmm'], 
                       help='mode for distillation kmeans or eigen.')
     args.add_argument('--mode', 
                       type=str, 
                       default='ce', 
-                      choices=['ce', 'same'], 
-                      help = 'distill_type. same means the same loss of teacher recipe')
+                      choices=['ce', 'keeploss'], 
+                      help = 'distill_type. keeploss means the same loss of teacher recipe')
     args.add_argument('--entropy', 
                       help='whether to use entropy loss', 
                       action='store_true')
@@ -50,14 +50,14 @@ def parse_args():
                       type=str, 
                       default=None, 
                       help = 'teacher checkpoint for distillation')
-    args.add_argument('--second_load_name', 
-                      type=str, 
-                      default=None, 
-                      help = '2nd teacher checkpoint for distillation')
-    args.add_argument('--third_load_name', 
-                      type=str, 
-                      default=None, 
-                      help = '3rd teacher checkpoint for distillation')
+#     args.add_argument('--second_load_name', 
+#                       type=str, 
+#                       default=None, 
+#                       help = '2nd teacher checkpoint for distillation')
+#     args.add_argument('--third_load_name', 
+#                       type=str, 
+#                       default=None, 
+#                       help = '3rd teacher checkpoint for distillation')
     args.add_argument('--reinit', 
                       help='if false, reuse teacher checkpoint', 
                       action='store_true')

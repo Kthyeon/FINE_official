@@ -1,30 +1,34 @@
 import sys
 import requests
 import socket
-
-import data_loader.data_loaders as module_data
-import loss as module_loss
-import model.metric as module_metric
-import model.model as module_arch
-from utils.parse_config import ConfigParser
-from trainer import DefaultTrainer, TruncatedTrainer, GroundTruthTrainer, DynamicTrainer
-from collections import OrderedDict
-from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio, kmean_eigen_out, topk_eigen_kmean, extract_teacherIdx
-from utils.util import *
-from utils.args import *
-
-
 import random
 import numpy as np
 import copy
 import torch
-import mlflow
-import mlflow.pytorch
+
+from collections import OrderedDict
+
+import data_loader.data_loaders as module_data
+import loss as module_loss
+
+import model.metric as module_metric
+import model.model as module_arch
+
+from trainer import DefaultTrainer, TruncatedTrainer, GroundTruthTrainer, DynamicTrainer
+
+from selection.svd_classifier import *
+from selection.gmm import *
+from selection.util import *
+
+from utils.parse_config import ConfigParser
+from utils.util import *
+from utils.args import *
 
 import wandb
 
 
 __all__ = ['robustlosstrain']
+
 
 def robustlosstrain(parse, config: ConfigParser):
     # implementation for WandB
@@ -34,8 +38,8 @@ def robustlosstrain(parse, config: ConfigParser):
         wandb.init(config=config, project='noisylabel', entity='goguryeo', name='_'.join(wandb_run_name_list))
     
     # By default, pytorch utilizes multi-threaded cpu
-    # Set to handle whole procedures on a single core
-    torch.set_num_threads(1)
+    numthread = torch.get_num_threads()
+    torch.set_num_threads(numthread)
     logger = config.get_logger('train')
     
     # Set seed for reproducibility
@@ -71,8 +75,7 @@ def robustlosstrain(parse, config: ConfigParser):
     # build model architecture, then print to console
     model = config.initialize('arch', module_arch)
     
-    if parse.no_wandb:
-        wandb.watch(model)
+    if parse.no_wandb: wandb.watch(model)
     
     if parse.distillation:
         teacher = config.initialize('arch', module_arch)
@@ -87,9 +90,7 @@ def robustlosstrain(parse, config: ConfigParser):
         training=True,
         num_workers=config['data_loader']['args']['num_workers'],
         pin_memory=config['data_loader']['args']['pin_memory'],
-        teacher_idx = extract_teacherIdx(teacher, data_loader, parse))
-        print('||||||truncated||||||')
-        isNoisy_ratio(data_loader)
+        teacher_idx = extract_cleanidx(teacher, data_loader, parse))
     else:
         teacher = None
 

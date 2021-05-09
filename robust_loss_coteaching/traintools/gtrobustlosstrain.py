@@ -10,9 +10,16 @@ import data_loader.data_loaders as module_data
 import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
-from utils.parse_config import ConfigParser
 from trainer import GroundTruthTrainer
 from collections import OrderedDict
+
+from selection.svd_classifier import *
+from selection.gmm import *
+from selection.util import *
+
+from utils.parse_config import ConfigParser
+from utils.util import *
+from utils.args import *
 
 import random
 import numpy as np
@@ -20,8 +27,10 @@ import copy
 
 import wandb
 
-from trainer import DefaultTrainer, TruncatedTrainer, GroundTruthTrainer, DynamicTrainer
-from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio, kmean_eigen_out, topk_eigen_kmean, extract_teacherIdx
+# from trainer import DefaultTrainer, TruncatedTrainer, GroundTruthTrainer, DynamicTrainer
+# from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector, get_loss_list, isNoisy_ratio, kmean_eigen_out, topk_eigen_kmean, extract_teacherIdx
+from selection.svd_classifier import *
+
 from utils.util import *
 from utils.args import *
 

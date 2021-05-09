@@ -12,13 +12,16 @@ import model.metric as module_metric
 import model.model as module_arch
 
 
-from utils.parse_config import ConfigParser
 from trainer import RealDatasetTrainer
 from collections import OrderedDict
 
 from selection.svd_classifier import *
 from selection.gmm import *
 from selection.util import *
+
+from utils.parse_config import ConfigParser
+from utils.util import *
+from utils.args import *
 
 import random
 import numpy as np

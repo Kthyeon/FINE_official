@@ -108,7 +108,7 @@ def extract_cleanidx(teacher, data_loader, parse, print_statistics = True):
     features, labels = get_features(teacher, data_loader)
     clean_labels = fine(current_features=features, current_labels=labels, fit = parse.distill_mode)
     
-    if print_statistics: return_statistics(data_loader, clean_labels, num=len(labels))
+    if print_statistics: return_statistics(data_loader, clean_labels, datanum=len(labels))
     
     return clean_labels
     

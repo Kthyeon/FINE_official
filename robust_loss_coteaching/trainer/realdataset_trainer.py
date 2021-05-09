@@ -10,9 +10,10 @@ from sklearn.mixture import GaussianMixture
 import pdb
 import numpy as np
 
-from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector
-from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out, get_anchor
-from trainer.svd_classifier import same_topk_index, same_kmeans_index
+# from trainer.svd_classifier import iterative_eigen, get_out_list, get_singular_value_vector
+# from trainer.svd_classifier import get_loss_list, isNoisy_ratio, kmean_eigen_out, get_anchor
+# from trainer.svd_classifier import same_topk_index, same_kmeans_index
+from selection.svd_classifier import *
 import data_loader.data_loaders as module_data
 
 class RealDatasetTrainer(BaseTrainer):

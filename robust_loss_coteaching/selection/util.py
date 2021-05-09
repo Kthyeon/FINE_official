@@ -1,0 +1,92 @@
+import numpy as np
+from tqdm import tqdm
+import torch
+import scipy.stats as stats
+
+__all__=['compute_noiseratio', 'get_features', 'estimate_purity', 'return_statistics']
+
+
+def compute_noiseratio(dataloader):
+    '''
+    get the noisy list in the current dataloader
+    '''
+    isNoisy_list = np.empty((0,))
+    
+    with tqdm(dataloader) as progress:
+        for _, (_, label, _, label_gt) in enumerate(progress):
+            isNoisy = label != label_gt
+            isNoisy_list = np.concatenate((isNoisy_list, isNoisy.cpu()))
+
+    return isNoisy_list
+    
+def return_statistics(dataloader, clean_labels, datanum):
+    
+    predict = np.ones(datanum)
+    for idx in clean_labels: predict[idx] = 0
+        
+    isNoisy_list = compute_noiseratio(dataloader)
+    r_stats = []
+    
+    tp = (isNoisy_list[predict==0]==0).sum()
+    tn = isNoisy_list[predict==1].sum()
+    fp = isNoisy_list.sum() - tn
+    fn = ((isNoisy_list.shape - isNoisy_list.sum()) - tp).item()
+    
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    specificity = tn / (tn + fp)
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    sel_samples = int(fp + tp)
+    frac_clean = tp / (fp + tp)
+
+    r_stats.extend([sel_samples, round(precision, 4), round(recall, 4), round(specificity, 4), round(accuracy, 4), round(frac_clean, 4)])
+    print('Selected samples: {} \nPrecision: {} \nRecall: {} \nSpecificity: {}\nAccuracy: {} \nFraction of clean samples/selected samples: {}'.format(r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4], r_stats[5]))
+    
+    
+def get_features(model, dataloader):
+    '''
+    Concatenate the hidden features and corresponding labels 
+    '''
+    labels = np.empty((0,))
+
+    model.eval()
+    model.cuda()
+    with tqdm(dataloader) as progress:
+        for batch_idx, (data, label, _, _) in enumerate(progress):
+            data, label = data.cuda(), label.long()
+            feature, _ = model(data)
+
+            labels = np.concatenate((labels, label.cpu()))
+            if batch_idx == 0:
+                features = feature.detach().cpu()
+            else:
+                features = np.concatenate((features, feature.detach().cpu()), axis=0)
+    
+    return features, labels
+
+
+def estimate_purity(f, means, covars, weights):
+    '''
+    Estimate the purity of the current dataloader
+    '''
+    
+    best_f1 = 0
+    for x in np.linspace(f.min(), f.max(), 100):
+        x0, x1 = (x - means[0]) / np.sqrt(covars[0]), (x - means[1]) / np.sqrt(covars[1])
+
+        cdf0, cdf1 = 1 - stats.norm.cdf(x0), 1 - stats.norm.cdf(x1)
+
+        if means[0] > means[1]:
+            pred_purity, c_instances = (weights[0]*cdf0) / (weights[0]*cdf0 + weights[1]*cdf1), weights[0] * len(f)
+            print ('Clean: {}'.format(weights[0]))
+        else:
+            pred_purity, c_instances = (weights[1]*cdf1) / (weights[1]*cdf1 + weights[0]*cdf0), weights[1] * len(f)
+            print ('Clean: {}'.format(weights[1]))
+            
+        precision, recall = pred_purity, pred_purity * len(f[f > x]) / c_instances
+        f1 = 2 * precision * recall / (precision + recall)
+        
+    if f1 > best_f1:
+        boundary = x
+
+    return boundary

@@ -21,7 +21,6 @@ def compute_noiseratio(dataloader):
     return isNoisy_list
     
 def return_statistics(dataloader, clean_labels, datanum):
-    
     predict = np.zeros(datanum)
     for idx in clean_labels: predict[idx] = 1
         

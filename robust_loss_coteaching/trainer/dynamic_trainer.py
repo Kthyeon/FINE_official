@@ -33,6 +33,7 @@ class DynamicTrainer(BaseTrainer):
         self.config = config
         self.data_loader = data_loader
         self.mode = mode
+        self.parse = parse
         if len_epoch is None:
             # epoch-based training
             self.len_epoch = len(self.data_loader)
@@ -41,7 +42,7 @@ class DynamicTrainer(BaseTrainer):
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
         self.train_data_loader = data_loader
-        self.dynamic_train_data_loader = copy.deepcopy(dataloader)
+        self.dynamic_train_data_loader = copy.deepcopy(data_loader)
         self.valid_data_loader = valid_data_loader
         
         if teacher != None:
@@ -77,8 +78,8 @@ class DynamicTrainer(BaseTrainer):
                 prev_features, prev_labels = current_features, current_labels
                 
 
-            if epoch > 60:
-                self.teacher_idx = fine(current_features, current_labels, fit = parse.distill_mode, prev_features=None, prev_labels=None)
+            if epoch > 10:
+                self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=None, prev_labels=None)
             else:
                 self.teacher_idx = range(datanum)
 #                 same_topk_index(orig_label, orig_out, prev_label, prev_out, np.clip((epoch-1) * 0.01, 0., 0.72))
@@ -95,7 +96,7 @@ class DynamicTrainer(BaseTrainer):
             pin_memory=self.config['data_loader']['args']['pin_memory'],
             teacher_idx=self.teacher_idx)
         
-        self.selected, self.precision, self.recall, self.specificity, self.accuracy = return_statistics(curr_data_loader, self.teacher_idx, datanum)
+        self.selected, self.precision, self.recall, self.specificity, self.accuracy = return_statistics(self.train_data_loader, self.teacher_idx, datanum)
         
         return curr_data_loader
         
@@ -122,7 +123,7 @@ class DynamicTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 5 == 1 and epoch > 10:
+        if epoch % 10 == 1 and epoch > 0:
             self.dynamic_train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.dynamic_train_data_loader)
             

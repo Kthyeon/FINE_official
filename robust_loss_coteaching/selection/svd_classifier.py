@@ -30,7 +30,7 @@ def get_score(singular_vector_dict, features, labels):
     '''
     Calculate the score providing the degree of showing whether the data is clean or not.
     '''
-    scores = [np.abs(np.inner(singular_vector_dict[labels[indx]], feat)) for indx, feat in enumerate(tqdm(features))]
+    scores = [np.abs(np.inner(singular_vector_dict[labels[indx]], feat/torch.norm(feat))) for indx, feat in enumerate(tqdm(features))]
     return np.array(scores)
 
 def extract_topk(scores, labels, k):

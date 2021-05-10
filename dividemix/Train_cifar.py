@@ -12,8 +12,9 @@ import numpy as np
 from PreResNet import *
 from sklearn.mixture import GaussianMixture
 import dataloader_cifar as dataloader
-
-from svd_classifier import singular_label, get_out_list, get_singular_value_vector, get_loss_list
+from tqdm import tqdm
+from sklearn import cluster
+import numpy as np
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
 parser.add_argument('--batch_size', default=64, type=int, help='train batchsize') 
@@ -33,7 +34,7 @@ parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to
 parser.add_argument('--dataset', default='cifar10', type=str)
 # For testing winning tickets
 parser.add_argument('--distill', default=None, type=str, help='use "dynamic" for robust training')
-parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','eigen'], help='mode for distillation kmeans or eigen.')
+parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','fine-kmeans'], help='mode for distillation kmeans or eigen.')
 parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')
 
 args = parser.parse_args()
@@ -248,25 +249,110 @@ def save_checkpoint(model1, model2, epoch):
     print("\nSaving model1 checkpoint: " + model1_save_path)
     print("\nSaving model2 checkpoint: " + model2_save_path)
 
-def get_teacher_idx(model, loader, mode='eigen'):
+def get_singular_vector(features, labels):
+    '''
+    To get top1 sigular vector in class-wise manner by using SVD of hidden feature vectors
+    features: hidden feature vectors of data (numpy)
+    labels: correspoding label list
+    '''
+    
+    singular_vector_dict = {}
+    with tqdm(total=len(np.unique(labels))) as pbar:
+        for index in np.unique(labels):
+            _, _, v = np.linalg.svd(features[labels==index])
+            singular_vector_dict[index] = v[0]
+            pbar.update(1)
+
+    return singular_vector_dict    
+    
+def get_features(model, dataloader):
+    '''
+    Concatenate the hidden features and corresponding labels 
+    '''
+    labels = np.empty((0,))
+
     model.eval()
-    for params in model.parameters():
-        params.requires_grad = False
+    model.cuda()
+    with tqdm(dataloader) as progress:
+        for batch_idx, (data, label, index) in enumerate(progress):
+            data, label = data.cuda(), label.long()
+            feature = model.forward(data, lout=4)
+            feature = F.avg_pool2d(feature, 4)
+            feature = feature.view(feature.size(0), -1)
+            
+            labels = np.concatenate((labels, label.cpu()))
+            if batch_idx == 0:
+                features = feature.detach().cpu()
+            else:
+                features = np.concatenate((features, feature.detach().cpu()), axis=0)
+    
+    return features, labels
+
+def get_score(singular_vector_dict, features, labels):
+    '''
+    Calculate the score providing the degree of showing whether the data is clean or not.
+    '''
+    scores = [np.abs(np.inner(singular_vector_dict[labels[indx]], feat)) for indx, feat in enumerate(tqdm(features))]
+    return np.array(scores)
+    
+def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, prev_labels=None):
+    '''
+    prev_features, prev_labels: data from the previous round
+    current_features, current_labels: current round's data
+    
+    return clean labels
+    
+    if you insert the prev_features and prev_labels to None,
+    the algorthm divides the data based on the current labels and current features
+    
+    '''
+    if (prev_features != None) and (prev_labels != None):
+        singular_vector_dict = get_singular_vector(prev_features, prev_labels)
+    else:
+        singular_vector_dict = get_singular_vector(current_features, current_labels)
+
+    scores = get_score(singular_vector_dict, features = current_features, labels = current_labels)
+    
+    if 'kmeans' in fit:
+        clean_labels = cleansing(scores, current_labels)
+#     elif 'gmm' in fit:
+#         clean_labels = fit_mixture(scores, current_labels)
+    else:
+        raise NotImplemented
+    
+    return clean_labels  
+
+def cleansing(scores, labels):
+    '''
+    Assume the distribution of scores: bimodal spherical distribution.
+    
+    return clean labels 
+    that belongs to the clean cluster made by the KMeans algorithm
+    '''
+    
+    indexes = np.array(range(len(scores)))
+    clean_labels = []
+    for cls in np.unique(labels):
+        cls_index = indexes[labels==cls]
+        kmeans = cluster.KMeans(n_clusters=2, random_state=0).fit(scores[cls_index].reshape(-1, 1))
+        if np.mean(scores[cls_index][kmeans.labels_==0]) < np.mean(scores[cls_index][kmeans.labels_==1]): kmeans.labels_ = 1 - kmeans.labels_
+            
+        clean_labels += cls_index[kmeans.labels_ == 0].tolist()
+        
+    return np.array(clean_labels, dtype=np.int64)
+    
+def extract_cleanidx(model, loader, mode='fine-kmeans'):
+    model.eval()
+    for params in model.parameters(): params.requires_grad = False
         
     # get teacher_idx
-    if mode =='eigen':
-        tea_label_list, tea_out_list = get_out_list(model, loader)
-        singular_dict, v_ortho_dict = get_singular_value_vector(tea_label_list, tea_out_list)
-    
-        for key in v_ortho_dict.keys():
-            v_ortho_dict[key] = v_ortho_dict[key].cuda()
-
-        teacher_idx = singular_label(v_ortho_dict, tea_out_list, tea_label_list)
+    if mode =='fine-kmeans':
+        features, labels = get_features(model, loader)
+        teacher_idx = fine(current_features=features, current_labels=labels, fit = 'fine-kmeans')
     else: # get teacher _idx via kmeans
         teacher_idx = get_loss_list(model, loader)
         
-    for params in model.parameters():
-        params.requires_grad = True
+    for params in model.parameters(): params.requires_grad = True
     model.train()
     
     teacher_idx = torch.tensor(teacher_idx)
@@ -335,8 +421,8 @@ for epoch in range(args.num_epochs+1):
     root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
             all_loader = loader.run('warmup')
         
-            teacher_idx_1 = get_teacher_idx(net1, all_loader, mode=args.distill_mode)
-            teacher_idx_2 = get_teacher_idx(net2, all_loader, mode=args.distill_mode)
+            teacher_idx_1 = extract_cleanidx(net1, all_loader, mode=args.distill_mode)
+            teacher_idx_2 = extract_cleanidx(net2, all_loader, mode=args.distill_mode)
             
             pred1, prob1 = None, None
             pred2, prob2 = None, None

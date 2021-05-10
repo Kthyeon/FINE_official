@@ -41,9 +41,18 @@ class DynamicTrainer(BaseTrainer):
             # iteration-based training
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
-        self.train_data_loader = data_loader
         self.dynamic_train_data_loader = copy.deepcopy(data_loader)
         self.valid_data_loader = valid_data_loader
+        
+        self.orig_data_loader = getattr(module_data, self.config['data_loader']['type'])(
+            self.config['data_loader']['args']['data_dir'],
+            batch_size=self.config['data_loader']['args']['batch_size'],
+            shuffle=False,
+            validation_split=0.0,
+            num_batches=self.config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=self.config['data_loader']['args']['num_workers'],
+            pin_memory=self.config['data_loader']['args']['pin_memory'])
         
         if teacher != None:
             self.teacher = teacher.to(self.device)
@@ -70,7 +79,7 @@ class DynamicTrainer(BaseTrainer):
     def update_dataloader(self, epoch):
         
         with torch.no_grad():
-            current_features, current_labels = get_features(self.model, self.train_data_loader)
+            current_features, current_labels = get_features(self.model, self.orig_data_loader)
             datanum = len(current_labels)
             if self.teacher_idx is not None:
                 prev_features, prev_labels = current_features[self.teacher_idx], current_labels[self.teacher_idx]
@@ -96,7 +105,7 @@ class DynamicTrainer(BaseTrainer):
             pin_memory=self.config['data_loader']['args']['pin_memory'],
             teacher_idx=self.teacher_idx)
         
-        self.selected, self.precision, self.recall, self.specificity, self.accuracy = return_statistics(self.train_data_loader, self.teacher_idx, datanum)
+        self.selected, self.precision, self.recall, self.specificity, self.accuracy = return_statistics(self.orig_data_loader, self.teacher_idx, datanum)
         
         return curr_data_loader
         

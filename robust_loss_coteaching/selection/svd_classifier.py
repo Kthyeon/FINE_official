@@ -117,4 +117,5 @@ def extract_cleanidx(teacher, data_loader, parse, print_statistics = True):
         raise NotImplemented
     if print_statistics: return_statistics(data_loader, clean_labels, datanum=len(labels))
     
+    
     return clean_labels

@@ -2,8 +2,9 @@ import numpy as np
 from tqdm import tqdm
 import torch
 import scipy.stats as stats
+from sklearn import cluster
 
-__all__=['compute_noiseratio', 'get_features', 'estimate_purity', 'return_statistics']
+__all__=['compute_noiseratio', 'get_features', 'estimate_purity', 'return_statistics','cleansing_loss']
 
 
 def compute_noiseratio(dataloader):
@@ -67,6 +68,28 @@ def get_features(model, dataloader):
     
     return features, labels
 
+def cleansing_loss(model, dataloader):
+    
+    loss_list = np.empty((0,))
+    labels = np.empty((0,))
+    model.eval()
+    model.cuda()
+    with tqdm(dataloader) as progress:
+        for batch_idx, (data, label, _, _) in enumerate(progress):
+            data, label = data.cuda(), label.long().cuda()
+            _, prediction = model(data)
+            
+            loss = torch.nn.CrossEntropyLoss(reduction='none')(prediction, label)
+            
+            loss_list = np.concatenate((loss_list, loss.detach().cpu()))
+            labels = np.concatenate((labels, label.detach().cpu()))
+
+    kmeans = cluster.KMeans(n_clusters=2, random_state=0).fit(loss_list.reshape(-1, 1))
+    if np.mean(loss_list[kmeans.labels_==0]) > np.mean(loss_list[kmeans.labels_==1]): kmeans.labels_ = 1 - kmeans.labels_
+        
+    indexes = np.array(range(len(labels)))
+
+    return np.array(indexes[kmeans.labels_ == 0], dtype=np.int64), labels
 
 def estimate_purity(f, means, covars, weights):
     '''

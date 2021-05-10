@@ -25,11 +25,15 @@ def get_singular_vector(features, labels):
     return singular_vector_dict
 
 
-def get_score(singular_vector_dict, features, labels):
+def get_score(singular_vector_dict, features, labels, normalization=True):
     '''
     Calculate the score providing the degree of showing whether the data is clean or not.
     '''
-    scores = [np.abs(np.inner(singular_vector_dict[labels[indx]], feat/torch.norm(feat))) for indx, feat in enumerate(tqdm(features))]
+    if normalization:
+        scores = [np.abs(np.inner(singular_vector_dict[labels[indx]], feat/np.linalg.norm(feat))) for indx, feat in enumerate(tqdm(features))]
+    else:
+        scores = [np.abs(np.inner(singular_vector_dict[labels[indx]], feat)) for indx, feat in enumerate(tqdm(features))]
+        
     return np.array(scores)
 
 def extract_topk(scores, labels, k):

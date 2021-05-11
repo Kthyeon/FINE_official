@@ -312,6 +312,7 @@ def fit_mixture(scores, labels, p_threshold=0.5):
     
     clean_labels = []
     indexes = np.array(range(len(scores)))
+    probs = {}
     for cls in np.unique(labels):
         cls_index = indexes[labels==cls]
         feats = scores[labels==cls]
@@ -320,7 +321,9 @@ def fit_mixture(scores, labels, p_threshold=0.5):
         
         gmm.fit(feats_)
         prob = gmm.predict_proba(feats_)
-        prob = prob[:,gmm.means_.argmax()]         
+        prob = prob[:,gmm.means_.argmax()]
+        for i in range(len(cls_index)):
+            probs[cls_index[i]] = prob[i]
 #         weights, means, covars = g.weights_, g.means_, g.covariances_
         
 #         # boundary? QDA!
@@ -333,7 +336,7 @@ def fit_mixture(scores, labels, p_threshold=0.5):
 #         bound = estimate_purity(feats, means, covars, weights)
         clean_labels += [cls_index[clean_idx] for clean_idx in range(len(cls_index)) if prob[clean_idx] > p_threshold] 
     
-    return np.array(clean_labels, dtype=np.int64)    
+    return np.array(clean_labels, dtype=np.int64), probs
     
     
 def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, prev_labels=None, p_threshold=0.7):
@@ -356,13 +359,14 @@ def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, p
     
     if 'kmeans' in fit:
         clean_labels = cleansing(scores, current_labels)
+        probs = None
     elif 'gmm' in fit:
         # fit a two-component GMM to the loss
-        clean_labels = fit_mixture(scores, current_labels, p_threshold)
+        clean_labels, probs = fit_mixture(scores, current_labels, p_threshold)
     else:
         raise NotImplemented
     
-    return clean_labels  
+    return clean_labels, probs
 
 def cleansing(scores, labels):
     '''
@@ -390,15 +394,16 @@ def extract_cleanidx(model, loader, mode='fine-kmeans', p_threshold=0.6):
     # get teacher_idx
     if 'fine' in mode:
         features, labels = get_features(model, loader)
-        teacher_idx = fine(current_features=features, current_labels=labels, fit = 'fine-gmm', p_threshold=p_threshold)
+        teacher_idx, probs = fine(current_features=features, current_labels=labels, fit = mode, p_threshold=p_threshold)
     else: # get teacher _idx via kmeans
         teacher_idx = get_loss_list(model, loader)
+        probs = None
         
     for params in model.parameters(): params.requires_grad = True
     model.train()
     
     teacher_idx = torch.tensor(teacher_idx)
-    return teacher_idx
+    return teacher_idx, probs
     
 
 if args.distill:
@@ -415,7 +420,7 @@ else:
      
 
 if args.dataset=='cifar10':
-    warm_up = 0
+    warm_up = 20
 elif args.dataset=='cifar100':
     warm_up = 30
     
@@ -459,15 +464,24 @@ for epoch in range(args.num_epochs+1):
    
     else:         
         if args.distill == 'dynamic':
-            loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
-    root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
-            all_loader = loader.run('warmup')
+#             loader = dataloader.cifar_dataloader(args.dataset,r=args.r,noise_mode=args.noise_mode,batch_size=args.batch_size,num_workers=5,\
+#     root_dir=args.data_path,log=stats_log,noise_file='%s/%.1f_%s.json'%(args.data_path,args.r,args.noise_mode))
+#             all_loader = loader.run('warmup')
         
-            teacher_idx_1 = extract_cleanidx(net1, all_loader, mode=args.distill_mode, p_threshold=args.p_threshold)
-            teacher_idx_2 = extract_cleanidx(net2, all_loader, mode=args.distill_mode, p_threshold=args.p_threshold)
+            teacher_idx_1, prob1_dict = extract_cleanidx(net1, eval_loader, mode=args.distill_mode, p_threshold=args.p_threshold)
+            teacher_idx_2, prob2_dict = extract_cleanidx(net2, eval_loader, mode=args.distill_mode, p_threshold=args.p_threshold)
             
-            pred1, prob1 = None, None
-            pred2, prob2 = None, None
+            pred1, pred2 = np.zeros(50000, dtype=bool), np.zeros(50000, dtype=bool)
+            prob1, prob2 = np.zeros(50000), np.zeros(50000)
+
+            for index in teacher_idx_1:
+                pred1[index] = True
+            for index in teacher_idx_2:
+                pred2[index] = True
+                
+            for i in range(50000):
+                prob1[i] = prob1_dict[i]
+                prob2[i] = prob2_dict[i]
             
             if args.refinement:
                 
@@ -477,19 +491,28 @@ for epoch in range(args.num_epochs+1):
                 pred1 = (prob1 > args.p_threshold)      
                 pred2 = (prob2 > args.p_threshold)
             
-            print('Train Net1 with dynamic distill')
-            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd', pred2, prob2, teacher_idx=teacher_idx_2, refinement=args.refinement) # co-divide
+            print('Train Net1')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train',pred2,prob2) # co-divide
             train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader) # train net1  
 
-            print('\nTrain Net2 with dynamic distill')
-            labeled_trainloader, unlabeled_trainloader = loader.run('train_svd', pred1, prob1, teacher_idx=teacher_idx_1, refinement=args.refinement) # co-divide
-            train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2
+            print('\nTrain Net2')
+            labeled_trainloader, unlabeled_trainloader = loader.run('train',pred1,prob1) # co-divide
+            train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2     
+            
+#             print('Train Net1 with dynamic distill')
+#             labeled_trainloader, unlabeled_trainloader = loader.run('train_svd', pred2, prob2, teacher_idx=teacher_idx_2, refinement=args.refinement) # co-divide
+#             train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader) # train net1  
+
+#             print('\nTrain Net2 with dynamic distill')
+#             labeled_trainloader, unlabeled_trainloader = loader.run('train_svd', pred1, prob1, teacher_idx=teacher_idx_1, refinement=args.refinement) # co-divide
+#             train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2
         
         else:
             prob1,all_loss[0]=eval_train(net1,all_loss[0])   
             prob2,all_loss[1]=eval_train(net2,all_loss[1])          
 
-            pred1 = (prob1 > args.p_threshold)      
+            pred1 = (prob1 > args.p_threshold)    
+            print(pred1, len(pred1))
             pred2 = (prob2 > args.p_threshold)      
 
             print('Train Net1')

@@ -31,7 +31,7 @@ def fit_mixture(scores, labels, p_threshold=0.5):
         
         gmm.fit(feats_)
         prob = gmm.predict_proba(feats_)
-        prob = prob[:,gmm.means_.argmin()]         
+        prob = prob[:,gmm.means_.argmax()]         
 #         weights, means, covars = g.weights_, g.means_, g.covariances_
         
 #         # boundary? QDA!

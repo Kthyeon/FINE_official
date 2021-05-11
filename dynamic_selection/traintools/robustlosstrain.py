@@ -132,20 +132,34 @@ def robustlosstrain(parse, config: ConfigParser):
     lr_scheduler = config.initialize('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
     if config['train_loss']['type'] == 'ELRLoss':
-#         trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
-                                     config=config,
-                                     data_loader=data_loader,
-                                     parse=parse,
-                                     teacher=teacher,
-                                     valid_data_loader=valid_data_loader,
-                                     test_data_loader=test_data_loader,
-                                     lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss,
-                                     mode = parse.mode,
-                                     entropy = parse.entropy,
-                                     threshold = parse.threshold
-                                )
+        if parse.dynamic:
+            trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
+                                         config=config,
+                                         data_loader=data_loader,
+                                         parse=parse,
+                                         teacher=teacher,
+                                         valid_data_loader=valid_data_loader,
+                                         test_data_loader=test_data_loader,
+                                         lr_scheduler=lr_scheduler,
+                                         val_criterion=val_loss,
+                                         mode = parse.mode,
+                                         entropy = parse.entropy,
+                                         threshold = parse.threshold
+                                    )
+        else:
+            trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                         config=config,
+                                         data_loader=data_loader,
+                                         parse=parse,
+                                         teacher=teacher,
+                                         valid_data_loader=valid_data_loader,
+                                         test_data_loader=test_data_loader,
+                                         lr_scheduler=lr_scheduler,
+                                         val_criterion=val_loss,
+                                         mode = parse.mode,
+                                         entropy = parse.entropy,
+                                         threshold = parse.threshold
+                                    )
     elif config['train_loss']['type'] == 'SCELoss':
         trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,

@@ -28,7 +28,7 @@ def parse_args():
     args.add_argument('--distill_mode', 
                       type=str, 
                       default='eigen', 
-                      choices=['fine-kmeans','fine-gmm', 'loss'], 
+                      choices=['fine-kmeans','fine-gmm', 'fine-bmm', 'loss'], 
                       help='mode for distillation kmeans or eigen.')
     args.add_argument('--mode', 
                       type=str, 

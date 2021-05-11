@@ -85,7 +85,7 @@ def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, p
     the algorthm divides the data based on the current labels and current features
     
     '''
-    if (prev_features != None) and (prev_labels != None):
+    if prev_features is not None and prev_labels is not None:
         singular_vector_dict = get_singular_vector(prev_features, prev_labels)
     else:
         singular_vector_dict = get_singular_vector(current_features, current_labels)
@@ -96,6 +96,8 @@ def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, p
         clean_labels = cleansing(scores, current_labels)
     elif 'gmm' in fit:
         clean_labels = fit_mixture(scores, current_labels)
+    elif 'bmm' in fit:
+        clean_labels = fit_mixture_bmm(scores, current_labels)
     else:
         raise NotImplemented
     

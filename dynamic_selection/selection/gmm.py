@@ -13,7 +13,7 @@ from .util import estimate_purity
 __all__=['fit_mixture']
 
 
-def fit_mixture(scores, labels):
+def fit_mixture(scores, labels, p_threshold=0.5):
     '''
     Assume the distribution of scores: bimodal gaussian mixture model
     
@@ -25,24 +25,26 @@ def fit_mixture(scores, labels):
     indexes = np.array(range(len(scores)))
     for cls in np.unique(labels):
         cls_index = indexes[labels==cls]
-        feats = scores[labels==cls].cpu().numpy()
+        feats = scores[labels==cls]
         feats_ = np.ravel(feats).astype(np.float).reshape(-1, 1)
-        g = GMM(n_components=2, covariance_type='full', tol=1e-6, max_iter=1000)
+        gmm = GaussianMixture(n_components=2, covariance_type='full', tol=1e-6, max_iter=10)
         
-        g.fit(feats_)
-        weights, means, covars = g.weights_, g.means_, g.covariances_
+        gmm.fit(feats_)
+        prob = gmm.predict_proba(feats_)
+        prob = prob[:,gmm.means_.argmin()]         
+#         weights, means, covars = g.weights_, g.means_, g.covariances_
         
-        # boundary? QDA!
-        a, b = (1/2) * ((1/covars[0]) - (1/covars[1])), -(means[0]/covars[0]) + (means[1]/covars[1])
-        c = (1/2) * ((np.square(means[0])/covars[0]) - (np.square(means[1])/covars[1]))
-        c -= np.log((weights[0])/np.sqrt(2*np.pi*covars[0]))
-        c += np.log((weights[1])/np.sqrt(2*np.pi*covars[1]))
-        d = b**2 - 4*a*c
+#         # boundary? QDA!
+#         a, b = (1/2) * ((1/covars[0]) - (1/covars[1])), -(means[0]/covars[0]) + (means[1]/covars[1])
+#         c = (1/2) * ((np.square(means[0])/covars[0]) - (np.square(means[1])/covars[1]))
+#         c -= np.log((weights[0])/np.sqrt(2*np.pi*covars[0]))
+#         c += np.log((weights[1])/np.sqrt(2*np.pi*covars[1]))
+#         d = b**2 - 4*a*c
         
-        bound = estimate_purity(feats, means, covars, weights)
-        clean_labels += cls_index[feats > bound].numpy().tolist()
+#         bound = estimate_purity(feats, means, covars, weights)
+        clean_labels += [cls_index[clean_idx] for clean_idx in range(len(cls_index)) if prob[clean_idx] > p_threshold] 
     
-    return np.array(clean_labels, dtype=np.int64)
+    return np.array(clean_labels, dtype=np.int64)    
 
 
 

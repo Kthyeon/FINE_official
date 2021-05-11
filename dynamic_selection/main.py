@@ -1,6 +1,7 @@
 from traintools import *
 from utils.args import *
-
+import warnings
+warnings.filterwarnings("ignore")
 
 def main(parse, config: ConfigParser):
     

@@ -15,6 +15,9 @@ import dataloader_cifar as dataloader
 from tqdm import tqdm
 from sklearn import cluster
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore")
+
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR Training')
 parser.add_argument('--batch_size', default=64, type=int, help='train batchsize') 
@@ -34,7 +37,7 @@ parser.add_argument('--data_path', default='./cifar-10', type=str, help='path to
 parser.add_argument('--dataset', default='cifar10', type=str)
 # For testing winning tickets
 parser.add_argument('--distill', default=None, type=str, help='use "dynamic" for robust training')
-parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','fine-kmeans'], help='mode for distillation kmeans or eigen.')
+parser.add_argument('--distill_mode', type=str, default='eigen', choices=['kmeans','fine-kmeans','fine-gmm'], help='mode for distillation kmeans or eigen.')
 parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')
 
 args = parser.parse_args()
@@ -299,7 +302,41 @@ def get_score(singular_vector_dict, features, labels, normalization=True):
     
     return np.array(scores)
     
-def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, prev_labels=None):
+def fit_mixture(scores, labels, p_threshold=0.5):
+    '''
+    Assume the distribution of scores: bimodal gaussian mixture model
+    
+    return clean labels
+    that belongs to the clean cluster by fitting the score distribution to GMM
+    '''
+    
+    clean_labels = []
+    indexes = np.array(range(len(scores)))
+    for cls in np.unique(labels):
+        cls_index = indexes[labels==cls]
+        feats = scores[labels==cls]
+        feats_ = np.ravel(feats).astype(np.float).reshape(-1, 1)
+        gmm = GaussianMixture(n_components=2, covariance_type='full', tol=1e-6, max_iter=10)
+        
+        gmm.fit(feats_)
+        prob = gmm.predict_proba(feats_)
+        prob = prob[:,gmm.means_.argmin()]         
+#         weights, means, covars = g.weights_, g.means_, g.covariances_
+        
+#         # boundary? QDA!
+#         a, b = (1/2) * ((1/covars[0]) - (1/covars[1])), -(means[0]/covars[0]) + (means[1]/covars[1])
+#         c = (1/2) * ((np.square(means[0])/covars[0]) - (np.square(means[1])/covars[1]))
+#         c -= np.log((weights[0])/np.sqrt(2*np.pi*covars[0]))
+#         c += np.log((weights[1])/np.sqrt(2*np.pi*covars[1]))
+#         d = b**2 - 4*a*c
+        
+#         bound = estimate_purity(feats, means, covars, weights)
+        clean_labels += [cls_index[clean_idx] for clean_idx in range(len(cls_index)) if prob[clean_idx] > p_threshold] 
+    
+    return np.array(clean_labels, dtype=np.int64)    
+    
+    
+def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, prev_labels=None, p_threshold=0.5):
     '''
     prev_features, prev_labels: data from the previous round
     current_features, current_labels: current round's data
@@ -319,8 +356,9 @@ def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, p
     
     if 'kmeans' in fit:
         clean_labels = cleansing(scores, current_labels)
-#     elif 'gmm' in fit:
-#         clean_labels = fit_mixture(scores, current_labels)
+    elif 'gmm' in fit:
+        # fit a two-component GMM to the loss
+        clean_labels = fit_mixture(scores, current_labels)
     else:
         raise NotImplemented
     
@@ -350,9 +388,9 @@ def extract_cleanidx(model, loader, mode='fine-kmeans'):
     for params in model.parameters(): params.requires_grad = False
         
     # get teacher_idx
-    if mode =='fine-kmeans':
+    if 'fine' in mode:
         features, labels = get_features(model, loader)
-        teacher_idx = fine(current_features=features, current_labels=labels, fit = 'fine-kmeans')
+        teacher_idx = fine(current_features=features, current_labels=labels, fit = 'fine-gmm')
     else: # get teacher _idx via kmeans
         teacher_idx = get_loss_list(model, loader)
         

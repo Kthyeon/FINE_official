@@ -1,13 +1,13 @@
 # not upload data
-ELR/dir_to_data/
-ELR/wandb
+dynamic_selcetion/dir_to_data/
+dynamic_selection/wandb
 .gitignore
-DivideMix/cifar-10/
-DivideMix/cifar-100/
-DivideMix/checkpoint/
-DivideMix/clothing1m/
-DivideMix/pretrained/
-ELR/checkpoint/
+dividemix/cifar-10/
+dividemix/cifar-100/
+dividemix/checkpoint/
+dividemix/clothing1m/
+dividemix/pretrained/
+dynamic_selection/checkpoint/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

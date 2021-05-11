@@ -34,6 +34,8 @@ class DynamicTrainer(BaseTrainer):
         self.data_loader = data_loader
         self.mode = mode
         self.parse = parse
+        
+
         if len_epoch is None:
             # epoch-based training
             self.len_epoch = len(self.data_loader)
@@ -87,7 +89,7 @@ class DynamicTrainer(BaseTrainer):
                 prev_features, prev_labels = current_features, current_labels
                 
 
-            if epoch > 10:
+            if epoch > 40:
                 self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=None, prev_labels=None)
             else:
                 self.teacher_idx = range(datanum)
@@ -132,9 +134,12 @@ class DynamicTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 10 == 1 and epoch > 0:
+        if epoch % 20 == 1 and epoch > 0:
             self.dynamic_train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.dynamic_train_data_loader)
+            self.purity = (self.dynamic_train_data_loader.train_dataset.train_labels == \
+                           self.dynamic_train_data_loader.train_dataset.train_labels_gt).sum() / \
+                        len(self.dynamic_train_data_loader.train_dataset)
             
 #         if epoch > 30:
 #             self.train_criterion = CCELoss()

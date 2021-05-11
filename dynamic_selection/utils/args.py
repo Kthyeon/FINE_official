@@ -107,7 +107,7 @@ def parse_args():
         CustomArgs(['--asym', '--asym'], type=str2bool, target=('trainer', 'asym')),
     ]
     
-    os.chdir(os.path.join(os.getcwd(), 'robust_loss_coteaching'))
+    os.chdir(os.path.join(os.getcwd(), 'dynamic_selection'))
     
     config = ConfigParser.get_instance(args, options)
     parse = args.parse_args()

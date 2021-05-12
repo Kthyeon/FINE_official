@@ -21,30 +21,30 @@ def compute_noiseratio(dataloader):
     # clean: 1, noisy 0
     return isNoisy_list
     
-def return_statistics(dataloader, clean_labels, datanum):
-    predict = np.zeros(datanum)
-    for idx in clean_labels: predict[idx] = 1
-        
+def return_statistics(dataloader, selected_idx):
+    '''
+    selected_idx: list of selected clean labels by filtering method
+    ''' 
     isNoisy_list = compute_noiseratio(dataloader)
     r_stats = []
     
-    tp = (isNoisy_list[predict==1]==1).sum() # positive clean
-    tn = (isNoisy_list[predict==0]==0).sum() # negative noisy
-    fp = (isNoisy_list==0).sum() - tn
-    fn = (isNoisy_list==1).sum() - tp
+    tp = isNoisy_list[selected_idx].sum()
+    fp = (selected_idx.shape - tp).item()
+    fn = isNoisy_list.sum() - tp
+    tn = (isNoisy_list==0).sum() -fp
     
-    print('Noisy: {}, Clean: {}'.format((isNoisy_list==0).sum(), (isNoisy_list==1).sum()))
+    print('Real Noisy: {}, Real Clean: {}'.format((isNoisy_list==0).sum(), (isNoisy_list==1).sum()))
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
+    f1_score = 2 / ((1 / precision) + (1  / recall))
     specificity = tn / (tn + fp)
     accuracy = (tp + tn) / (tp + tn + fp + fn)
-    sel_samples = int(fp + tp)
-    frac_clean = tp / (fp + tp)
+    sel_samples = 'Real clean:{}/Selected:{}'.format(tp, tp+fp)
 
-    r_stats.extend([sel_samples, round(precision, 4), round(recall, 4), round(specificity, 4), round(accuracy, 4), round(frac_clean, 4)])
-    print('Selected samples: {} \nPrecision: {} \nRecall: {} \nSpecificity: {}\nAccuracy: {} \nFraction of clean samples/selected samples: {}'.format(r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4], r_stats[5]))
+    r_stats.extend([sel_samples, round(precision, 4), round(recall, 4), round(f1_score, 4), round(specificity, 4), round(accuracy, 4)])
+    print('{} \nPrecision: {} \nRecall: {} \nF1_Score: {} \nSpecificity: {}\nAccuracy: {}'.format(r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4], r_stats[5]))
     
-    return r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4]
+    return r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4], r_stats[5]
     
     
 def get_features(model, dataloader):

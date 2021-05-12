@@ -88,10 +88,10 @@ class DynamicTrainer(BaseTrainer):
                 prev_features, prev_labels = current_features, current_labels
                 
 
-            if epoch > 40:
+            if epoch > 0:
                 self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels)
             else:
-                self.teacher_idx = range(datanum)
+                self.teacher_idx = np.arange(datanum)
 #                 same_topk_index(orig_label, orig_out, prev_label, prev_out, np.clip((epoch-1) * 0.01, 0., 0.72))
             
             
@@ -106,9 +106,7 @@ class DynamicTrainer(BaseTrainer):
             pin_memory=self.config['data_loader']['args']['pin_memory'],
             teacher_idx=self.teacher_idx)
         
-        print (curr_data_loader.dataset)
-        
-        self.selected, self.precision, self.recall, self.specificity, self.accuracy = return_statistics(self.orig_data_loader, self.teacher_idx, datanum)
+        self.selected, self.precision, self.recall, self.f1, self.specificity, self.accuracy = return_statistics(self.orig_data_loader, self.teacher_idx)
         
         return curr_data_loader
         
@@ -135,7 +133,7 @@ class DynamicTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 10 == 1 and epoch > 40: # 
+        if epoch % 10 == 1 and epoch > 0: # 
             self.dynamic_train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.dynamic_train_data_loader)
             self.purity = (self.dynamic_train_data_loader.train_dataset.train_labels == \
@@ -193,7 +191,6 @@ class DynamicTrainer(BaseTrainer):
                         self._progress(batch_idx),
                         loss.item()))
                     self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
-                break
                 
                 if batch_idx == self.len_epoch:
                     break

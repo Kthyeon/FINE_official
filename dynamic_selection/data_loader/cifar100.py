@@ -63,7 +63,7 @@ def train_val_split(base_dataset: torchvision.datasets.CIFAR10, seed=888):
     fix_seed(seed)
     num_classes = 100
     base_dataset = np.array(base_dataset)
-    train_n = int(len(base_dataset) * 1.0 / num_classes)
+    train_n = int(len(base_dataset) * 0.9 / num_classes)
     train_idxs = []
     val_idxs = []
 

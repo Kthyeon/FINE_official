@@ -178,7 +178,7 @@ class DefaultTrainer(BaseTrainer):
                     progress.set_description_str(f'Valid epoch {epoch}')
                     data, label = data.to(self.device), label.to(self.device)
                     _, output = self.model(data)
-                    loss = self.val_criterion(output, label)
+                    loss = self.val_criterion()(output, label)
 
                     self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
                     self.writer.add_scalar('loss', loss.item())

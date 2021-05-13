@@ -162,7 +162,38 @@ def robustlosstrain(parse, config: ConfigParser):
                                          threshold = parse.threshold
                                     )
     elif config['train_loss']['type'] == 'SCELoss':
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+        if parse.dynamic:
+            trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
+                                         config=config,
+                                         data_loader=data_loader,
+                                         parse=parse,
+                                         teacher=teacher,
+                                         valid_data_loader=valid_data_loader,
+                                         test_data_loader=test_data_loader,
+                                         lr_scheduler=lr_scheduler,
+                                         val_criterion=val_loss,
+                                         mode = parse.mode,
+                                         entropy = parse.entropy,
+                                         threshold = parse.threshold
+                                    )
+        else:
+            trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                         config=config,
+                                         data_loader=data_loader,
+                                         parse=parse,
+                                         teacher=teacher,
+                                         valid_data_loader=valid_data_loader,
+                                         test_data_loader=test_data_loader,
+                                         lr_scheduler=lr_scheduler,
+                                         val_criterion=val_loss,
+                                         mode = parse.mode,
+                                         entropy = parse.entropy,
+                                         threshold = parse.threshold
+                                    )
+            
+    elif config['train_loss']['type'] == 'GCELoss':
+        if parse.dynamic:
+            trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
                                      parse=parse,
@@ -173,10 +204,9 @@ def robustlosstrain(parse, config: ConfigParser):
                                      val_criterion=val_loss,
                                      mode = parse.mode,
                                      entropy = parse.entropy,
-                                     threshold = parse.threshold                                  
-                                )
-    elif config['train_loss']['type'] == 'GCELoss':
-        if config['train_loss']['args']['truncated'] == False:
+                                     threshold = parse.threshold
+                                    )
+        else:
             trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
                                      config=config,
                                      data_loader=data_loader,
@@ -190,61 +220,48 @@ def robustlosstrain(parse, config: ConfigParser):
                                      entropy = parse.entropy,
                                      threshold = parse.threshold
                                     )
-        elif config['train_loss']['args']['truncated'] == True:
-            trainer= TruncatedTrainer(model, train_loss, metrics, optimizer,
-                                      config=config,
-                                      data_loader=data_loader,
-                                      parse=parse,
-                                      teacher=teacher,
-                                      valid_data_loader=valid_data_loader,
-                                      test_data_loader=test_data_loader,
-                                      lr_scheduler=lr_scheduler,
-                                      val_criterion=val_loss,
-                                      mode = parse.mode,
-                                      entropy = parse.entropy,
-                                      threshold = parse.threshold
-                                     )
-    elif config['train_loss']['type'] == 'GTLoss':
-        trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
-                                     config=config,
-                                     data_loader=data_loader,
-                                     teacher=teacher,
-                                     valid_data_loader=valid_data_loader,
-                                     test_data_loader=test_data_loader,
-                                     lr_scheduler=lr_scheduler,
-                                     val_criterion=val_loss,
-                                     mode = parse.mode,
-                                     entropy = parse.entropy,
-                                     threshold = parse.threshold
-                                    )
-    elif config['train_loss']['type'] == 'CCELoss' and parse.dynamic:
-        trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
-                                   config=config,
-                                   data_loader=data_loader,
-                                   parse=parse,
-                                   teacher=teacher,
-                                   valid_data_loader=valid_data_loader,
-                                   test_data_loader=test_data_loader,
-                                   lr_scheduler=lr_scheduler,
-                                   val_criterion=val_loss,
-                                   mode = parse.mode,
-                                   entropy = parse.entropy,
-                                   threshold = parse.threshold
+#     elif config['train_loss']['type'] == 'GTLoss':
+#         trainer = GroundTruthTrainer(model, train_loss, metrics, optimizer,
+#                                      config=config,
+#                                      data_loader=data_loader,
+#                                      teacher=teacher,
+#                                      valid_data_loader=valid_data_loader,
+#                                      test_data_loader=test_data_loader,
+#                                      lr_scheduler=lr_scheduler,
+#                                      val_criterion=val_loss,
+#                                      mode = parse.mode,
+#                                      entropy = parse.entropy,
+#                                      threshold = parse.threshold
+#                                     )
+    elif config['train_loss']['type'] == 'CCELoss':
+        if parse.dynamic:
+            trainer = DynamicTrainer(model, train_loss, metrics, optimizer,
+                                       config=config,
+                                       data_loader=data_loader,
+                                       parse=parse,
+                                       teacher=teacher,
+                                       valid_data_loader=valid_data_loader,
+                                       test_data_loader=test_data_loader,
+                                       lr_scheduler=lr_scheduler,
+                                       val_criterion=val_loss,
+                                       mode = parse.mode,
+                                       entropy = parse.entropy,
+                                       threshold = parse.threshold
                                   )
         
-    else:
-        trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
-                                   config=config,
-                                   data_loader=data_loader,
-                                   parse=parse,
-                                   teacher=teacher,
-                                   valid_data_loader=valid_data_loader,
-                                   test_data_loader=test_data_loader,
-                                   lr_scheduler=lr_scheduler,
-                                   val_criterion=val_loss,
-                                   mode = parse.mode,
-                                   entropy = parse.entropy,
-                                   threshold = parse.threshold
+        else:
+            trainer = DefaultTrainer(model, train_loss, metrics, optimizer,
+                                       config=config,
+                                       data_loader=data_loader,
+                                       parse=parse,
+                                       teacher=teacher,
+                                       valid_data_loader=valid_data_loader,
+                                       test_data_loader=test_data_loader,
+                                       lr_scheduler=lr_scheduler,
+                                       val_criterion=val_loss,
+                                       mode = parse.mode,
+                                       entropy = parse.entropy,
+                                       threshold = parse.threshold
                                   )
     
 

@@ -39,10 +39,10 @@ def return_statistics(dataloader, selected_idx):
     f1_score = 2 / ((1 / precision) + (1  / recall))
     specificity = tn / (tn + fp)
     accuracy = (tp + tn) / (tp + tn + fp + fn)
-    sel_samples = 'Real clean:{}/Selected:{}'.format(tp, tp+fp)
+    sel_samples = '{}/{}'.format(tp, tp+fp)
 
     r_stats.extend([sel_samples, round(precision, 4), round(recall, 4), round(f1_score, 4), round(specificity, 4), round(accuracy, 4)])
-    print('{} \nPrecision: {} \nRecall: {} \nF1_Score: {} \nSpecificity: {}\nAccuracy: {}'.format(r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4], r_stats[5]))
+    print('Selected_clean/total: {} \nPrecision: {} \nRecall: {} \nF1_Score: {} \nSpecificity: {}\nAccuracy: {}'.format(r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4], r_stats[5]))
     
     return r_stats[0], r_stats[1], r_stats[2], r_stats[3], r_stats[4], r_stats[5]
     

@@ -68,6 +68,9 @@ def parse_args():
     args.add_argument('--no_wandb', 
                       action='store_false', 
                       help='if false, not to use wandb')
+    args.add_argument('--TFT', 
+                      action='store_true', 
+                      help='True if TFT')
     
     
     # dataset, lr_scheduler, loss_fn are only used to decide config file; they have no effect when config file is given
@@ -95,6 +98,7 @@ def parse_args():
                       type=str, 
                       default='robustloss', 
                       choices=['robustloss', 'robustlossgt', 'coteaching', 'trainingclothing1m'])
+
 
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')

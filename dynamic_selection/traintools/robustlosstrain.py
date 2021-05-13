@@ -86,12 +86,13 @@ def robustlosstrain(parse, config: ConfigParser):
         batch_size= config['data_loader']['args']['batch_size'],
         shuffle=config['data_loader']['args']['shuffle'],
 #         validation_split=config['data_loader']['args']['validation_split'],
-        validation_split=0.0,
+        validation_split=0.1,
         num_batches=config['data_loader']['args']['num_batches'],
         training=True,
         num_workers=config['data_loader']['args']['num_workers'],
         pin_memory=config['data_loader']['args']['pin_memory'],
-        teacher_idx = extract_cleanidx(teacher, data_loader, parse))
+        teacher_idx = extract_cleanidx(teacher, data_loader, parse),
+        seed = parse.dataseed)
     else:
         teacher = None
 

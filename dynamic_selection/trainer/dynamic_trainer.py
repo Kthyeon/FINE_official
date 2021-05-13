@@ -88,7 +88,7 @@ class DynamicTrainer(BaseTrainer):
                 prev_features, prev_labels = current_features, current_labels
                 
 
-            if epoch > 0:
+            if epoch > 40:
                 self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels)
             else:
                 self.teacher_idx = np.arange(datanum)
@@ -133,7 +133,7 @@ class DynamicTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 10 == 1 and epoch > 0: # 
+        if epoch % 10 == 1 and epoch > 40: # 
             self.dynamic_train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.dynamic_train_data_loader)
             self.purity = (self.dynamic_train_data_loader.train_dataset.train_labels == \

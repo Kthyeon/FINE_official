@@ -13,7 +13,7 @@ from .util import estimate_purity
 __all__=['fit_mixture', 'fit_mixture_bmm']
 
 
-def fit_mixture(scores, labels, p_threshold=0.6):
+def fit_mixture(scores, labels, p_threshold=0.5):
     '''
     Assume the distribution of scores: bimodal gaussian mixture model
     

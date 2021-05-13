@@ -57,7 +57,7 @@
         "save_period": 1,
         "verbosity": 2,
         "label_dir": "saved/",
-        "monitor": "max test_my_metric",
+        "monitor": "max val_my_metric",
         "early_stop": 2000,
         "tensorboard": false,
         "mlflow": true,

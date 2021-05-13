@@ -24,6 +24,9 @@ def get_cifar100(root, cfg_trainer, train=True,
                 transform_train=None, transform_val=None,
                 download=True, noise_file = '', teacher_idx=None, seed=888):
     base_dataset = torchvision.datasets.CIFAR100(root, train=train, download=download)
+    
+    print (seed)
+    
     if train:
         fix_seed(seed)
         train_idxs, val_idxs = train_val_split(base_dataset.targets, seed)

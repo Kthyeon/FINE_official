@@ -53,7 +53,8 @@ def robustlosstrain(parse, config: ConfigParser):
         num_batches=config['data_loader']['args']['num_batches'],
         training=True,
         num_workers=config['data_loader']['args']['num_workers'],
-        pin_memory=config['data_loader']['args']['pin_memory']
+        pin_memory=config['data_loader']['args']['pin_memory'],
+        seed=parse.dataseed
     )
 
     valid_data_loader = data_loader.split_validation()

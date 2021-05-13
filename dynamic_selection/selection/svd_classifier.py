@@ -96,8 +96,6 @@ def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, p
         clean_labels = cleansing(scores, current_labels)
     elif 'gmm' in fit:
         clean_labels = fit_mixture(scores, current_labels)
-    elif 'bmm' in fit:
-        clean_labels = fit_mixture_bmm(scores, current_labels)
     else:
         raise NotImplemented
     

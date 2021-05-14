@@ -9,8 +9,11 @@ import sys
 from sklearn.mixture import GaussianMixture
 import pdb
 import numpy as np
+import copy
 
 from selection.svd_classifier import *
+from selection.gmm import *
+from selection.util import *
 import data_loader.data_loaders as module_data
 
 class RealDatasetTrainer(BaseTrainer):
@@ -34,13 +37,18 @@ class RealDatasetTrainer(BaseTrainer):
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
         self.train_data_loader = data_loader
-        self.dynamic_train_data_loader = copy.deepcopy(dataloader)
+        self.dynamic_train_data_loader = copy.deepcopy(data_loader)
         self.valid_data_loader = valid_data_loader
         
-        if teacher != None:
-            self.teacher = teacher.to(self.device)
-        else:
-            self.teacher = teacher
+        self.orig_data_loader = getattr(module_data, self.config['data_loader']['type'])(
+            self.config['data_loader']['args']['data_dir'],
+            batch_size=self.config['data_loader']['args']['batch_size'],
+            shuffle=False,
+            validation_split=0.0,
+            num_batches=self.config['data_loader']['args']['num_batches'],
+            training=True,
+            num_workers=self.config['data_loader']['args']['num_workers'],
+            pin_memory=self.config['data_loader']['args']['pin_memory'])
 
         self.test_data_loader = test_data_loader
         self.do_validation = self.valid_data_loader is not None
@@ -66,23 +74,18 @@ class RealDatasetTrainer(BaseTrainer):
 
     def update_dataloader(self, epoch):
         
-        
-        print ("##### START TRUNCATE #####")
-        
         with torch.no_grad():
-            current_features, current_labels = get_features(self.model, self.train_data_loader)
+            current_features, current_labels = get_features(self.model, self.orig_data_loader)
             datanum = len(current_labels)
             if self.teacher_idx is not None:
                 prev_features, prev_labels = current_features[self.teacher_idx], current_labels[self.teacher_idx]
             else:
                 prev_features, prev_labels = current_features, current_labels
                 
-
-            if epoch > 60:
-                self.teacher_idx = fine(current_features, current_labels, fit = parse.distill_mode, prev_features=None, prev_labels=None)
+            if epoch > 0:
+                self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels)
             else:
                 self.teacher_idx = range(datanum)
-#                 same_topk_index(orig_label, orig_out, prev_label, prev_out, np.clip((epoch-1) * 0.01, 0., 0.72))
             
             
         curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(
@@ -96,7 +99,7 @@ class RealDatasetTrainer(BaseTrainer):
             pin_memory=self.config['data_loader']['args']['pin_memory'],
             teacher_idx=self.teacher_idx)
         
-        self.selected, self.precision, self.recall, self.specificity, self.accuracy = return_statistics(curr_data_loader, self.teacher_idx, datanum)
+        self.selected, self.precision, self.recall, self.f1, self.specificity, self.accuracy = return_statistics(self.orig_data_loader, self.teacher_idx)
         
         return curr_data_loader
     
@@ -133,27 +136,11 @@ class RealDatasetTrainer(BaseTrainer):
                 progress.set_description_str(f'Train epoch {epoch}')
                 
                 data, label = data.to(self.device), label.long().to(self.device)
-                if self.teacher:
-                    tea_represent, tea_logit = self.teacher(data)
-                    tea_represent, tea_logit = tea_represent.to(self.device), tea_logit.to(self.device)
-#                     represent_out = self.represent(data).to(self.device)
-                    
-                
                 gt = gt.long().to(self.device)
                 
-                model_represent, output = self.model(data)
-                if self.config['train_loss']['type'] == 'CLoss' or self.config['train_loss']['type'] == 'NPCLoss':
-                    loss = self.train_criterion(output, label, epoch, indexs.cpu().detach().numpy().tolist())
-                else:
-                    if self.teacher:
-                        loss = self.train_criterion(output, label, indexs, mode=self.mode)
-                    else:
-                        sing_lbl = None
-                        loss = self.train_criterion(output, label, indexs)
-#                 pdb.set_trace()
+                _, output = self.model(data)
+                loss = self.train_criterion(output, label, indexs)
                 self.optimizer.zero_grad()
-                if self.entropy:
-                    loss -= self.entro_loss(output, label, sing_lbl)
                 loss.backward()
 
                 self.optimizer.step()
@@ -219,7 +206,7 @@ class RealDatasetTrainer(BaseTrainer):
                     progress.set_description_str(f'Valid epoch {epoch}')
                     data, label = data.to(self.device), label.to(self.device)
                     _, output = self.model(data)
-                    loss = self.val_criterion(output, label)
+                    loss = self.val_criterion()(output, label)
 
                     self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
                     self.writer.add_scalar('loss', loss.item())

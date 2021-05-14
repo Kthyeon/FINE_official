@@ -95,6 +95,17 @@ def parse_args():
                       type=str, 
                       default='robustloss', 
                       choices=['robustloss', 'robustlossgt', 'coteaching', 'trainingclothing1m'])
+    
+    # Arguments for Dynamic Training
+    args.add_argument('--warmup',
+                      type=int,
+                      default=40,
+                      help='warm-up epochs')
+    
+    args.add_argument('--every',
+                      type=int,
+                      default=10,
+                      help='proceed FINE frequent')
 
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')

@@ -4,3 +4,4 @@ from .gt_trainer import *
 from .coteaching_trainer import *
 from .dynamic_trainer import *
 from .realdataset_trainer import *
+from .dynamic_coteaching_trainer import *

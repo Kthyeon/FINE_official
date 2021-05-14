@@ -96,8 +96,12 @@ def coteachingtrain(parse, config: ConfigParser):
     else:
         num_examp = len(data_loader.dataset)
     
+    # F-coteaching
+    if confing['train_loss']['type'] == 'CCELoss':
+        train_loss = getattr(module_loss, 'CCELoss')()
+        
     # coteaching
-    if config['train_loss']['type'] == 'CoteachingLoss':
+    elif config['train_loss']['type'] == 'CoteachingLoss':
         train_loss = getattr(module_loss, 'CoteachingLoss')(forget_rate=config['trainer']['percent'],
                                                             num_gradual=int(config['train_loss']['args']['num_gradual']),
                                                             n_epoch=config['trainer']['epochs'])
@@ -108,28 +112,47 @@ def coteachingtrain(parse, config: ConfigParser):
                                                                 num_gradual=int(config['train_loss']['args']['num_gradual']),
                                                                 n_epoch=config['trainer']['epochs'])
     
-    # coteaching + winning_ticket!
-    elif config['train_loss']['type'] == 'CoteachingDistillLoss':
-        train_loss = getattr(module_loss, 'CoteachingDistillLoss')(forget_rate=config['trainer']['percent'],
-                                                                   num_gradual=int(config['train_loss']['args']['num_gradual']),
-                                                                   n_epoch=config['trainer']['epochs'],
-                                                                   num_examp=num_examp,
-                                                                   clean_indexs=teacher_idx)
+#     # coteaching + winning_ticket!
+#     elif config['train_loss']['type'] == 'CoteachingDistillLoss':
+#         train_loss = getattr(module_loss, 'CoteachingDistillLoss')(forget_rate=config['trainer']['percent'],
+#                                                                    num_gradual=int(config['train_loss']['args']['num_gradual']),
+#                                                                    n_epoch=config['trainer']['epochs'],
+#                                                                    num_examp=num_examp,
+#                                                                    clean_indexs=teacher_idx)
         
-    # coteaching_plus + winning_ticket!
-    elif config['train_loss']['type'] == 'CoteachingPlusDistillLoss':
-        train_loss = getattr(module_loss, 'CoteachingPlusDistillLoss')(forget_rate=config['trainer']['percent'],
-                                                                       num_gradual=int(config['train_loss']['args']['num_gradual']),
-                                                                       n_epoch=config['trainer']['epochs'],
-                                                                       num_examp=num_examp,
-                                                                       clean_indexs=teacher_idx)
+#     # coteaching_plus + winning_ticket!
+#     elif config['train_loss']['type'] == 'CoteachingPlusDistillLoss':
+#         train_loss = getattr(module_loss, 'CoteachingPlusDistillLoss')(forget_rate=config['trainer']['percent'],
+#                                                                        num_gradual=int(config['train_loss']['args']['num_gradual']),
+#                                                                        n_epoch=config['trainer']['epochs'],
+#                                                                        num_examp=num_examp,
+#                                                                        clean_indexs=teacher_idx)
 
         
     val_loss = getattr(module_loss, config['val_loss'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
 
+    
+    # F-coteaching
+    if config['train_loss']['type'] == 'CCELoss':
+        
+        model = config.initialize('arch', module_arch)
+        trainer = FCoteachingTrainer(model, train_loss, metrics, None,
+                                       config=config,
+                                       data_loader=data_loader,
+                                       parse=parse,
+                                       teacher=teacher,
+                                       valid_data_loader=valid_data_loader,
+                                       test_data_loader=test_data_loader,
+                                       lr_scheduler=None,
+                                       val_criterion=val_loss,
+                                       mode = parse.mode,
+                                       entropy = parse.entropy,
+                                       threshold = parse.threshold
+                                  )
+    
     # coteaching
-    if config['train_loss']['type'] == 'CoteachingLoss':
+    elif config['train_loss']['type'] == 'CoteachingLoss':
         
         model1, model2 = config.initialize('arch', module_arch), config.initialize('arch', module_arch)
         

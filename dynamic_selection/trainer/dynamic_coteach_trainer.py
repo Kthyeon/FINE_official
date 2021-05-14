@@ -1,5 +1,5 @@
 import os
-os.chdir('../')
+# os.chdir('../')
 # print (os.getcwd())
 
 from selection.svd_classifier import *
@@ -260,7 +260,7 @@ class FCoteachingTrainer(BaseTrainer):
             'metrics_gt_2': (total_metrics_gt_2 / self.len_epoch).tolist(),
             'learning rate': self.lr_scheduler_1.get_last_lr(),
             'purity_1:': '{} = {}/{}'.format(self.purity_1, (self.dynamic_train_data_loader_1.train_dataset.train_labels == \
-                   self.dynamic_train_data_loader_1.train_dataset.train_labels_gt).sum(), len(self.dynamic_train_data_loader_1.train_dataset))
+                   self.dynamic_train_data_loader_1.train_dataset.train_labels_gt).sum(), len(self.dynamic_train_data_loader_1.train_dataset)),
             'purity_2:': '{} = {}/{}'.format(self.purity_2, (self.dynamic_train_data_loader_2.train_dataset.train_labels == \
                    self.dynamic_train_data_loader_2.train_dataset.train_labels_gt).sum(), len(self.dynamic_train_data_loader_2.train_dataset))
         }

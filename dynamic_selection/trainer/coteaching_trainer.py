@@ -174,7 +174,7 @@ class CoteachingTrainer(BaseTrainer):
             'metrics_gt_1': (total_metrics_gt_1 / self.len_epoch).tolist(),
             'metrics_2': (total_metrics_2 / self.len_epoch).tolist(),
             'metrics_gt_2': (total_metrics_gt_2 / self.len_epoch).tolist(),
-            'learning rate': self.alpha_plan[epoch-1],
+            'learning rate': self.lr_scheduler_1.get_lr() if self.lr_scheduler_1 is not None else self.alpha_plan[epoch-1],
             'purity_1': '{} = {}/{}'.format(purity_1,
                                             clean_instances_1, total_instances_1),
             'purity_2': '{} = {}/{}'.format(purity_2,
@@ -200,6 +200,8 @@ class CoteachingTrainer(BaseTrainer):
             self.adjust_learning_rate(self.optimizer_1, epoch)
             self.adjust_learning_rate(self.optimizer_2, epoch)
         else:
+            print ('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+            print ('Ang')
             self.lr_scheduler_1.step()
             self.lr_scheduler_2.step()
         

@@ -45,6 +45,9 @@ class DynamicTrainer(BaseTrainer):
         self.dynamic_train_data_loader = copy.deepcopy(data_loader)
         self.valid_data_loader = valid_data_loader
         
+        self.warm_up = parse.warmup
+        self.every = parse.every
+        
         self.orig_data_loader = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
             batch_size=self.config['data_loader']['args']['batch_size'],
@@ -88,10 +91,10 @@ class DynamicTrainer(BaseTrainer):
                 prev_features, prev_labels = current_features, current_labels
                 
 
-            if epoch > 40:
-                self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels)
-            else:
-                self.teacher_idx = np.arange(datanum)
+#             if epoch > 10:
+            self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels)
+#             else:
+#                 self.teacher_idx = np.arange(datanum)
 #                 same_topk_index(orig_label, orig_out, prev_label, prev_out, np.clip((epoch-1) * 0.01, 0., 0.72))
             
             
@@ -133,7 +136,7 @@ class DynamicTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 10 == 1 and epoch > 40: # 
+        if epoch % self.every == 1 and epoch > self.warm_up: # 
             self.dynamic_train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.dynamic_train_data_loader)
             self.purity = (self.dynamic_train_data_loader.train_dataset.train_labels == \

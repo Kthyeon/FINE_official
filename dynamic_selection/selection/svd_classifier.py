@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import pandas as pd
 from sklearn import cluster
 from tqdm import tqdm
 from .gmm import *
@@ -96,13 +97,20 @@ def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, p
         clean_labels = cleansing(scores, current_labels)
     elif 'gmm' in fit:
         clean_labels = fit_mixture(scores, current_labels)
+    elif 'bmm' in fit:
+        clean_labels = fit_mixture_bmm(scores, current_labels)
     else:
         raise NotImplemented
     
     return clean_labels
 
 def extract_cleanidx(teacher, data_loader, parse, print_statistics = True):
-    teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
+    
+    if parse.TFT: # 모델 불러오는 위치 통일 안됨
+        teacher.load_state_dict(torch.load(parse.load_name)['state_dict'])
+    else:
+        teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])   
+    
     teacher = teacher.cuda()
 
     if not parse.reinit: teacher.load_state_dict(torch.load('./checkpoint/' + parse.load_name)['state_dict'])
@@ -111,11 +119,24 @@ def extract_cleanidx(teacher, data_loader, parse, print_statistics = True):
     if 'fine' in parse.distill_mode:
         features, labels = get_features(teacher, data_loader)
         clean_labels = fine(current_features=features, current_labels=labels, fit = parse.distill_mode)
+        
     elif 'loss' in parse.distill_mode:
         clean_labels, labels = cleansing_loss(teacher, data_loader)
     else:
         raise NotImplemented
-    if print_statistics: return_statistics(data_loader, clean_labels, datanum=len(labels))
     
-    
+    if print_statistics and parse.TFT == False: return_statistics(data_loader, clean_labels)
+    if parse.TFT:
+        stat_dict = dict()
+        df = pd.DataFrame()
+        
+        stat_dict['Sel_samples'] ,stat_dict['Precision'], stat_dict['Recall'], stat_dict['F1_Score'], stat_dict['Specificity'], stat_dict['Accuracy'] = return_statistics(data_loader, clean_labels)    
+        df.insert(0, 'Metric', stat_dict.keys())
+        df.insert(1, parse.distill_mode, stat_dict.values())
+        
+        root_list = parse.load_name.split('/')[:-1] + [parse.distill_mode + str(parse.dataseed) + '_statistic.csv']
+        file_root = '/'.join(map(str, root_list))
+
+        df.to_csv(file_root, index=False, header=True, sep="\t")      
+        
     return clean_labels

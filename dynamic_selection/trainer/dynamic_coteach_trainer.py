@@ -10,6 +10,7 @@ import data_loader.data_loaders as module_data
 import copy
 import numpy as np
 import torch
+import torch.nn as nn
 from tqdm import tqdm
 from typing import List
 from torchvision.utils import make_grid
@@ -46,6 +47,10 @@ class FCoteachingTrainer(BaseTrainer):
         self.optimizer_2 = config.initialize('optimizer', torch.optim, [{'params': trainable_params2}])
         self.lr_scheduler_1 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, self.optimizer_1)
         self.lr_scheduler_2 = config.initialize('lr_scheduler', torch.optim.lr_scheduler, self.optimizer_2)
+        
+        # CODE FOR RUNNING. REDUNDANT
+        self.optimizer = self.optimizer_1
+        self.lr_scheduler = self.lr_scheduler_1
             
         # re-initialization model
         for m in self.model_1.modules():
@@ -59,6 +64,9 @@ class FCoteachingTrainer(BaseTrainer):
         ####################################
         ############# COMPLETE #############
         ####################################
+        
+        self.warm_up = parse.warmup
+        self.every = parse.every
         
         if len_epoch is None:
             # epoch-based training
@@ -91,9 +99,9 @@ class FCoteachingTrainer(BaseTrainer):
         self.train_loss_list: List[float] = []
         self.val_loss_list: List[float] = []
         self.test_loss_list: List[float] = []
-        self.purity = (data_loader.train_dataset.train_labels == \
+        self.purity_1 = self.purity_2 = (data_loader.train_dataset.train_labels == \
                        data_loader.train_dataset.train_labels_gt).sum() / len(data_loader.train_dataset)
-        self.teacher_idx = None
+        self.teacher_idx_1, self.teacher_idx_2 = None, None
         #Visdom visualization
         
         self.entropy = entropy
@@ -105,7 +113,7 @@ class FCoteachingTrainer(BaseTrainer):
         with torch.no_grad():
             current_features_1, current_labels_1 = get_features(self.model_1, self.orig_data_loader)
             current_features_2, current_labels_2 = get_features(self.model_2, self.orig_data_loader)
-            datanum = len(current_labels)
+            datanum = len(current_labels_1)
             
             if self.teacher_idx_1 is not None:
                 prev_features_1, prev_labels_1 = current_features_1[self.teacher_idx_1], current_labels_1[self.teacher_idx_1]
@@ -114,12 +122,8 @@ class FCoteachingTrainer(BaseTrainer):
                 prev_features_1, prev_labels_1 = current_features_1, current_labels_1
                 prev_features_2, prev_labels_2 = current_features_2, current_labels_2
                 
-            if epoch > 0:
-                self.teacher_idx_1 = fine(current_features_2, current_labels_2, fit=self.parse.distill_mode, prev_features=prev_features_2, prev_labels=prev_labels_2)
-                self.teacher_idx_2 = fine(current_features_1, current_labels_1, fit=self.parse.distill_mode, prev_features=prev_features_1, prev_labels=prev_labels_1)
-            else:
-                self.teacher_idx_1 = range(datanum)
-                self.teacher_idx_2 = range(datanum)
+            self.teacher_idx_1 = fine(current_features_2, current_labels_2, fit=self.parse.distill_mode, prev_features=prev_features_2, prev_labels=prev_labels_2)
+            self.teacher_idx_2 = fine(current_features_1, current_labels_1, fit=self.parse.distill_mode, prev_features=prev_features_1, prev_labels=prev_labels_1)
             
         curr_data_loader_1 = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
@@ -171,7 +175,7 @@ class FCoteachingTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        if epoch % 10 == 1 and epoch > 0: # 
+        if epoch % self.every == 3 and epoch > self.warm_up: # 
             self.dynamic_train_data_loader_1, self.dynamic_train_data_loader_2 = self.update_dataloader(epoch)
             self.len_epoch_1 = len(self.dynamic_train_data_loader_1)
             self.len_epoch_2 = len(self.dynamic_train_data_loader_2)
@@ -198,7 +202,7 @@ class FCoteachingTrainer(BaseTrainer):
                 data, label = data.to(self.device), label.long().to(self.device)
                 gt = gt.long().to(self.device)
                 
-                _, output = self.model(data)
+                _, output = self.model_1(data)
                 loss_1 = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
 
                 self.optimizer_1.zero_grad()
@@ -207,15 +211,15 @@ class FCoteachingTrainer(BaseTrainer):
 
                 self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
                 self.writer.add_scalar('loss_1', loss_1.item())
-                self.train_loss_list.append(loss.item())
+                self.train_loss_list.append(loss_1.item())
                 total_loss_1 += loss_1.item()
-                total_metrics_1 += self._eval_metrics(output_1, label)
-                total_metrics_gt_1 += self._eval_metrics(output_1, gt)
+                total_metrics_1 += self._eval_metrics(output, label)
+                total_metrics_gt_1 += self._eval_metrics(output, gt)
 
                 if batch_idx % self.log_step == 0:
                     progress.set_postfix_str(' {} Loss: {:.6f}'.format(
                         self._progress(batch_idx),
-                        loss.item()))
+                        loss_1.item()))
                     self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
                 if batch_idx == self.len_epoch_1:
@@ -228,24 +232,24 @@ class FCoteachingTrainer(BaseTrainer):
                 data, label = data.to(self.device), label.long().to(self.device)
                 gt = gt.long().to(self.device)
                 
-                _, output = self.model(data)
-                loss = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
+                _, output = self.model_2(data)
+                loss_2 = self.train_criterion(output, label, indexs.cpu().detach().numpy().tolist())
 
                 self.optimizer_2.zero_grad()
-                loss.backward()
+                loss_2.backward()
                 self.optimizer_2.step()
 
                 self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
                 self.writer.add_scalar('loss_2', loss_2.item())
                 self.train_loss_list.append(loss_2.item())
                 total_loss_2 += loss_2.item()
-                total_metrics_2 += self._eval_metrics(output_2, label)
-                total_metrics_gt_2 += self._eval_metrics(output_2, gt)
+                total_metrics_2 += self._eval_metrics(output, label)
+                total_metrics_gt_2 += self._eval_metrics(output, gt)
                 
                 if batch_idx % self.log_step == 0:
                     progress.set_postfix_str(' {} Loss: {:.6f}'.format(
                         self._progress(batch_idx),
-                        loss.item()))
+                        loss_2.item()))
                     self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
                 if batch_idx == self.len_epoch_2:
@@ -307,8 +311,8 @@ class FCoteachingTrainer(BaseTrainer):
                     loss_2 = self.val_criterion()(output_2, label)
 
                     self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
-                    self.writer.add_scalar('loss_1', loss.item())
-                    self.writer.add_scalar('loss_2', loss.item())
+                    self.writer.add_scalar('loss_1', loss_1.item())
+                    self.writer.add_scalar('loss_2', loss_2.item())
 #                     self.val_loss_list.append(loss.item())
 
                     total_val_loss_1 += loss_1.item()

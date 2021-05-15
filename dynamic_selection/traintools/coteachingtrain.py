@@ -10,7 +10,7 @@ import data_loader.data_loaders as module_data
 import loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
-from trainer import CoteachingTrainer
+from trainer import CoteachingTrainer, FCoteachingTrainer
 from collections import OrderedDict
 
 from selection.svd_classifier import *
@@ -97,7 +97,7 @@ def coteachingtrain(parse, config: ConfigParser):
         num_examp = len(data_loader.dataset)
     
     # F-coteaching
-    if confing['train_loss']['type'] == 'CCELoss':
+    if config['train_loss']['type'] == 'CCELoss':
         train_loss = getattr(module_loss, 'CCELoss')()
         
     # coteaching

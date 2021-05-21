@@ -1,17 +1,17 @@
 {
-    "name": "cifar10_resnet18_multistep",
+    "name": "cifar100_resnet34_multistep",
     "n_gpu": 1,
     "seed": 123,
 
     "arch": {
-        "type": "resnet18",
-        "args": {"num_classes":10}
+        "type": "resnet34",
+        "args": {"num_classes":100}
     },
 
-    "num_classes": 10,
+    "num_classes": 100,
 
     "data_loader": {
-        "type": "CIFAR10DataLoader",
+        "type": "CIFAR100DataLoader",
         "args":{
             "data_dir": "./dir_to_data",
             "batch_size": 128,
@@ -27,9 +27,9 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.02,
+            "lr": 0.01,
             "momentum": 0.9,
-            "weight_decay": 1e-3
+            "weight_decay": 1e-4
         }
     },
     
@@ -48,20 +48,20 @@
     "lr_scheduler": {
         "type": "MultiStepLR",
         "args": {
-            "milestones": [40, 80],
+            "milestones": [80, 120],
             "gamma": 0.01
         }
     },
 
     "trainer": {
-        "epochs": 120,
+        "epochs": 150,
         "epoch_decay_start": 80,
         "warmup": 0,
         "save_dir": "saved/",
         "save_period": 1,
         "verbosity": 2,
         "label_dir": "saved/",
-        "monitor": "max test_my_metric",
+        "monitor": "max val_my_metric",
         "early_stop": 2000,
         "tensorboard": false,
         "mlflow": true,

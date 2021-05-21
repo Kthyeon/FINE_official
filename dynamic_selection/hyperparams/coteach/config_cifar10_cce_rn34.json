@@ -1,10 +1,10 @@
 {
-    "name": "cifar10_resnet18_multistep",
+    "name": "cifar10_resnet34_coteach",
     "n_gpu": 1,
     "seed": 123,
 
     "arch": {
-        "type": "resnet18",
+        "type": "resnet34",
         "args": {"num_classes":10}
     },
 
@@ -27,17 +27,14 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.02,
+            "lr": 0.01,
             "momentum": 0.9,
             "weight_decay": 1e-3
         }
     },
     
     "train_loss": {
-        "type": "CoteachingLoss",
-        "args":{
-            "num_gradual" : 40
-        }
+        "type": "CCELoss",
     },
 
     "val_loss": "CrossEntropyLoss",

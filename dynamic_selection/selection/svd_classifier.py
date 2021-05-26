@@ -75,7 +75,7 @@ def cleansing(scores, labels):
     return np.array(clean_labels, dtype=np.int64)
         
 
-def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, prev_labels=None):
+def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, prev_labels=None, p_threshold=0.5, norm=True):
     '''
     prev_features, prev_labels: data from the previous round
     current_features, current_labels: current round's data
@@ -91,12 +91,12 @@ def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, p
     else:
         singular_vector_dict = get_singular_vector(current_features, current_labels)
 
-    scores = get_score(singular_vector_dict, features = current_features, labels = current_labels)
+    scores = get_score(singular_vector_dict, features = current_features, labels = current_labels, normalization=norm)
     
     if 'kmeans' in fit:
         clean_labels = cleansing(scores, current_labels)
     elif 'gmm' in fit:
-        clean_labels = fit_mixture(scores, current_labels)
+        clean_labels = fit_mixture(scores, current_labels, p_threshold=p_threshold)
     elif 'bmm' in fit:
         clean_labels = fit_mixture_bmm(scores, current_labels)
     else:

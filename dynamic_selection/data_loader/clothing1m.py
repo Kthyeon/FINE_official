@@ -18,16 +18,16 @@ def fix_seed(seed=777):
     np.random.seed(seed)
 
 def get_clothing1m(root, cfg_trainer, num_samples=0, train=True,
-                transform_train=None, transform_val=None, teacher_idx=None):
+                transform_train=None, transform_val=None, teacher_idx=None, seed=8888):
 
     if train:
-        fix_seed()
-        train_dataset = Clothing1M_Dataset(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train)
+        fix_seed(seed)
+        train_dataset = Clothing1M_Dataset(root, cfg_trainer, num_samples=num_samples, train=train, transform=transform_train, seed=seed)
         val_dataset = Clothing1M_Dataset(root, cfg_trainer, val=train, transform=transform_val)
         print(f"Train: {len(train_dataset)} Val: {len(val_dataset)}")
 
     else:
-        fix_seed()
+        fix_seed(seed)
         train_dataset = []
         val_dataset = Clothing1M_Dataset(root, cfg_trainer, test= (not train), transform=transform_val)
         print(f"Test: {len(val_dataset)}")
@@ -40,9 +40,9 @@ def get_clothing1m(root, cfg_trainer, num_samples=0, train=True,
 
 class Clothing1M_Dataset(torch.utils.data.Dataset):
 
-    def __init__(self, root, cfg_trainer, num_samples=0, train=False, val=False, test=False, transform=None, num_class=14):
+    def __init__(self, root, cfg_trainer, num_samples=0, train=False, val=False, test=False, transform=None, num_class=14, seed=8888):
         
-        fix_seed()
+        fix_seed(seed)
         self.cfg_trainer = cfg_trainer
         self.root = root
         self.transform = transform
@@ -78,13 +78,18 @@ class Clothing1M_Dataset(torch.utils.data.Dataset):
             random.shuffle(train_imgs)
             class_num = torch.zeros(num_class)
             self.train_imgs = []
+            self.train_labels_ = []
             for id_raw, impath in train_imgs:
-                label = self.train_labels[impath] 
-                if class_num[label]<(num_samples/14) and len(self.train_imgs)<num_samples:
+                label = self.train_labels[impath]
+                if class_num[label] < (num_samples/14) and len(self.train_imgs)<num_samples:
                     self.train_imgs.append((id_raw,impath))
+                    self.train_labels_.append(int(label))
                     class_num[label]+=1
+#                 else:
+#                     print (label, class_num[label], (num_samples/14))
             random.shuffle(self.train_imgs)
             self.train_imgs = np.array(self.train_imgs)
+            self.train_labels_ = np.array(self.train_labels_)
 
         elif test:
             self.test_imgs = []
@@ -141,3 +146,4 @@ class Clothing1M_Dataset(torch.utils.data.Dataset):
     
     def truncate(self, teacher_idx):
         self.train_imgs = self.train_imgs[teacher_idx]
+        self.train_labels_ = self.train_labels_[teacher_idx]

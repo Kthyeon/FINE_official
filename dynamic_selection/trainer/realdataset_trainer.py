@@ -40,6 +40,9 @@ class RealDatasetTrainer(BaseTrainer):
         self.dynamic_train_data_loader = copy.deepcopy(data_loader)
         self.valid_data_loader = valid_data_loader
         
+        self.warm_up = parse.warmup
+        self.every = parse.every
+        
         self.orig_data_loader = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
             batch_size=self.config['data_loader']['args']['batch_size'],
@@ -75,18 +78,26 @@ class RealDatasetTrainer(BaseTrainer):
     def update_dataloader(self, epoch):
         
         with torch.no_grad():
+            
+            self.orig_data_loader = getattr(module_data, self.config['data_loader']['type'])(
+                self.config['data_loader']['args']['data_dir'],
+                batch_size=self.config['data_loader']['args']['batch_size'],
+                shuffle=False,
+                validation_split=0.0,
+                num_batches=self.config['data_loader']['args']['num_batches'],
+                training=True,
+                num_workers=self.config['data_loader']['args']['num_workers'],
+                pin_memory=self.config['data_loader']['args']['pin_memory'],
+                seed=epoch)
+            
             current_features, current_labels = get_features(self.model, self.orig_data_loader)
             datanum = len(current_labels)
-            if self.teacher_idx is not None:
-                prev_features, prev_labels = current_features[self.teacher_idx], current_labels[self.teacher_idx]
-            else:
-                prev_features, prev_labels = current_features, current_labels
+#             if self.teacher_idx is not None:
+#                 prev_features, prev_labels = current_features[self.teacher_idx], current_labels[self.teacher_idx]
+#             else:
+            prev_features, prev_labels = current_features, current_labels
                 
-            if epoch > 0:
-                self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels)
-            else:
-                self.teacher_idx = range(datanum)
-            
+            self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels, p_threshold=0.3, norm=True)
             
         curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
@@ -97,7 +108,9 @@ class RealDatasetTrainer(BaseTrainer):
             training=True,
             num_workers=self.config['data_loader']['args']['num_workers'],
             pin_memory=self.config['data_loader']['args']['pin_memory'],
-            teacher_idx=self.teacher_idx)
+            teacher_idx=self.teacher_idx,
+            seed=epoch
+        )
         
         self.selected, self.precision, self.recall, self.f1, self.specificity, self.accuracy = return_statistics(self.orig_data_loader, self.teacher_idx)
         
@@ -120,12 +133,19 @@ class RealDatasetTrainer(BaseTrainer):
             The metrics in log must have the key 'metrics'.
         """
         
-        self.model.train()
         
-        if epoch > 1:
+        
+        
+        if epoch > max(self.warm_up, 1) and epoch % self.every == 0:
             self.dynamic_train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.dynamic_train_data_loader)
             print ('############# Epoch:{} ############'.format(epoch))
+
+        self.model.train()
+            
+        for i in range(14):
+            print ((np.array(self.dynamic_train_data_loader.dataset.train_labels_) == i).sum() # \
+                    ,len(self.dynamic_train_data_loader.dataset))
         
         total_loss = 0
         total_metrics = np.zeros(len(self.metrics))
@@ -165,6 +185,7 @@ class RealDatasetTrainer(BaseTrainer):
 
         log = {
             'loss': total_loss / self.len_epoch,
+            'num_train': len(self.dynamic_train_data_loader.dataset),
             'metrics': (total_metrics / self.len_epoch).tolist(),
             'metrics_gt': (total_metrics_gt / self.len_epoch).tolist(),
             'learning rate': self.lr_scheduler.get_lr()

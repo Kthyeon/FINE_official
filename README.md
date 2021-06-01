@@ -1,5 +1,5 @@
-# Winning Ticket in Noisy Image Classification
-This repository is the official implementation of "FINE: Filtering Noisy Labels via their Eigenvectors" paper.
+# FINE Samples for Learning with Noisy Labels
+This repository is the official implementation of "FINE Samples for Learning with Noisy Labels" paper.
 
 ## Reference Codes
 We refer to some official implementation codes
@@ -9,10 +9,6 @@ We refer to some official implementation codes
  - https://github.com/shengliu66/ELR
 
  
-
-
-
-
 ## Requirements
 - This codebase is written for `python3` (used `python 3.7.6` while implementing).
 - To install necessary python packages, run `pip install -r requirements.txt`.
@@ -20,7 +16,7 @@ We refer to some official implementation codes
 
 ## Training
 
-### Robust loss and Co-teaching
+### Sample-Selection Approaches and Collaboration with Noise-Robust loss functions
  - Most codes are similar with the original implementation code in https://github.com/bhanML/Co-teaching and https://github.com/shengliu66/ELR. If you want to run the baseline models, run the `robust_loss_baseline.sh` file or `co-teaching_baseline.sh` file.
  - If you want to train the model with `FINE`, move to the folder `robust_loss_coteaching` and run the bash files by following the `README.md` in the `robust_loss_coteaching` folder.
  

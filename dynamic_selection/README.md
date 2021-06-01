@@ -1,6 +1,5 @@
-# ELR and Co-teaching With CLK and SAME
-This is a PyTorch implementation for the robust loss functions and Co-teaching families.
-This also include the TFT framework regarding CLK and SAME.
+# Sample-Selection Approaches and Conjunction with Noise-Robust functions
+This is a PyTorch implementation for the sample-selection approaches and conjunction with noise-robust functions.
 
 ## Usage
 You can check simple descriptions about arguments in `utils/args.py`.
@@ -9,7 +8,7 @@ According to the descriptions, the arguments can be replaced.
 All the bash samples below run the code with 60% symmetric noise, cifar-10 dataset and ResNet-34 architecture.
 You can change arguments settings according to its descriptions.
 
-### FINE as robust approach (Sec. 4.2)
+### FINE as robust approach (Sec. 4.2.3)
 Dynamically apply FINE algorithm in the training process.
 Bash files for this section is in `scripts/dynamic/` directory.
 
@@ -19,14 +18,6 @@ bash scripts/dynamic/FINE_gce_dynamic.sh
 bash scripts/dynamic/FINE_sce_dynamic.sh
 bash scripts/dynamic/FINE_elr_dynamic.sh
 
-```
-
-
-### FINE as application (Sec. 4.3) ; Robust Lpss Approach
-After train the proxy network, make clean dataset to train the target network by the trained proxy network.
-
-```
-bash scripts/retrain/FINE_retrain.sh
 ```
 
 ### Robust loss functions

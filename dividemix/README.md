@@ -1,5 +1,19 @@
-# DivideMix With Winning Tickets
-We add some commands for either CLK or SAME by refering to the original code from https://github.com/LiJunnan1992/DivideMix.
+# Semi-Supervised Learning based Approaches
+Overall code structure is made from original DivideMix repo.
+We refer to https://github.com/LiJunnan1992/DivideMix.
+
+## Dataset
+### CIFAR10, CIFAR100
+To download CIFAR dataset, just follow
+
+```
+bash scripts/download_cifar10.sh
+
+bash scripts/download_cifar100.sh
+```
+
+### Clothing1M
+
 
 ## Training
 To run scripts or python file, you have to download cifar-10 or cifar-100 datasets, firstly.
@@ -17,7 +31,7 @@ Run the followings:
 
     bash scripts/refinement_dynamic_cifar10
     
-### arguments
+<!-- ### arguments
 Default arguments settings are set for cifar10 experiments. Usage and other arguments are same with DivideMix original code. Options below are added only for our paper.
 
 ```
@@ -29,6 +43,6 @@ usage : python Train_cifar.py [--distill] [--distill_mode] [--refinement]
         --refinement : if not, the clean probability of all clean subset is set to one. In our paper, all experiments always use this option to make same condition with original paper.
 ```
 
-
+ -->
 <b>License</b>\
 This project is licensed under the terms of the MIT license.

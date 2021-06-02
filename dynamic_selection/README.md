@@ -1,88 +1,73 @@
 # Sample-Selection Approaches and Conjunction with Noise-Robust functions
-This is a PyTorch implementation for the sample-selection approaches and conjunction with noise-robust functions.
+This is a PyTorch implementation for the sample-selection approaches and collaboration with noise-robust functions.
+
+## Dataset
+### CIFAR10, CIFAR100
+You don't have to take care about these dataset. Download options of these datasets are included in the codes.
+
+### Clothing1M
+You have to download Clothing1M dataset and set its path before run the codes.
+- To download the dataset, follow https://github.com/Cysu/noisy_label
+- Directories and Files of clothing1m should be saved in `dir_to_data/clothing1m`. The directory structure should be
+
+        dynamic_selection/dir_to_data/clothing1m/
+        ├── 0/
+        ├── ⋮
+        ├── 9/
+        ├── annotations/
+        ├── category_names_chn.txt
+        ├── category_names_eng.txt
+        ├── clean_train_key_list.txt
+        ├── clean_val_key_list.txt
+        ├── clean_test_key_list.txt
+        ├── clean_label_kv.txt
+        ├── noisy_train_key_list.txt
+        └── noisy_label_kv.txt
+
+- Directories `0/` to `9/` include image data.
 
 ## Usage
 You can check simple descriptions about arguments in `utils/args.py`.
-According to the descriptions, the arguments can be replaced.
 
-All the bash samples below run the code with `60% symmetric noise`, `cifar-10 dataset` and `ResNet-34` architecture.
+All the bashes below run the code with `60% symmetric noise`, `cifar-10 dataset` and `ResNet-34` architecture.
 You can change arguments settings according to its descriptions.
 
-### FINE as robust approach (Sec. 4.2.3)
+### Sample-Selection based Approaches (Sec. 4.2.1)
 
-Dynamically apply FINE algorithm in the training process.
-Bash files for this section is in `scripts/dynamic/` directory.
-
-```
-bash scripts/dynamic/FINE_ce_dynamic.sh
-
-bash scripts/dynamic/FINE_gce_dynamic.sh
-
-bash scripts/dynamic/FINE_sce_dynamic.sh
-
-bash scripts/dynamic/FINE_elr_dynamic.sh
-```
-
-<<<<<<< HEAD
-
-### FINE as application (Sec. 4.3) ; Robust Loss Approach
-After train the proxy network, make clean dataset to train the target network by using the trained proxy network.
-This bash file also contains commands that train proxy networks and load the networks to train target networks.
-To change the settings for experiments, the path of the second command's arguments must also be modified.
+To run our FINE algorithm, the FINE detector dynamically select the clean data at every epoch, and then the neural network are trained with them
 
 ```
-bash scripts/retrain/FINE_retrain.sh
-```
+bash scripts/sample_selection_based/fine_cifar.sh
 
-### FINE as application (Sec. 4.3) ; Sample Selection Approach
-Substituting sample selection state of Co-teaching to our FINE algorithm.
-
+bash scripts/sample_selection_based/fine_clothing1m.sh
 ```
-bash scripts/coteaching/f-coteaching.sh
-```
+- You can change cifar10 or cifar100 option in `fine_cifar.sh`
+- Clothing1m dataset have to be set before run `fine_clothing1m.sh`
 
-### Robust loss functions
-Train the proxy network on the Symmmetric Noise CIFAR-10 dataset, ResNet18, ELR Loss (noise rate = 0.8):
+To run `F-coteaching` experiment, substituting sample selection state of Co-teaching to our FINE algorithm, just follow
 
 ```
-python train.py -c ./hyperparams/multistep/config_cifar10_elr_rn18.json --percent=0.8 --asym=False
+bash scripts/sample_selection_based/f-coteaching.sh
 ```
 
-Train the proxy network on the Asymmmetric Noise CIFAR-100 dataset, ResNet34, GCE Loss (noise rate = 0.4):
+### Collaboration with Noise-Robust Loss Functions (Sec. 4.2.3)
+
+These commands run our FINE algorithm with various robust loss function methods.
+We used Cross Entropy (CE), Generalized Cross Entropy (GCE), Symmetric Cross Entropy (SCE), and Early-Learning Regularized (ELR).
 
 ```
-python train.py -c ./hyperparams/cosine/config_cifar100_gce_rn34.json --percent=0.4 --asym=True
+bash scripts/robust_loss/fine_dynamic_ce.sh
+
+bash scripts/robust_loss/fine_dynamic_gce.sh
+
+bash scripts/robust_loss/fine_dynamic_sce.sh
+
+bash scripts/robust_loss/fine_dynamic_elr.sh
 ```
 
-If you want to train the network with SAME CIFAR-10 dataset, GCELoss, ResNet34(noise rate = 0.8, Symmetric Noise),
+<!-- 
 
-```
-train.py -c ./hyperparams/multistep/config_cifar10_gce_rn34.json -d 0 --percent 0.8 --distillation --distill_mode=eigen 
---load_name=multistep_sym_80_gce.pth --reinit
-```
-To load the checkpoint for `--load_name`, you should manually make the `checkpoint` folder and put the `xx.pth` file into the `checkpoint` folder.
-(`xx.pth` will be saved in the `saved` directory and its log is in the `logger`.)
-The config files can be modified to adjust hyperparameters and optimization settings. 
 
-### Co-teaching families
-Train the network on the Symmetric Noise CIFAR-10 dataset (noise rate = 0.8). Fix lr_scheduler argument as coteach
-You can choose four arguments for loss_fn (coteach, coteach+, coteachdistill, coteach+distill)
-```
-python train_coteaching.py --arch=rn18 --loss_fn=coteach --lr_scheduler=coteach --num_gradual=60 --asym=False --percent=0.8 --no_wandb
-python train.py --device 0 --config hyperparams/coteach/config_cifar10_coteach_rn18.json --asym=False --percent=0.8 --no_wandb
-```
-not uses wandb, just run on your local(server)
-
-Train the networ with the CLK or SAME with coteachdistill or coteach+distill (noise rate = 0.8)
-```
-python train_coteaching.py --distillation --reinit --distill_mode kmeans --arch=rn18 --asym=False --dataset=cifar100 --loss_fn=coteach+distill --lr_scheduler=coteach --num_gradual=140 --percent=0.8 
-```
-or
-```
-python train_coteaching.py --distillation --reinit --distill_mode eigen --arch=rn18 --asym=False --dataset=cifar100 --loss_fn=coteachdistill --lr_scheduler=coteach --num_gradual=60 --percent=0.8 
-```
-To load the checkpoint for `--load_name`, you should manually make the `checkpoint` folder and put the `xx.pth` file into the `checkpoint` folder.
-(`xx.pth` will be saved in the `saved` directory and its log is in the `logger`.)
 ## arguments
 if dataset, loss_fn, lr_scheduler are all given, don't have to give config file as an argument.
 if config file is given, dataset, loss_fn, lr_scheduler arguments are useless.
@@ -134,4 +119,4 @@ usage : python train_coteaching.py [-c] [-d] [--distillation] [--distill_mode] [
         --no_wandb : whether or not using wandb (if you do not use wandb, state --no_wandb)
         --reinit : whether or not re-initialization network parameters
         --load_name : checkpoint directory for proxy network
-```
+``` -->

@@ -1,5 +1,5 @@
-# Winning Ticket in Noisy Image Classification
-This repository is the official implementation of "FINE: Filtering Noisy Labels via their Eigenvectors" paper.
+# FINE samples for Learning with Label Noise
+This repository is the official implementation of "FINE samples for Learning with Label Noise" paper.
 
 ## Reference Codes
 We refer to some official implementation codes

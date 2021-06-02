@@ -16,6 +16,11 @@ from selection.gmm import *
 from selection.util import *
 import data_loader.data_loaders as module_data
 
+class NegEntropy(object):
+    def __call__(self,outputs):
+        probs = torch.softmax(outputs, dim=1)
+        return torch.mean(torch.sum(probs.log()*probs, dim=1))
+
 class RealDatasetTrainer(BaseTrainer):
     """
     DefaultTrainer class
@@ -97,7 +102,7 @@ class RealDatasetTrainer(BaseTrainer):
 #             else:
             prev_features, prev_labels = current_features, current_labels
                 
-            self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels, p_threshold=0.3, norm=True)
+            self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels, p_threshold=0.6, norm=True)
             
         curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
@@ -150,6 +155,8 @@ class RealDatasetTrainer(BaseTrainer):
         total_loss = 0
         total_metrics = np.zeros(len(self.metrics))
         total_metrics_gt = np.zeros(len(self.metrics))
+        conf_penalty = NegEntropy()
+
 
         with tqdm(self.dynamic_train_data_loader) as progress:
             for batch_idx, (data, label, indexs, gt) in enumerate(progress):
@@ -160,6 +167,9 @@ class RealDatasetTrainer(BaseTrainer):
                 
                 _, output = self.model(data)
                 loss = self.train_criterion(output, label, indexs)
+                if epoch < 3:
+                    loss += conf_penalty(output)
+
                 self.optimizer.zero_grad()
                 loss.backward()
 
@@ -293,7 +303,6 @@ class RealDatasetTrainer(BaseTrainer):
         total_loss = 0
         total_metrics = np.zeros(len(self.metrics))
         self.model.train()
-
         data_loader = self.data_loader#self.loader.run('warmup')
 
 

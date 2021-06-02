@@ -1,6 +1,5 @@
-# Robust Loss and Co-teaching With FINE
-This is a PyTorch implementation for the robust loss functions and Co-teaching families.
-This also include the TFT framework regarding CLK and SAME.
+# Sample-Selection Approaches and Conjunction with Noise-Robust functions
+This is a PyTorch implementation for the sample-selection approaches and conjunction with noise-robust functions.
 
 ## Usage
 You can check simple descriptions about arguments in `utils/args.py`.
@@ -9,12 +8,8 @@ According to the descriptions, the arguments can be replaced.
 All the bash samples below run the code with `60% symmetric noise`, `cifar-10 dataset` and `ResNet-34` architecture.
 You can change arguments settings according to its descriptions.
 
-컨피그 파일을 베이스로 실험이 돌아감
+### FINE as robust approach (Sec. 4.2.3)
 
-저장되는 경로는 saved 폴더 내에서 각 argument에 따라 path가 결정됨
-
-
-### FINE as robust approach (Sec. 4.2)
 Dynamically apply FINE algorithm in the training process.
 Bash files for this section is in `scripts/dynamic/` directory.
 
@@ -28,6 +23,7 @@ bash scripts/dynamic/FINE_sce_dynamic.sh
 bash scripts/dynamic/FINE_elr_dynamic.sh
 ```
 
+<<<<<<< HEAD
 
 ### FINE as application (Sec. 4.3) ; Robust Loss Approach
 After train the proxy network, make clean dataset to train the target network by using the trained proxy network.
@@ -44,7 +40,6 @@ Substituting sample selection state of Co-teaching to our FINE algorithm.
 ```
 bash scripts/coteaching/f-coteaching.sh
 ```
-
 
 ### Robust loss functions
 Train the proxy network on the Symmmetric Noise CIFAR-10 dataset, ResNet18, ELR Loss (noise rate = 0.8):

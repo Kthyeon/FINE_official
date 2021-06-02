@@ -70,10 +70,10 @@ def trainClothing1m(parse, config: ConfigParser):
         shuffle=False,
         validation_split=0.0,
         training=False,
-        num_workers=2
+        num_workers=0
     ).split_validation()
 
-
+    print('---------')
     # build model architecture, then print to console
 #     model = config.initialize('arch', module_arch)
     model = getattr(module_arch, 'resnet50')(pretrained=True,

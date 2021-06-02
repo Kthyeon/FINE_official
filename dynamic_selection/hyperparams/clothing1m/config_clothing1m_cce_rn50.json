@@ -17,7 +17,7 @@
             "shuffle": true,
             "num_batches": 2000,
             "validation_split": 0,
-            "num_workers": 8,
+            "num_workers": 0,
             "pin_memory": true
         }
     },
@@ -43,7 +43,7 @@
         "type": "MultiStepLR",
         "args": {
             "milestones": [
-                5
+                5, 6, 7, 8
             ],
             "gamma": 0.01
         }

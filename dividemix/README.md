@@ -21,8 +21,8 @@ To run scripts or python file, you have to download cifar-10 or cifar-100 datase
 
 
 ### With FINE
-All hyper-parameter settings are same with baselines
-Run the followings:
+All hyper-parameter settings are the same with baselines
+Run the followings for severe noise rate 90\%:
 ```
     bash scripts/refinement_dynamic_cifar10
     bash scripts/refinement_dynamic_cifar100

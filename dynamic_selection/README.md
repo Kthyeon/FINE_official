@@ -32,6 +32,13 @@ You can check simple descriptions about arguments in `utils/args.py`.
 All the bashes below run the code with `60% symmetric noise`, `cifar-10 dataset` and `ResNet-34` architecture.
 You can change arguments settings according to its descriptions.
 
+### Arguments setting
+You can check the description of each arguments in `utils/args.py`.
+
+However, when you execute a command, if you give dataset, lr_scheduler, loss_fn arguments manually (e.g. `python main.py --lr_scheduler multistep --loss_fn elr --dataset cifar10`), then its corresponding config file is used automatically from `hyperparams` directory.
+If you give the config file manually as an argument (e.g. `python main.py --config [config_file]`), then other arguments are over-written on the given config file.
+
+
 ### Sample-Selection based Approaches (Sec. 4.2.1)
 
 To run our FINE algorithm, the FINE detector dynamically select the clean data at every epoch, and then the neural network are trained with them

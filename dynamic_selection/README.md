@@ -1,4 +1,4 @@
-# Sample-Selection Approaches and Conjunction with Noise-Robust functions
+# Sample-Selection Approaches and Collaboration with Noise-Robust functions
 This is a PyTorch implementation for the sample-selection approaches and collaboration with noise-robust functions.
 
 ## Dataset
@@ -64,6 +64,10 @@ bash scripts/robust_loss/fine_dynamic_sce.sh
 
 bash scripts/robust_loss/fine_dynamic_elr.sh
 ```
+
+<b>License</b>\
+This project is licensed under the terms of the MIT license.
+
 
 <!-- 
 

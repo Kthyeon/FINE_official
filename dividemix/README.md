@@ -13,7 +13,8 @@ bash scripts/download_cifar100.sh
 ```
 
 ### Clothing1M
-
+Please follow https://github.com/jaychoi12/FINE/tree/master/dynamic_selection clothing1m settings.
+You can set data path as an argument.
 
 ## Training
 To run scripts or python file, you have to download cifar-10 or cifar-100 datasets, firstly.

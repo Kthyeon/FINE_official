@@ -36,6 +36,7 @@ You can change arguments settings according to its descriptions.
 You can check the description of each arguments in `utils/args.py`.
 
 However, when you execute a command, if you give dataset, lr_scheduler, loss_fn arguments manually (e.g. `python main.py --lr_scheduler multistep --loss_fn elr --dataset cifar10`), then its corresponding config file is used automatically from `hyperparams` directory.
+
 If you give the config file manually as an argument (e.g. `python main.py --config [config_file]`), then other arguments are over-written on the given config file.
 
 

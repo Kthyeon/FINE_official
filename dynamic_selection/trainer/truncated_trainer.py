@@ -38,5 +38,4 @@ class TruncatedTrainer(DefaultTrainer):
         return super()._train_epoch(epoch)
     
     def _warmup_epoch(self, epoch):
-        # ELR plus에서만 사용하는 함수.
         pass

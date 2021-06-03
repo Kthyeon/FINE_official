@@ -42,11 +42,7 @@ class CoteachingTrainer(BaseTrainer):
             self.lr_scheduler_1, self.lr_scheduler_2 = lr_scheduler[0], lr_scheduler[1]
         else:
             self.lr_scheduler_1, self.lr_scheduler_2 = None, None
-        
-        # TODO: 얘네는 train.py단에서 건드리는게 더 쉬울듯?
-        # 아니면 train_epoch에서 건드려도 됨
-        # DONE
-        
+
         # re-initialization model
         for m in self.model_1.modules():
             if isinstance(m, nn.Conv2d):
@@ -109,11 +105,6 @@ class CoteachingTrainer(BaseTrainer):
             The metrics in log must have the key 'metrics'.
         """
         self.model.train()
-        
-        # 이러면 learning rate scheduler 한 번에 할 수 있어서
-        # 따로 안 만들어줘도 됨.
-#         self.optimizer_1 = copy.deepcopy(self.optimizer)
-#         self.optimizer_2 = copy.deepcopy(self.optimizer)
 
         total_loss_1, total_loss_2 = 0, 0
         total_metrics_1, total_metrics_2 = np.zeros(len(self.metrics)), np.zeros(len(self.metrics))
@@ -130,9 +121,7 @@ class CoteachingTrainer(BaseTrainer):
                     
                 _, output_1 = self.model_1(data)
                 _, output_2 = self.model_2(data)
-            
-                # TODO: pure ratio 볼지 안볼지 결정해서 보는 코드 추가할지 안할지 정하기
-                # 지금 당장 학습하는데는 필요하지 않기 때문에 넣지 않도록 하겠습니당
+
                 loss_1, loss_2, clean_1, clean_2, total_1, total_2 = \
                 self.train_criterion(output_1, output_2, label, gt, epoch, indexs, epoch*batch_idx)
                 
@@ -191,11 +180,6 @@ class CoteachingTrainer(BaseTrainer):
         else: 
             test_meta = [0,0]
 
-        # TODO: UPDATE FORGET RATE FOR TRAIN LOSS
-        # Removed!
-        # Move into Coteaching Loss
-        
-        # TODO : UPDATE PARAMETERS FOR OPTIMIZER
         if self.lr_scheduler_1 is None:
             self.adjust_learning_rate(self.optimizer_1, epoch)
             self.adjust_learning_rate(self.optimizer_2, epoch)

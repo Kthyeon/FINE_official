@@ -111,22 +111,6 @@ def coteachingtrain(parse, config: ConfigParser):
         train_loss = getattr(module_loss, 'CoteachingPlusLoss')(forget_rate=config['trainer']['percent'],
                                                                 num_gradual=int(config['train_loss']['args']['num_gradual']),
                                                                 n_epoch=config['trainer']['epochs'])
-    
-#     # coteaching + winning_ticket!
-#     elif config['train_loss']['type'] == 'CoteachingDistillLoss':
-#         train_loss = getattr(module_loss, 'CoteachingDistillLoss')(forget_rate=config['trainer']['percent'],
-#                                                                    num_gradual=int(config['train_loss']['args']['num_gradual']),
-#                                                                    n_epoch=config['trainer']['epochs'],
-#                                                                    num_examp=num_examp,
-#                                                                    clean_indexs=teacher_idx)
-        
-#     # coteaching_plus + winning_ticket!
-#     elif config['train_loss']['type'] == 'CoteachingPlusDistillLoss':
-#         train_loss = getattr(module_loss, 'CoteachingPlusDistillLoss')(forget_rate=config['trainer']['percent'],
-#                                                                        num_gradual=int(config['train_loss']['args']['num_gradual']),
-#                                                                        n_epoch=config['trainer']['epochs'],
-#                                                                        num_examp=num_examp,
-#                                                                        clean_indexs=teacher_idx)
 
         
     val_loss = getattr(module_loss, config['val_loss'])

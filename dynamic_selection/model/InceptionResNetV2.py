@@ -4,6 +4,7 @@ import torch.nn as nn
 import os
 import sys
 
+__all__ = ['InceptionResNetV2']
 
 class BasicConv2d(nn.Module):
 

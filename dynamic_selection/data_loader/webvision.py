@@ -125,7 +125,7 @@ class Webvision(torch.utils.data.Dataset):
         
         if self.train:
             img_path = self.train_imgs[index]
-            target = self.train_labels[img_path]     
+            target = self.train_labels[img_path]   
             image = Image.open(self.root+img_path)
             img0 = image.convert('RGB')
             img0 = self.transform(img0)
@@ -134,13 +134,13 @@ class Webvision(torch.utils.data.Dataset):
             img_path = self.val_imgs[index]
             target = self.val_labels[img_path]     
             image = Image.open(self.root+'val_images_256/'+img_path).convert('RGB')   
-            img = self.transform(image) 
+            img = self.transform(image)
             return img, target, index, target
         elif self.test:
             img_path = self.test_imgs[index]
             target = self.test_labels[img_path]     
             image = Image.open(self.root+'val_images_256/'+img_path).convert('RGB')   
-            img = self.transform(image) 
+            img = self.transform(image)
             return img, target, index, target
         
     def __len__(self):
@@ -149,7 +149,7 @@ class Webvision(torch.utils.data.Dataset):
         if self.val:
             return len(self.val_imgs)
         else:
-            return len(self.train_imgs) 
+            return len(self.train_imgs)
         
     def truncate(self, teacher_idx):
         self.train_imgs = self.train_imgs[teacher_idx]

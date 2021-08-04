@@ -123,6 +123,8 @@ def trainClothing1m(parse, config: ConfigParser):
         
     else:
         train_loss = getattr(module_loss, 'CCELoss')()
+        
+    print (train_loss)
 
         
     val_loss = getattr(module_loss, config['val_loss'])

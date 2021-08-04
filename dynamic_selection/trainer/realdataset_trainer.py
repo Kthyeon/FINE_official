@@ -92,17 +92,14 @@ class RealDatasetTrainer(BaseTrainer):
                 num_batches=self.config['data_loader']['args']['num_batches'],
                 training=True,
                 num_workers=self.config['data_loader']['args']['num_workers'],
-                pin_memory=self.config['data_loader']['args']['pin_memory'],
-                seed=epoch)
+                pin_memory=self.config['data_loader']['args']['pin_memory']
+            )
             
             current_features, current_labels = get_features(self.model, self.orig_data_loader)
             datanum = len(current_labels)
-#             if self.teacher_idx is not None:
-#                 prev_features, prev_labels = current_features[self.teacher_idx], current_labels[self.teacher_idx]
-#             else:
             prev_features, prev_labels = current_features, current_labels
                 
-            self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels, p_threshold=0.6, norm=True)
+            self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels, p_threshold=0.5, norm=True)
             
         curr_data_loader = getattr(module_data, self.config['data_loader']['type'])(
             self.config['data_loader']['args']['data_dir'],
@@ -113,8 +110,7 @@ class RealDatasetTrainer(BaseTrainer):
             training=True,
             num_workers=self.config['data_loader']['args']['num_workers'],
             pin_memory=self.config['data_loader']['args']['pin_memory'],
-            teacher_idx=self.teacher_idx,
-            seed=epoch
+            teacher_idx=self.teacher_idx
         )
         
         self.selected, self.precision, self.recall, self.f1, self.specificity, self.accuracy = return_statistics(self.orig_data_loader, self.teacher_idx)
@@ -137,20 +133,13 @@ class RealDatasetTrainer(BaseTrainer):
 
             The metrics in log must have the key 'metrics'.
         """
-        
-        
-        
-        
+
         if epoch > max(self.warm_up, 1) and epoch % self.every == 0:
             self.dynamic_train_data_loader = self.update_dataloader(epoch)
             self.len_epoch = len(self.dynamic_train_data_loader)
             print ('############# Epoch:{} ############'.format(epoch))
 
         self.model.train()
-            
-        for i in range(14):
-            print ((np.array(self.dynamic_train_data_loader.dataset.train_labels_) == i).sum() # \
-                    ,len(self.dynamic_train_data_loader.dataset))
         
         total_loss = 0
         total_metrics = np.zeros(len(self.metrics))
@@ -167,8 +156,8 @@ class RealDatasetTrainer(BaseTrainer):
                 
                 _, output = self.model(data)
                 loss = self.train_criterion(output, label, indexs)
-                if epoch < 3:
-                    loss += conf_penalty(output)
+#                 if epoch < 3:
+#                 loss += conf_penalty(output)
 
                 self.optimizer.zero_grad()
                 loss.backward()

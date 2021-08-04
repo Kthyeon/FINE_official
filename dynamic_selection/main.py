@@ -13,6 +13,8 @@ def main(parse, config: ConfigParser):
         trainClothing1m(parse, config)
     elif parse.traintools == 'coteaching':
         coteachingtrain(parse, config)
+    elif parse.traintools == 'instance':
+        traininstance(parse, config)
     else:
         raise NotImplemented
         

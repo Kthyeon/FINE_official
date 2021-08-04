@@ -6,9 +6,19 @@ from tqdm import tqdm
 from .gmm import *
 from .util import *
 
-__all__=['get_singular_vector', 'cleansing', 'fine', 'extract_cleanidx']
+__all__=['get_mean_vector', 'get_singular_vector', 'cleansing', 'fine', 'extract_cleanidx']
 
 
+def get_mean_vector(features, labels):
+    mean_vector_dict = {}
+    with tqdm(total=len(np.unique(labels))) as pbar:
+        for index in np.unique(labels):
+            v = np.mean(features[labels==index], axis=0)
+            mean_vector_dict[index] = v
+            pbar.update(1)
+            
+    return mean_vector_dict
+            
 def get_singular_vector(features, labels):
     '''
     To get top1 sigular vector in class-wise manner by using SVD of hidden feature vectors
@@ -75,7 +85,7 @@ def cleansing(scores, labels):
     return np.array(clean_labels, dtype=np.int64)
         
 
-def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, prev_labels=None, p_threshold=0.5, norm=True):
+def fine(current_features, current_labels, fit='kmeans', prev_features=None, prev_labels=None, p_threshold=0.5, norm=True, eigen=True):
     '''
     prev_features, prev_labels: data from the previous round
     current_features, current_labels: current round's data
@@ -86,12 +96,18 @@ def fine(current_features, current_labels, fit = 'kmeans', prev_features=None, p
     the algorthm divides the data based on the current labels and current features
     
     '''
-    if prev_features is not None and prev_labels is not None:
-        singular_vector_dict = get_singular_vector(prev_features, prev_labels)
+    if eigen is True:
+        if prev_features is not None and prev_labels is not None:
+            vector_dict = get_singular_vector(prev_features, prev_labels)
+        else:
+            vector_dict = get_singular_vector(current_features, current_labels)
     else:
-        singular_vector_dict = get_singular_vector(current_features, current_labels)
+        if prev_features is not None and prev_labels is not None:
+            vector_dict = get_mean_vector(prev_features, prev_labels)
+        else:
+            vector_dict = get_mean_vector(current_features, current_labels)
 
-    scores = get_score(singular_vector_dict, features = current_features, labels = current_labels, normalization=norm)
+    scores = get_score(vector_dict, features = current_features, labels = current_labels, normalization=norm)
     
     if 'kmeans' in fit:
         clean_labels = cleansing(scores, current_labels)

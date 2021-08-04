@@ -92,7 +92,7 @@ class DynamicTrainer(BaseTrainer):
                 
 
 #             if epoch > 10:
-            self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels)
+            self.teacher_idx = fine(current_features, current_labels, fit=self.parse.distill_mode, prev_features=prev_features, prev_labels=prev_labels, p_threshold=self.parse.zeta)
 #             else:
 #                 self.teacher_idx = np.arange(datanum)
 #                 same_topk_index(orig_label, orig_out, prev_label, prev_out, np.clip((epoch-1) * 0.01, 0., 0.72))

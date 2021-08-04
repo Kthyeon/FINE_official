@@ -109,6 +109,10 @@ def parse_args():
                       type=int,
                       default=10,
                       help='proceed FINE frequent')
+    args.add_argument('--zeta',
+                      type=float,
+                      default=0.5,
+                      help='hyperparameter for fine')
 
 
     # custom cli options to modify configuration from default values given in json file.

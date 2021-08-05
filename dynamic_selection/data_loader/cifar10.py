@@ -31,7 +31,10 @@ def get_cifar10(root, cfg_trainer, train=True,
 
         train_dataset = CIFAR10_train(root, cfg_trainer, train_idxs, train=True, transform=transform_train, seed=seed)
         val_dataset = CIFAR10_val(root, cfg_trainer, val_idxs, train=train, transform=transform_val)
-        if cfg_trainer['asym']:
+        if cfg_trainer['instance']:
+            train_dataset.instance_noise()
+            val_dataset.instance_noise()
+        elif cfg_trainer['asym']:
             train_dataset.asymmetric_noise()
             val_dataset.asymmetric_noise()
         else:
@@ -127,7 +130,33 @@ class CIFAR10_train(torchvision.datasets.CIFAR10):
                     # deer -> horse
                     elif i == 4:
                         self.train_labels[idx] = 7
-    
+                        
+    def instance_noise(self):
+        '''
+        Instance-dependent noise
+        https://github.com/haochenglouis/cores/blob/main/data/utils.py
+        '''
+        
+        self.train_labels_gt = copy.deepcopy(self.train_labels)
+        fix_seed(self.seed)
+        
+        q_ = np.random.normal(loc=self.cfg_trainer['percent'], scale=0.1, size=int(1e6))
+        q = []
+        for pro in q_:
+            if 0 < pro < 1:
+                q.append(pro)
+            if len(q)==50000:
+                break
+                
+        w = np.random.normal(loc=0, scale=1, size=(32*32*3, 10))
+        for i, sample in enumerate(self.train_data):
+            sample = sample.flatten()
+            p_all = np.matmul(sample, w)
+            p_all[self.train_labels_gt[i]] = -int(1e6)
+            p_all = q[i] * F.softmax(torch.tensor(p_all), dim=0).numpy()
+            p_all[self.train_labels_gt[i]] = 1 - q[i]
+            self.train_labels[i] = np.random.choice(np.arange(10), p=p_all/sum(p_all))
+        
     def truncate(self, teacher_idx):
         self.train_data = self.train_data[teacher_idx]
         self.train_labels = self.train_labels[teacher_idx]
@@ -209,6 +238,31 @@ class CIFAR10_val(torchvision.datasets.CIFAR10):
                     # deer -> horse
                     elif i == 4:
                         self.train_labels[idx] = 7
+                        
+                        
+    def instance_noise(self):
+        '''
+        Instance-dependent noise
+        https://github.com/haochenglouis/cores/blob/main/data/utils.py
+        '''
+        q_ = np.random.normal(loc=self.cfg_trainer['percent'], scale=0.1, size=int(1e6))
+        q = []
+        for pro in q_:
+            if 0 < pro < 1:
+                q.append(pro)
+            if len(q)==50000:
+                break
+                
+        w = np.random.normal(loc=0, scale=1, size=(32*32*3, 10))
+        for i, sample in enumerate(self.train_data):
+            sample = sample.flatten()
+            p_all = np.matmul(sample, w)
+            p_all[self.train_labels_gt[i]] = -int(1e6)
+            p_all = q[i] * F.softmax(torch.tensor(p_all), dim=0).numpy()
+            p_all[self.train_labels_gt[i]] = 1 - q[i]
+            self.train_labels[i] = np.random.choice(np.arange(10), p=p_all/sum(p_all))
+                        
+                        
     def __len__(self):
         return len(self.train_data)
 

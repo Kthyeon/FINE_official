@@ -124,6 +124,7 @@ def parse_args():
         CustomArgs(['--seed', '--seed'], type=int, target=('seed',)),
         CustomArgs(['--percent', '--percent'], type=float, target=('trainer', 'percent')),
         CustomArgs(['--asym', '--asym'], type=str2bool, target=('trainer', 'asym')),
+        CustomArgs(['--instance', '--instance'], type=str2bool, target=('trainer', 'instance'))
     ]
     
     os.chdir(os.path.join(os.getcwd(), 'dynamic_selection'))

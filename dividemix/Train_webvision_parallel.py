@@ -14,36 +14,38 @@ from InceptionResNetV2 import *
 from sklearn.mixture import GaussianMixture
 import dataloader_webvision as dataloader
 import torchnet
-import tqdm
+import torch.multiprocessing as mp
+from tqdm import tqdm
 
-parser = argparse.ArgumentParser(description='PyTorch WebVision Training')
+parser = argparse.ArgumentParser(description='PyTorch WebVision Parallel Training')
 parser.add_argument('--batch_size', default=32, type=int, help='train batchsize') 
 parser.add_argument('--lr', '--learning_rate', default=0.01, type=float, help='initial learning rate')
 parser.add_argument('--alpha', default=0.5, type=float, help='parameter for Beta')
 parser.add_argument('--lambda_u', default=0, type=float, help='weight for unsupervised loss')
 parser.add_argument('--p_threshold', default=0.5, type=float, help='clean probability threshold')
 parser.add_argument('--T', default=0.5, type=float, help='sharpening temperature')
-parser.add_argument('--num_epochs', default=80, type=int)
+parser.add_argument('--num_epochs', default=100, type=int)
 parser.add_argument('--id', default='',type=str)
 parser.add_argument('--seed', default=123)
-parser.add_argument('--gpuid', default=0, type=int)
+parser.add_argument('--gpuid1', default=0, type=int)
+parser.add_argument('--gpuid2', default=2, type=int)
 parser.add_argument('--num_class', default=50, type=int)
 parser.add_argument('--data_path', default='./dataset/', type=str, help='path to dataset')
 
 parser.add_argument('--distill', default=None, type=str, help='use "dynamic" for robust training')
 parser.add_argument('--distill_mode', type=str, default='fine-gmm', choices=['kmeans','fine-kmeans','fine-gmm'], help='mode for distillation kmeans or eigen.')
 parser.add_argument('--refinement', action='store_true', help='use refined label if in teacher_idx')
-
 args = parser.parse_args()
 
-torch.cuda.set_device(args.gpuid)
+os.environ["CUDA_VISIBLE_DEVICES"] = '%s,%s'%(args.gpuid1,args.gpuid2)
 random.seed(args.seed)
-torch.manual_seed(args.seed)
-torch.cuda.manual_seed_all(args.seed)
-
+cuda1 = torch.device('cuda:0')
+cuda2 = torch.device('cuda:1')
 
 # Training
-def train(epoch,net,net2,optimizer,labeled_trainloader,unlabeled_trainloader):
+def train(epoch,net,net2,optimizer,labeled_trainloader,unlabeled_trainloader,device,whichnet):
+    criterion = SemiLoss()   
+    
     net.train()
     net2.eval() #fix one network and train the other
     
@@ -61,8 +63,8 @@ def train(epoch,net,net2,optimizer,labeled_trainloader,unlabeled_trainloader):
         labels_x = torch.zeros(batch_size, args.num_class).scatter_(1, labels_x.view(-1,1), 1)        
         w_x = w_x.view(-1,1).type(torch.FloatTensor) 
 
-        inputs_x, inputs_x2, labels_x, w_x = inputs_x.cuda(), inputs_x2.cuda(), labels_x.cuda(), w_x.cuda()
-        inputs_u, inputs_u2 = inputs_u.cuda(), inputs_u2.cuda()
+        inputs_x, inputs_x2, labels_x, w_x = inputs_x.to(device,non_blocking=True), inputs_x2.to(device,non_blocking=True), labels_x.to(device,non_blocking=True), w_x.to(device,non_blocking=True)
+        inputs_u, inputs_u2 = inputs_u.to(device), inputs_u2.to(device)
 
         with torch.no_grad():
             # label co-guessing of unlabeled samples
@@ -108,7 +110,7 @@ def train(epoch,net,net2,optimizer,labeled_trainloader,unlabeled_trainloader):
         Lx = -torch.mean(torch.sum(F.log_softmax(logits, dim=1) * mixed_target, dim=1))
         
         prior = torch.ones(args.num_class)/args.num_class
-        prior = prior.cuda()        
+        prior = prior.to(device)        
         pred_mean = torch.softmax(logits, dim=1).mean(0)
         penalty = torch.sum(prior*torch.log(prior/pred_mean))
        
@@ -118,16 +120,19 @@ def train(epoch,net,net2,optimizer,labeled_trainloader,unlabeled_trainloader):
         loss.backward()
         optimizer.step()
         
-        sys.stdout.write('\r')
-        sys.stdout.write('%s | Epoch [%3d/%3d] Iter[%4d/%4d]\t Labeled loss: %.2f'
-                %(args.id, epoch, args.num_epochs, batch_idx+1, num_iter, Lx.item()))
+        sys.stdout.write('\n')
+        sys.stdout.write('%s |%s Epoch [%3d/%3d] Iter[%4d/%4d]\t Labeled loss: %.2f'
+                %(args.id, whichnet, epoch, args.num_epochs, batch_idx+1, num_iter, Lx.item()))
         sys.stdout.flush()
 
-def warmup(epoch,net,optimizer,dataloader):
+def warmup(epoch,net,optimizer,dataloader,device,whichnet):
+    CEloss = nn.CrossEntropyLoss()
+    acc_meter = torchnet.meter.ClassErrorMeter(topk=[1,5], accuracy=True)
+    
     net.train()
     num_iter = (len(dataloader.dataset)//dataloader.batch_size)+1
     for batch_idx, (inputs, labels, path) in enumerate(dataloader):      
-        inputs, labels = inputs.cuda(), labels.cuda() 
+        inputs, labels = inputs.to(device), labels.to(device,non_blocking=True) 
         optimizer.zero_grad()
         outputs = net(inputs)               
         loss = CEloss(outputs, labels)   
@@ -138,55 +143,54 @@ def warmup(epoch,net,optimizer,dataloader):
         L.backward()  
         optimizer.step() 
 
-        sys.stdout.write('\r')
-        sys.stdout.write('%s | Epoch [%3d/%3d] Iter[%4d/%4d]\t CE-loss: %.4f'
-                %(args.id, epoch, args.num_epochs, batch_idx+1, num_iter, loss.item()))
+        sys.stdout.write('\n')
+        sys.stdout.write('%s |%s  Epoch [%3d/%3d] Iter[%4d/%4d]\t CE-loss: %.4f'
+                %(args.id, whichnet, epoch, args.num_epochs, batch_idx+1, num_iter, loss.item()))
         sys.stdout.flush()
+
         
-        
-def test(epoch,net1,net2,test_loader):
+def test(epoch,net1,net2,test_loader,device,queue):
+    acc_meter = torchnet.meter.ClassErrorMeter(topk=[1,5], accuracy=True)
     acc_meter.reset()
     net1.eval()
     net2.eval()
-    correct = 0
-    total = 0
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
-            inputs, targets = inputs.cuda(), targets.cuda()
+            inputs, targets = inputs.to(device), targets.to(device,non_blocking=True)
             outputs1 = net1(inputs)
             outputs2 = net2(inputs)           
             outputs = outputs1+outputs2
             _, predicted = torch.max(outputs, 1)                 
             acc_meter.add(outputs,targets)
     accs = acc_meter.value()
-    return accs
+    queue.put(accs)
 
 
-def eval_train(model,all_loss):    
+def eval_train(eval_loader,model,device,whichnet,queue):   
+    CE = nn.CrossEntropyLoss(reduction='none')
     model.eval()
     num_iter = (len(eval_loader.dataset)//eval_loader.batch_size)+1
     losses = torch.zeros(len(eval_loader.dataset))    
     with torch.no_grad():
         for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
-            inputs, targets = inputs.cuda(), targets.cuda() 
+            inputs, targets = inputs.to(device), targets.to(device,non_blocking=True) 
             outputs = model(inputs) 
             loss = CE(outputs, targets)  
             for b in range(inputs.size(0)):
                 losses[index[b]]=loss[b]       
-            sys.stdout.write('\r')
-            sys.stdout.write('| Evaluating loss Iter[%3d/%3d]\t' %(batch_idx,num_iter)) 
+            sys.stdout.write('\n')
+            sys.stdout.write('|%s Evaluating loss Iter[%3d/%3d]\t' %(whichnet,batch_idx,num_iter)) 
             sys.stdout.flush()    
                                     
     losses = (losses-losses.min())/(losses.max()-losses.min())    
-    all_loss.append(losses)
 
     # fit a two-component GMM to the loss
     input_loss = losses.reshape(-1,1)
-    gmm = GaussianMixture(n_components=2,max_iter=10,tol=1e-2,reg_covar=5e-4)
+    gmm = GaussianMixture(n_components=2,max_iter=10,tol=1e-2,reg_covar=1e-3)
     gmm.fit(input_loss)
     prob = gmm.predict_proba(input_loss) 
     prob = prob[:,gmm.means_.argmin()]         
-    return prob,all_loss
+    queue.put(prob)
 
 def linear_rampup(current, warm_up, rampup_length=16):
     current = np.clip((current-warm_up) / rampup_length, 0.0, 1.0)
@@ -206,9 +210,9 @@ class NegEntropy(object):
         probs = torch.softmax(outputs, dim=1)
         return torch.mean(torch.sum(probs.log()*probs, dim=1))
 
-def create_model():
+def create_model(device):
     model = InceptionResNetV2(num_classes=args.num_class)
-    model = model.cuda()
+    model = model.to(device)
     return model
 
 def get_singular_vector(features, labels):
@@ -227,26 +231,26 @@ def get_singular_vector(features, labels):
 
     return singular_vector_dict    
     
-def get_features(model, dataloader):
+def get_features(model, dataloader, device):
     '''
     Concatenate the hidden features and corresponding labels 
     '''
     labels = np.empty((0,))
 
     model.eval()
-    model.cuda()
+    model.to(device)
     paths = []
     with tqdm(dataloader) as progress:
         for batch_idx, (data, label, path) in enumerate(progress):
-            data, label = data.cuda(), label.long()
-            
-            feature = model.maxpool(model.relu(model.bn1(model.conv1(data))))
-            feature = model.avgpool(model.layer4(model.layer3(model.layer2(model.layer1(feature)))))
+            data, label = data.to(device), label.long()
+
+            feature = model.features(data)
+            feature = model.avgpool_1a(feature)
             feature = feature.view(feature.size(0), -1)
-            
+
             for b in range(data.size(0)):
                 paths.append(path[b])
-                
+
             labels = np.concatenate((labels, label.cpu()))
             if batch_idx == 0:
                 features = feature.detach().cpu()
@@ -351,13 +355,13 @@ def cleansing(scores, labels):
         
     return np.array(clean_labels, dtype=np.int64)
     
-def extract_cleanidx(model, loader, mode='fine-kmeans', p_threshold=0.6):
+def extract_cleanidx(model, loader, device, mode='fine-kmeans', p_threshold=0.5):
     model.eval()
     for params in model.parameters(): params.requires_grad = False
         
     # get teacher_idx
     if 'fine' in mode:
-        features, labels, paths = get_features(model, loader)
+        features, labels, paths = get_features(model, loader, device)
         teacher_idx, probs = fine(current_features=features, current_labels=labels, fit = mode, p_threshold=p_threshold)
     else: # get teacher _idx via kmeans
         teacher_idx = get_loss_list(model, loader)
@@ -370,94 +374,124 @@ def extract_cleanidx(model, loader, mode='fine-kmeans', p_threshold=0.6):
     return teacher_idx, probs, paths
 
 
+if __name__ == "__main__":
+    
+    mp.set_start_method('spawn')
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)    
+    
+    stats_log=open('./checkpoint/%s'%(args.id)+'_stats.txt','w') 
+    test_log=open('./checkpoint/%s'%(args.id)+'_acc.txt','w')         
+    
+    warm_up=-1
+    data_num = None
 
+    loader = dataloader.webvision_dataloader(batch_size=args.batch_size,num_class = args.num_class,num_workers=8,root_dir=args.data_path,log=stats_log)
 
+    print('| Building net')
+    
+    net1 = create_model(cuda1)
+    net2 = create_model(cuda2)
+    
+    net1_clone = create_model(cuda2)
+    net2_clone = create_model(cuda1)
+    
+    cudnn.benchmark = True
+    
+    optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+    optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
-
-stats_log=open('./checkpoint/%s'%(args.id)+'_stats.txt','w') 
-test_log=open('./checkpoint/%s'%(args.id)+'_acc.txt','w')     
-
-warm_up=1
-
-loader = dataloader.webvision_dataloader(batch_size=args.batch_size,num_workers=5,root_dir=args.data_path,log=stats_log, num_class=args.num_class)
-
-print('| Building net')
-net1 = create_model()
-net2 = create_model()
-cudnn.benchmark = True
-
-criterion = SemiLoss()
-optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-
-CE = nn.CrossEntropyLoss(reduction='none')
-CEloss = nn.CrossEntropyLoss()
-conf_penalty = NegEntropy()
-
-all_loss = [[],[]] # save the history of losses from two networks
-acc_meter = torchnet.meter.ClassErrorMeter(topk=[1,5], accuracy=True)
-
-
-
-for epoch in range(args.num_epochs+1):   
-    lr=args.lr
-    if epoch >= 40:
-        lr /= 10      
-    for param_group in optimizer1.param_groups:
-        param_group['lr'] = lr       
-    for param_group in optimizer2.param_groups:
-        param_group['lr'] = lr              
-    eval_loader = loader.run('eval_train')  
+    #conf_penalty = NegEntropy()    
     web_valloader = loader.run('test')
     imagenet_valloader = loader.run('imagenet')   
-    imagenet_acc = test(0,net1,net2,imagenet_valloader)
-    print(imagenet_acc)
-
     
-    if epoch<warm_up:       
-        warmup_trainloader = loader.run('warmup')
-        print('Warmup Net1')
-        warmup(epoch,net1,optimizer1,warmup_trainloader)    
-        print('\nWarmup Net2')
-        warmup(epoch,net2,optimizer2,warmup_trainloader) 
-   
-    else:     
-        eval_loader = loader.run('eval_train')
-        teacher_idx_1, prob1_dict, paths1 = extract_cleanidx(net1, eval_loader, mode=args.distill_mode, p_threshold=args.p_threshold)
-        eval_loader = loader.run('eval_train')
-        teacher_idx_2, prob2_dict, paths2 = extract_cleanidx(net2, eval_loader, mode=args.distill_mode, p_threshold=args.p_threshold)
-        if data_num == None:
-            data_num = len(prob1_dict.keys())
-        pred1, pred2 = np.zeros(data_num, dtype=bool), np.zeros(data_num, dtype=bool)
-        prob1, prob2 = np.zeros(data_num), np.zeros(data_num)
+    for epoch in range(args.num_epochs+1):   
+        lr=args.lr
+        if epoch >= 50:
+            lr /= 10      
+        for param_group in optimizer1.param_groups:
+            param_group['lr'] = lr       
+        for param_group in optimizer2.param_groups:
+            param_group['lr'] = lr              
 
-        for index in teacher_idx_1:
-            pred1[index] = True
-        for index in teacher_idx_2:
-            pred2[index] = True
+        if epoch<warm_up:  
+            warmup_trainloader1 = loader.run('warmup')
+            warmup_trainloader2 = loader.run('warmup')
+            p1 = mp.Process(target=warmup, args=(epoch,net1,optimizer1,warmup_trainloader1,cuda1,'net1'))                      
+            p2 = mp.Process(target=warmup, args=(epoch,net2,optimizer2,warmup_trainloader2,cuda2,'net2'))
+            p1.start() 
+            p2.start()        
 
-        for i in range(data_num):
-            prob1[i] = prob1_dict[i]
-            prob2[i] = prob2_dict[i]     
+        else:                
+            eval_loader = loader.run('eval_train')
+            teacher_idx_1, prob1_dict, paths1 = extract_cleanidx(net1, eval_loader, device=cuda1, mode=args.distill_mode, p_threshold=args.p_threshold)
+            print('----')
+#             mp.Process(target=extract_cleanidx, args=(net1, eval_loader,'fine-gmm',0.5))
+            
+#             extract_cleanidx(net1, eval_loader, mode=args.distill_mode, p_threshold=args.p_threshold)
+            eval_loader = loader.run('eval_train')
+            teacher_idx_2, prob2_dict, paths2 = extract_cleanidx(net2, eval_loader, device=cuda2, mode=args.distill_mode, p_threshold=args.p_threshold)
         
-        print('Train Net1')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train',pred2,prob2) # co-divide
-        train(epoch,net1,net2,optimizer1,labeled_trainloader, unlabeled_trainloader) # train net1  
-        
-        print('\nTrain Net2')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train',pred1,prob1) # co-divide
-        train(epoch,net2,net1,optimizer2,labeled_trainloader, unlabeled_trainloader) # train net2    
+#         mp.Process(target=extract_cleanidx, args=(net2, eval_loader,'fine-gmm',0.5))
+#                                                            extract_cleanidx(net2, eval_loader, mode=args.distill_mode, p_threshold=args.p_threshold)
+            if data_num == None:
+                data_num = len(prob1_dict.keys())
+            pred1, pred2 = np.zeros(data_num, dtype=bool), np.zeros(data_num, dtype=bool)
+            prob1, prob2 = np.zeros(data_num), np.zeros(data_num)
 
+            for index in teacher_idx_1:
+                pred1[index] = True
+            for index in teacher_idx_2:
+                pred2[index] = True
+
+            for i in range(data_num):
+                prob1[i] = prob1_dict[i]
+                prob2[i] = prob2_dict[i]     
+
+            labeled_trainloader1, unlabeled_trainloader1 = loader.run('train',pred2,prob2) # co-divide
+            labeled_trainloader2, unlabeled_trainloader2 = loader.run('train',pred1,prob1) # co-divide
+            
+            p1 = mp.Process(target=train, args=(epoch,net1,net2_clone,optimizer1,labeled_trainloader1, unlabeled_trainloader1,cuda1,'net1'))                             
+            p2 = mp.Process(target=train, args=(epoch,net2,net1_clone,optimizer2,labeled_trainloader2, unlabeled_trainloader2,cuda2,'net2'))
+            p1.start()  
+            p2.start()               
+
+        p1.join()
+        p2.join()
     
-    web_acc = test(epoch,net1,net2,web_valloader)  
-    imagenet_acc = test(epoch,net1,net2,imagenet_valloader)  
-    
-    print("\n| Test Epoch #%d\t WebVision Acc: %.2f%% (%.2f%%) \t ImageNet Acc: %.2f%% (%.2f%%)\n"%(epoch,web_acc[0],web_acc[1],imagenet_acc[0],imagenet_acc[1]))  
-    test_log.write('Epoch:%d \t WebVision Acc: %.2f%% (%.2f%%) \t ImageNet Acc: %.2f%% (%.2f%%)\n'%(epoch,web_acc[0],web_acc[1],imagenet_acc[0],imagenet_acc[1]))
-    test_log.flush()  
-       
-    print('\n==== net 1 evaluate training data loss ====') 
-    prob1,all_loss[0]=eval_train(net1,all_loss[0])   
-    print('\n==== net 2 evaluate training data loss ====') 
-    prob2,all_loss[1]=eval_train(net2,all_loss[1])
-    torch.save(all_loss,'./checkpoint/%s.pth.tar'%(args.id))   
+        net1_clone.load_state_dict(net1.state_dict())
+        net2_clone.load_state_dict(net2.state_dict())
+        
+        q1 = mp.Queue()
+        q2 = mp.Queue()
+        p1 = mp.Process(target=test, args=(epoch,net1,net2_clone,web_valloader,cuda1,q1))                
+        p2 = mp.Process(target=test, args=(epoch,net1_clone,net2,imagenet_valloader,cuda2,q2))
+        
+        p1.start()   
+        p2.start()
+        
+        web_acc = q1.get()
+        imagenet_acc = q2.get()
+        
+        p1.join()
+        p2.join()        
+        
+        print("\n| Test Epoch #%d\t WebVision Acc: %.2f%% (%.2f%%) \t ImageNet Acc: %.2f%% (%.2f%%)\n"%(epoch,web_acc[0],web_acc[1],imagenet_acc[0],imagenet_acc[1]))  
+        test_log.write('Epoch:%d \t WebVision Acc: %.2f%% (%.2f%%) \t ImageNet Acc: %.2f%% (%.2f%%)\n'%(epoch,web_acc[0],web_acc[1],imagenet_acc[0],imagenet_acc[1]))
+        test_log.flush()  
+        
+        eval_loader1 = loader.run('eval_train')          
+        eval_loader2 = loader.run('eval_train')       
+        q1 = mp.Queue()
+        q2 = mp.Queue()
+        p1 = mp.Process(target=eval_train, args=(eval_loader1,net1,cuda1,'net1',q1))                
+        p2 = mp.Process(target=eval_train, args=(eval_loader2,net2,cuda2,'net2',q2))
+        
+        p1.start()   
+        p2.start()
+        
+        prob1 = q1.get()
+        prob2 = q2.get()
+        
+        p1.join()
+        p2.join()

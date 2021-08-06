@@ -6,26 +6,60 @@ from PIL import Image
 import torch
 import os
 
-class imagenet_dataset(Dataset):
+# class imagenet_dataset(Dataset):
+#     def __init__(self, root_dir, transform, num_class):
+#         self.root = '/home/hynix/imagenet/cl_val/'
+#         self.transform = transform
+#         self.val_data = []
+#         pathes = os.listdir(self.root)
+#         path_dic = {}
+#         for i in range(len(pathes)):
+#             path_dic[i] = pathes[i] 
+        
+#         for c in range(len(pathes)):
+#             imgs = os.listdir(self.root+path_dic[c])
+#             for img in imgs:
+#                 self.val_data.append([c,os.path.join(self.root,path_dic[c],img)])                
+                
+#     def __getitem__(self, index):
+#         data = self.val_data[index]
+#         target = data[0]
+#         image = Image.open(data[1]).convert('RGB')   
+#         img = self.transform(image) 
+#         return img, target
+    
+#     def __len__(self):
+#         return len(self.val_data)
+    
+class imagenet_dataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, transform, num_class):
-        self.root = '/home/hynix/imagenet/cl_val/'
+        self.root = '/home/hynix/imagenet/'
         self.transform = transform
-        self.val_data = []
-        pathes = os.listdir(self.root)
-        for c in pathes:
-            imgs = os.listdir(self.root+str(c))
-            for img in imgs:
-                self.val_data.append([c,os.path.join(self.root,str(c),img)])                
+
+        with open(self.root+'imagenet_val.txt') as f:
+            lines=f.readlines()
+            self.val_imgs = []
+            self.val_labels = {}
+            for line in lines:
+                img, target = line.split()
+                target = int(target)
+                if target<num_class:
+                    self.val_imgs.append(img)
+                    self.val_labels[img]=target               
                 
     def __getitem__(self, index):
-        data = self.val_data[index]
-        target = data[0]
-        image = Image.open(data[1]).convert('RGB')   
+
+        img_path = self.val_imgs[index]
+        target = self.val_labels[img_path]     
+        image = Image.open(self.root+'val/'+img_path).convert('RGB')   
         img = self.transform(image) 
-        return img, target
+
+        return img, target # index, target
+        
     
     def __len__(self):
-        return len(self.val_data)
+        return len(self.val_imgs)    
+
 
 class webvision_dataset(Dataset): 
     def __init__(self, root_dir, transform, mode, num_class, pred=[], probability=[], log=''): 
@@ -187,7 +221,7 @@ class webvision_dataloader():
             imagenet_val = imagenet_dataset(root_dir=self.root_dir, transform=self.transform_imagenet, num_class=self.num_class)      
             imagenet_loader = DataLoader(
                 dataset=imagenet_val, 
-                batch_size=self.batch_size*20,
+                batch_size=self.batch_size,
                 shuffle=False,
                 num_workers=self.num_workers,
                 pin_memory=True)               

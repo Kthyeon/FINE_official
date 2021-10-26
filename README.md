@@ -1,5 +1,5 @@
 # [Official] FINE Samples for Learning with Noisy Labels
-This repository is the official implementation of "FINE Samples for Learning with Noisy Labels" paper presented in NeurIPS 2021.
+This repository is the official implementation of "FINE Samples for Learning with Noisy Labels" paper presented in NeurIPS 2021. New version of previous repository https://github.com/jaychoi12/FINE.
 
 ## Reference Codes
 We refer to some official implementation codes

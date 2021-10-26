@@ -1,5 +1,5 @@
-# FINE Samples for Learning with Noisy Labels
-This repository is the official implementation of "FINE Samples for Learning with Noisy Labels" paper.
+# [Official] FINE Samples for Learning with Noisy Labels
+This repository is the official implementation of "FINE Samples for Learning with Noisy Labels" paper presented in NeurIPS 2021.
 
 ## Reference Codes
 We refer to some official implementation codes
@@ -27,6 +27,10 @@ We refer to some official implementation codes
 
 ## Results
 You can reproduce all results in the paper with our code. All results have been described in our paper including Appendix. The results of our experiments are so numerous that it is difficult to post everything here. However, if you experiment several times by modifying the hyperparameter value in the .sh file, you will be able to reproduce all of our analysis.
+
+## Contact
+ - Taehyeon Kim : potter32@kaist.ac.kr
+ - Jongwoo Ko : Jongwoo.ko@kaist.ac.kr
 
 <b>License</b>\
 This project is licensed under the terms of the MIT license.

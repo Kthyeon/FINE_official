@@ -29,8 +29,8 @@ We refer to some official implementation codes
 You can reproduce all results in the paper with our code. All results have been described in our paper including Appendix. The results of our experiments are so numerous that it is difficult to post everything here. However, if you experiment several times by modifying the hyperparameter value in the .sh file, you will be able to reproduce all of our analysis.
 
 ## Contact
- - Taehyeon Kim : potter32@kaist.ac.kr
  - Jongwoo Ko : Jongwoo.ko@kaist.ac.kr
+ - Taehyeon Kim : potter32@kaist.ac.kr
 
 <b>License</b>\
 This project is licensed under the terms of the MIT license.

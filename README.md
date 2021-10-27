@@ -34,3 +34,7 @@ You can reproduce all results in the paper with our code. All results have been 
 
 <b>License</b>\
 This project is licensed under the terms of the MIT license.
+
+## Acknowledgements
+This work was supported by Institute of Information & communications Technology Planning &
+Evaluation (IITP) grant funded by the Korea government (MSIT) \[No.2019-0-00075, Artificial Intelligence Graduate School Program (KAIST)] and \[No. 2021-0-00907, Development of Adaptive and Lightweight Edge-Collaborative Analysis Technology for Enabling Proactively Immediate Response and Rapid Learning].
